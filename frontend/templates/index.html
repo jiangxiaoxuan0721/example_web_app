@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IEEE3 数据表格</title>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .controls {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .btn {
+            padding: 8px 16px;
+            margin: 0 5px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn:hover { opacity: 0.8; }
+        .table-container {
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        .table-header {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
+        }
+        .table-wrapper {
+            max-height: 400px;
+            overflow: auto;
+            resize: both;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 800px; /* 确保表格有最小宽度 */
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 6px 8px;
+            text-align: left;
+            white-space: nowrap;
+            font-size: 14px;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        /* 滚动条样式 */
+        .table-wrapper::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .table-wrapper::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .table-wrapper::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        .table-wrapper::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        .error {
+            color: red;
+            text-align: center;
+            padding: 10px;
+        }
+        .success {
+            color: green;
+            text-align: center;
+            padding: 10px;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 3px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>IEEE3 电力系统数据</h1>
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-success" onclick="generateData()">生成数据</button>
+            <button class="btn btn-primary" onclick="loadData()">刷新数据</button>
+        </div>
+        
+        <div id="message"></div>
+        
+        <div class="table-container">
+            <div class="table-header">节点数据 (Buses)</div>
+            <div class="table-wrapper">
+                <div id="busTable">
+                    <p>暂无数据，请先生成数据</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <div class="table-header">支路数据 (Branches)</div>
+            <div class="table-wrapper">
+                <div id="branchTable">
+                    <p>暂无数据，请先生成数据</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <div class="table-header">功率流图</div>
+            <div class="table-wrapper">
+                <div id="powerFlowGraph" style="height: 400px; border: 1px solid #ddd;"></div>
+                <div id="powerSummary" style="padding: 10px; background: #f8f9fa; border-top: 1px solid #ddd;">
+                    <p>暂无功率流数据</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <div class="table-header">原始JSON数据</div>
+            <div class="table-wrapper">
+                <div id="rawData">
+                    <p>暂无数据</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showMessage(msg, type = 'success') {
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = `<div class="${type}">${msg}</div>`;
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 3000);
+        }
+
+        async function generateData() {
+            try {
+                showMessage('正在生成数据...', 'success');
+                const response = await fetch('/generate_IEEE3_table');
+                const result = await response.text();
+                
+                if (result === 'success') {
+                    showMessage('数据生成成功！', 'success');
+                    setTimeout(loadData, 1000);
+                } else {
+                    showMessage('生成失败: ' + result, 'error');
+                }
+            } catch (error) {
+                showMessage('请求失败: ' + error.message, 'error');
+            }
+        }
+
+        async function loadData() {
+            try {
+                // 加载节点数据
+                const busResponse = await fetch('/api/table');
+                const tableData = await busResponse.json();
+                
+                // 显示节点数据
+                if (tableData.buses) {
+                    displayTable('busTable', tableData.buses);
+                }
+                
+                // 显示支路数据
+                if (tableData.branches) {
+                    displayTable('branchTable', tableData.branches);
+                }
+                
+                // 加载功率流图数据
+                const powerFlowResponse = await fetch('/api/power-flow-graph');
+                const powerFlowData = await powerFlowResponse.json();
+                displayPowerFlowGraph(powerFlowData);
+                
+                // 加载功率统计信息
+                const summaryResponse = await fetch('/api/power-summary');
+                const summaryData = await summaryResponse.json();
+                displayPowerSummary(summaryData);
+                
+                // 显示原始JSON数据
+                document.getElementById('rawData').innerHTML = 
+                    '<pre>' + JSON.stringify(tableData, null, 2) + '</pre>';
+                    
+                showMessage('数据加载成功', 'success');
+            } catch (error) {
+                showMessage('加载数据失败: ' + error.message, 'error');
+            }
+        }
+
+        function displayTable(containerId, data) {
+            const container = document.getElementById(containerId);
+            
+            if (!data || !data.data || !data.data.columns) {
+                container.innerHTML = '<p>数据格式错误</p>';
+                return;
+            }
+
+            let html = '<table>';
+            
+            // 表头
+            html += '<tr>';
+            data.data.columns.forEach(col => {
+                html += `<th>${col.name || 'Column'}</th>`;
+            });
+            html += '</tr>';
+            
+            // 数据行
+            if (data.data.columns.length > 0) {
+                const maxRows = Math.max(...data.data.columns.map(col => 
+                    col.data ? col.data.length : 0));
+                
+                for (let row = 0; row < maxRows; row++) {
+                    html += '<tr>';
+                    data.data.columns.forEach(col => {
+                        const value = col.data && col.data[row] !== undefined ? col.data[row] : '';
+                        html += `<td>${value}</td>`;
+                    });
+                    html += '</tr>';
+                }
+            }
+            
+            html += '</table>';
+            container.innerHTML = html;
+        }
+
+        function displayPowerFlowGraph(data) {
+            const container = document.getElementById('powerFlowGraph');
+            
+            if (!data.nodes || !data.edges) {
+                container.innerHTML = '<p>功率流数据格式错误</p>';
+                return;
+            }
+
+            const nodes = new vis.DataSet(data.nodes);
+            const edges = new vis.DataSet(data.edges);
+
+            const networkData = {
+                nodes: nodes,
+                edges: edges
+            };
+
+            const options = {
+                layout: {
+                    randomSeed: 2,  // 固定随机种子，保持布局一致
+                    improvedLayout: false  // 禁用自动布局优化
+                },
+                nodes: {
+                    shape: 'box',
+                    margin: 15,
+                    font: {
+                        size: 20,
+                        color: '#333',
+                        bold: true
+                    },
+                    borderWidth: 2,
+                    shadow: true,
+                    physics: false  // 禁用节点物理效果，允许手动拖拽
+                },
+                edges: {
+                    smooth: {
+                        type: 'cubicBezier',
+                        roundness: 0.5
+                    },
+                    font: {
+                        size: 16,
+                        align: 'middle',
+                        background: 'white',
+                        strokeWidth: 3,
+                        strokeColor: 'white'
+                    },
+                    shadow: true,
+                    physics: false  // 禁用边物理效果
+                },
+                physics: {
+                    enabled: false  // 完全禁用物理引擎
+                },
+                interaction: {
+                    hover: true,
+                    tooltipDelay: 200,
+                    dragNodes: true,  // 允许拖拽节点
+                    dragView: true,   // 允许拖拽视图
+                    zoomView: true    // 允许缩放视图
+                },
+                manipulation: {
+                    enabled: false   // 禁用编辑功能
+                }
+            };
+
+            new vis.Network(container, networkData, options);
+        }
+
+        function displayPowerSummary(data) {
+            const container = document.getElementById('powerSummary');
+            
+            if (!data) {
+                container.innerHTML = '<p>暂无功率流统计信息</p>';
+                return;
+            }
+
+            const html = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                    <div><strong>总支路数:</strong> ${data.total_branches}</div>
+                    <div><strong>总有功功率:</strong> ${data.total_active_power?.toFixed(2)} MW</div>
+                    <div><strong>总无功功率:</strong> ${data.total_reactive_power?.toFixed(2)} MVar</div>
+                    <div><strong>有功损耗:</strong> ${data.total_active_loss?.toFixed(2)} MW</div>
+                    <div><strong>无功损耗:</strong> ${data.total_reactive_loss?.toFixed(2)} MVar</div>
+                    <div><strong>最大功率支路:</strong> ${data.max_power_branch?.id} (${data.max_power_branch?.power?.toFixed(2)} MW)</div>
+                    <div><strong>最小功率支路:</strong> ${data.min_power_branch?.id} (${data.min_power_branch?.power?.toFixed(2)} MW)</div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
+        }
+
+        // 页面加载时自动加载数据
+        window.onload = function() {
+            loadData();
+        };
+    </script>
+</body>
+</html>
