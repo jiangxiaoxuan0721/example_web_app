@@ -142,8 +142,3 @@ output/*
 # Except for .gitkeep
 !output/.gitkeep
 output/.gitignore
-
-# Ignore markdown files
-README.md
-INSTRUCTURE.md
-
