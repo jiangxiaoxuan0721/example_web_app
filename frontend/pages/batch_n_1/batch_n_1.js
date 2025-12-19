@@ -137,7 +137,7 @@ window.onload = function() {
 function initComponents() {
     // 初始化KPI卡片组件
     kpiCards = new KPICards('kpi-board', {
-        layout: 'default',
+        layout: 'inline', // 使用一行内布局
         animated: true
     });
 

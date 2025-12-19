@@ -43,19 +43,15 @@ class KPICards {
         
         return `
             <div class="kpi-card ${typeClass} ${loadingClass}" data-id="${card.id}">
-                <div class="kpi-header">
-                    <div class="kpi-icon">${card.icon || '📊'}</div>
-                    ${card.trend ? `
-                        <div class="kpi-trend ${trendClass}">
-                            ${card.trend.direction === 'up' ? '↑' : card.trend.direction === 'down' ? '↓' : '→'}
-                            ${card.trend.value}
-                        </div>
-                    ` : ''}
-                </div>
+                <div class="kpi-icon">${card.icon || '📊'}</div>
                 <div class="kpi-title">${card.title}</div>
                 <div class="kpi-value ${typeClass}">${this.formatValue(card.value, card.format)}</div>
-                ${card.subtitle ? `<div class="kpi-subtitle">${card.subtitle}</div>` : ''}
-                ${card.chart ? this.renderMiniChart(card.chart) : ''}
+                ${card.trend ? `
+                    <div class="kpi-trend ${trendClass}">
+                        ${card.trend.direction === 'up' ? '↑' : card.trend.direction === 'down' ? '↓' : '→'}
+                        ${card.trend.value}
+                    </div>
+                ` : ''}
             </div>
         `;
     }

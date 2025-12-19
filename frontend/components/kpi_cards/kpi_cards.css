@@ -1,7 +1,7 @@
 /* KPI卡片组件样式 */
 .kpi-board {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 20px;
     margin-bottom: 24px;
 }
@@ -13,6 +13,11 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     border: 1px solid var(--border-color);
     transition: all 0.2s ease;
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
 }
 
 .kpi-card:hover {
@@ -21,9 +26,9 @@
 
 .kpi-header {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 12px;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 12px;
 }
 
 .kpi-icon {
@@ -33,20 +38,23 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
+    font-size: 20px;
     background: linear-gradient(135deg, var(--primary-color, #1890ff), var(--secondary-color, #40a9ff));
     color: white;
     flex-shrink: 0;
+    margin-right: 8px;
 }
 
 .kpi-trend {
     display: flex;
     align-items: center;
-    gap: 4px;
-    font-size: 14px;
+    gap: 2px;
+    font-size: 12px;
     font-weight: 500;
-    padding: 4px 8px;
+    padding: 2px 6px;
     border-radius: 4px;
+    white-space: nowrap;
+    margin-left: 8px;
 }
 
 .kpi-trend.up {
@@ -64,17 +72,19 @@
 .kpi-title {
     font-size: 13px;
     color: var(--text-secondary);
-    margin-bottom: 6px;
     font-weight: 500;
     line-height: 1.3;
+    white-space: nowrap;
 }
 
 .kpi-value {
     font-size: 24px;
     font-weight: 600;
     color: var(--text-main);
-    margin-bottom: 8px;
     line-height: 1.2;
+    margin-left: auto;
+    margin-right: 8px;
+    white-space: nowrap;
 }
 
 .kpi-value.primary {
@@ -138,6 +148,20 @@
 .kpi-board.compact {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 16px;
+}
+
+/* 行内布局KPI卡片 */
+.kpi-board.inline {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+}
+
+.kpi-board.inline .kpi-card {
+    flex: 0 0 auto;
+    min-width: 220px;
+    max-width: 280px;
 }
 
 .kpi-board.compact .kpi-card {

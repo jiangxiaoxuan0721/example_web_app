@@ -22,15 +22,15 @@ body {
 }
 
 .header h1 { 
-    font-size: 20px; 
+    font-size: 28px; 
     margin: 0; 
     font-weight: 600;
 }
 
 .batch-info { 
     color: var(--text-secondary); 
-    font-size: 13px; 
-    margin-top: 4px; 
+    font-size: 16px; 
+    margin-top: 6px; 
     display: block; 
 }
 
