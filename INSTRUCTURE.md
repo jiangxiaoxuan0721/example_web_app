@@ -6,7 +6,7 @@
 
 ## 项目结构
 
-```
+```bash
 workspace\\example_web_app\\
 ├── app.py                           # Flask应用入口
 ├── config.py                        # 配置文件

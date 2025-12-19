@@ -452,3 +452,8 @@ function closeDrawer() {
         drawer.close();
     }
 }
+
+function goHome() {
+    // 返回主页，假设主页是 index.html 或根目录
+    window.location.href = '/';
+}
