@@ -77,6 +77,13 @@ const rawData = [
 ];
 
 // ==========================================
+// 1.1 组件实例
+// ==========================================
+let kpiCards = null;
+let dataTable = null;
+let drawer = null;
+
+// ==========================================
 // 2. 辅助函数
 // ==========================================
 const faultTypeMap = {
@@ -118,6 +125,7 @@ const activeFilters = {
 };
 
 window.onload = function() {
+    initComponents();
     processData();
     renderKPI();
     renderTable(processedData);
@@ -125,6 +133,61 @@ window.onload = function() {
     const now = new Date();
     document.getElementById('report-meta').innerText = `报告生成时间: ${now.toLocaleString()} | 记录数: ${processedData.length}`;
 };
+
+function initComponents() {
+    // 初始化KPI卡片组件
+    kpiCards = new KPICards('kpi-board', {
+        layout: 'default',
+        animated: true
+    });
+
+    // 初始化表格组件
+    dataTable = new DataTable('table-container', {
+        columns: [
+            { key: 'id', title: 'Case ID (TransKey)', width: '15%' },
+            { key: 'faultTypeStr', title: '故障类型', width: '10%' },
+            { key: 'volt', title: '最低电压', width: '12%', type: 'number', render: renderVoltageCell },
+            { key: 'freq', title: '最大频偏', width: '12%', type: 'number', render: renderFreqCell },
+            { key: 'angle', title: '最大功角差', width: '12%', type: 'number', render: renderAngleCell },
+            { key: 'status', title: '稳定性结论', width: '25%', render: renderStatusCell },
+            { key: 'actions', title: '操作', width: '8%', render: renderActionsCell }
+        ],
+        data: [],
+        searchable: true,
+        paginated: true,
+        pageSize: 10,
+        selectable: true,
+        sortable: true,
+        toolbarActions: `
+            <div class="v-divider"></div>
+            <button class="btn btn-filter" id="filter-unstable" onclick="toggleFilter('unstable')">
+                ⚠️ 所有异常
+            </button>
+            <button class="btn btn-filter type-error" id="filter-volt" onclick="toggleFilter('volt')">
+                ⚡ 电压越限
+            </button>
+            <button class="btn btn-filter type-warning" id="filter-freq" onclick="toggleFilter('freq')">
+                📉 频率失稳
+            </button>
+            <button class="btn btn-filter type-error" id="filter-angle" onclick="toggleFilter('angle')">
+                📐 功角失稳
+            </button>
+            <div style="margin-left: auto; font-size: 13px; color: #999;">点击行查看详情</div>
+        `,
+        onRowSelect: (rowData, index) => {
+            openDrawer(rowData.index);
+        }
+    });
+
+    // 设置全局表格实例
+    dataTableInstance = dataTable;
+
+    // 初始化抽屉组件
+    drawer = drawerManager.create('batch-drawer', {
+        title: '详细报告',
+        size: 'large'
+    });
+}
 
 function processData() {
     processedData = rawData.map((item, index) => {
@@ -163,54 +226,62 @@ function renderKPI() {
     const freqFail = processedData.filter(d => !d.isFreqOk).length;
     const angleFail = processedData.filter(d => !d.isAngleOk).length;
 
-    document.getElementById('kpi-total').innerText = total;
-    document.getElementById('kpi-volt').innerText = voltFail;
-    document.getElementById('kpi-freq').innerText = freqFail;
-    document.getElementById('kpi-angle').innerText = angleFail;
+    const cards = [
+        KPICards.createCard('total', '仿真总工况数', total, {
+            icon: '⚡',
+            type: 'primary'
+        }),
+        KPICards.createCard('voltage', '电压稳定性异常', voltFail, {
+            icon: '⚡',
+            type: 'danger'
+        }),
+        KPICards.createCard('frequency', '频率稳定性异常', freqFail, {
+            icon: '📉',
+            type: 'warning'
+        }),
+        KPICards.createCard('angle', '功角稳定性异常', angleFail, {
+            icon: '📐',
+            type: 'danger'
+        })
+    ];
+
+    kpiCards.setCards(cards);
 }
 
 function renderTable(data) {
-    const tbody = document.getElementById('table-body');
-    const emptyState = document.getElementById('empty-state');
-    tbody.innerHTML = '';
+    dataTable.setData(data);
+}
 
-    if (data.length === 0) {
-        emptyState.style.display = 'block';
-        return;
+// 表格单元格渲染函数
+function renderVoltageCell(value, row) {
+    const className = !row.isVoltOk ? 'text-error' : '';
+    return `<span class="${className}">${formatNumber(value, 'p.u.')}</span>`;
+}
+
+function renderFreqCell(value, row) {
+    const className = !row.isFreqOk ? 'text-warning' : '';
+    return `<span class="${className}">${formatNumber(value, 'Hz')}</span>`;
+}
+
+function renderAngleCell(value, row) {
+    const className = !row.isAngleOk ? 'text-error' : '';
+    return `<span class="${className}">${formatNumber(value, '°')}</span>`;
+}
+
+function renderStatusCell(value, row) {
+    if (row.isStable) {
+        return '<span class="table-tag table-tag-success">✅ 系统稳定</span>';
+    } else {
+        return row.failureModes.map(m => {
+            let cls = 'table-tag-warning';
+            if(m.includes('功角') || m.includes('电压')) cls = 'table-tag-error';
+            return `<span class="table-tag ${cls}">${m}</span>`;
+        }).join(' ');
     }
-    emptyState.style.display = 'none';
+}
 
-    data.forEach(row => {
-        const tr = document.createElement('tr');
-        
-        let statusHtml = '';
-        if (row.isStable) {
-            statusHtml = '<span class="tag tag-success">✅ 系统稳定</span>';
-        } else {
-            statusHtml = row.failureModes.map(m => {
-                let cls = 'tag-warning';
-                if(m.includes('功角') || m.includes('电压')) cls = 'tag-error';
-                return `<span class="tag ${cls}">${m}</span>`;
-            }).join(' ');
-        }
-
-        // 阈值高亮
-        const voltClass = !row.isVoltOk ? 'text-error' : '';
-        const freqClass = !row.isFreqOk ? 'text-warning' : '';
-        const angleClass = !row.isAngleOk ? 'text-error' : '';
-
-        tr.innerHTML = `
-            <td style="font-family:monospace; font-weight:600;">${row.id}</td>
-            <td>${row.faultTypeStr}</td>
-            <td class="${voltClass}">${formatNumber(row.volt, 'p.u.')}</td>
-            <td class="${freqClass}">${formatNumber(row.freq, 'Hz')}</td>
-            <td class="${angleClass}">${formatNumber(row.angle, '°')}</td>
-            <td>${statusHtml}</td>
-            <td><button class="btn btn-primary" style="padding:4px 10px; font-size:12px;" onclick="openDrawer(${row.index}, event)">详情</button></td>
-        `;
-        tr.onclick = () => openDrawer(row.index);
-        tbody.appendChild(tr);
-    });
+function renderActionsCell(value, row) {
+    return `<button class="btn btn-primary" style="padding:4px 10px; font-size:12px;" onclick="openDrawer(${row.index}, event)">详情</button>`;
 }
 
 // ==========================================
@@ -229,7 +300,9 @@ function toggleFilter(type) {
 }
 
 function applyFilter() {
-    const query = document.getElementById('search-box').value.toLowerCase();
+    // 获取搜索框的值
+    const searchInput = document.querySelector('.table-search');
+    const query = searchInput ? searchInput.value.toLowerCase() : '';
     
     // 检查是否有任何过滤器处于激活状态
     const hasActiveFilters = Object.values(activeFilters).some(v => v);
@@ -265,70 +338,91 @@ function openDrawer(index, event) {
     if(event) event.stopPropagation();
     const data = processedData[index];
     
-    document.getElementById('d-title').innerText = `${data.id} - 详细报告`;
-    document.getElementById('d-key').innerText = data.id;
-    document.getElementById('d-type').innerText = data.faultTypeStr;
-    document.getElementById('d-start-time').innerText = data.timing.start;
-    document.getElementById('d-cut-time').innerText = data.timing.cut;
-
-    document.getElementById('d-volt').innerText = formatNumber(data.volt, 'p.u.');
-    document.getElementById('d-freq').innerText = formatNumber(data.freq, 'Hz');
-    document.getElementById('d-angle').innerText = formatNumber(data.angle, 'deg');
-    
-    const conclusionEl = document.getElementById('d-conclusion');
-    const tagsEl = document.getElementById('d-status-tags');
-    
-    if (data.isStable) {
-        conclusionEl.innerHTML = '<span class="tag tag-success" style="font-size:14px;">✅ 满足 N-1 准则</span>';
-        tagsEl.innerHTML = '<span class="tag tag-success">Stable</span>';
-    } else {
-        const reasons = data.failureModes.join(' & ');
-        conclusionEl.innerHTML = `<span class="tag tag-error" style="font-size:14px;">❌ 不满足: ${reasons}</span>`;
-        tagsEl.innerHTML = `<span class="tag tag-error">Unstable</span>`;
+    if (!drawer) {
+        console.error('Drawer not initialized!');
+        return;
     }
+    
+    // 构建抽屉内容
+    const content = `
+        ${Drawer.createInfoSection('故障场景定义', [
+            { label: '设备标识 (TransKey)', value: data.id },
+            { label: '故障类型', value: data.faultTypeStr },
+            { label: '故障开始时间', value: data.timing.start + ' s' },
+            { label: '故障切除时间', value: data.timing.cut + ' s' }
+        ])}
+        
+        ${Drawer.createInfoSection('关键稳定性指标 (KPIs)', [
+            { label: '母线最低电压 (Min Voltage)', value: formatNumber(data.volt, 'p.u.') },
+            { label: '最大频率偏移 (Max Freq Dev)', value: formatNumber(data.freq, 'Hz') },
+            { label: '发电机最大功角差 (Max Angle Diff)', value: formatNumber(data.angle, 'deg') },
+            { label: '综合判定', value: data.isStable ? '满足 N-1 准则' : `不满足: ${data.failureModes.join(' & ')}`, highlight: true }
+        ], { subtitle: '系统稳定性评估结果' })}
+        
+        <div class="drawer-section">
+            <h4 class="drawer-section-title">仿真波形分析</h4>
+            <div class="img-grid">
+                <div class="chart-placeholder">
+                    <span class="chart-title">图1: 发电机功角 / Rotor Angle</span>
+                    <div class="chart-container">${data.images[0] ? `<img src="${data.images[0]}" alt="Waveform 1" onerror="this.src='https://via.placeholder.com/800x400?text=Image+Load+Error'">` : '<span style="color:#ccc">无图像数据</span>'}</div>
+                </div>
+                <div class="chart-placeholder">
+                    <span class="chart-title">图2: 母线电压 / Bus Voltage</span>
+                    <div class="chart-container">${data.images[1] ? `<img src="${data.images[1]}" alt="Waveform 2" onerror="this.src='https://via.placeholder.com/800x400?text=Image+Load+Error'">` : '<span style="color:#ccc">无图像数据</span>'}</div>
+                </div>
+                <div class="chart-placeholder">
+                    <span class="chart-title">图3: 系统频率 / Frequency</span>
+                    <div class="chart-container">${data.images[2] ? `<img src="${data.images[2]}" alt="Waveform 3" onerror="this.src='https://via.placeholder.com/800x400?text=Image+Load+Error'">` : '<span style="color:#ccc">无图像数据</span>'}</div>
+                </div>
+                <div class="chart-placeholder">
+                    <span class="chart-title">图4: 发电机有功 / Active Power</span>
+                    <div class="chart-container">${data.images[3] ? `<img src="${data.images[3]}" alt="Waveform 4" onerror="this.src='https://via.placeholder.com/800x400?text=Image+Load+Error'">` : '<span style="color:#ccc">无图像数据</span>'}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="drawer-section">
+            <h4 class="drawer-section-title">原始数据文件下载</h4>
+            <table class="file-list-table">
+                <thead>
+                    <tr>
+                        <th>文件类型</th>
+                        <th>文件名</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.files.flow_url ? `
+                        <tr>
+                            <td>潮流计算结果 (Flow HDF5)</td>
+                            <td style="word-break:break-all; font-family:monospace; color:#666;">${data.files.flow_url.split('/').pop() || 'download.h5'}</td>
+                            <td><a href="${data.files.flow_url}" class="download-btn" download target="_blank">⬇️ 下载</a></td>
+                        </tr>
+                    ` : ''}
+                    ${data.files.emt_url ? `
+                        <tr>
+                            <td>电磁暂态结果 (EMT HDF5)</td>
+                            <td style="word-break:break-all; font-family:monospace; color:#666;">${data.files.emt_url.split('/').pop() || 'download.h5'}</td>
+                            <td><a href="${data.files.emt_url}" class="download-btn" download target="_blank">⬇️ 下载</a></td>
+                        </tr>
+                    ` : ''}
+                </tbody>
+            </table>
+        </div>
+    `;
 
-    const containers = [
-        document.getElementById('img-container-1'),
-        document.getElementById('img-container-2'),
-        document.getElementById('img-container-3'),
-        document.getElementById('img-container-4')
-    ];
-
-    data.images.forEach((url, i) => {
-        if (i < 4) {
-            if (url && url.trim() !== '') {
-                containers[i].innerHTML = `<img src="${url}" alt="Waveform ${i+1}" onerror="this.src='https://via.placeholder.com/800x400?text=Image+Load+Error'">`;
-            } else {
-                containers[i].innerHTML = `<span style="color:#ccc">无图像数据</span>`;
-            }
-        }
-    });
-
-    const fileBody = document.getElementById('d-file-list');
-    fileBody.innerHTML = '';
-    const fileMap = [
-        { label: '潮流计算结果 (Flow HDF5)', url: data.files.flow_url },
-        { label: '电磁暂态结果 (EMT HDF5)', url: data.files.emt_url }
-    ];
-
-    fileMap.forEach(f => {
-        if (f.url) {
-            const fileName = f.url.split('/').pop() || 'download.h5';
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${f.label}</td>
-                <td style="word-break:break-all; font-family:monospace; color:#666;">${fileName}</td>
-                <td><a href="${f.url}" class="download-btn" download target="_blank">⬇️ 下载</a></td>
-            `;
-            fileBody.appendChild(tr);
-        }
-    });
-
-    document.getElementById('overlay').classList.add('open');
-    document.getElementById('drawer').classList.add('open');
+    // 更新抽屉内容并打开
+    if (drawer) {
+        drawer.setTitle(`${data.id} - 详细报告`);
+        drawer.setSubtitle(data.isStable ? Drawer.createStatusIndicator('Stable', 'success') : Drawer.createStatusIndicator('Unstable', 'error'));
+        drawer.setContent(content);
+        drawer.open();
+    }
 }
 
 function closeDrawer() {
-    document.getElementById('overlay').classList.remove('open');
-    document.getElementById('drawer').classList.remove('open');
+    // 使用抽屉组件关闭
+    if (drawer) {
+        drawer.close();
+    }
 }

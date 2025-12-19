@@ -93,14 +93,14 @@ class Drawer {
         
         this.isOpen = true;
         
-        // 显示遮罩层
+        // 直接设置样式，确保显示
         this.overlay.style.display = 'block';
+        this.overlay.style.opacity = '1';
+        this.drawer.style.right = '0px';
         
-        // 触发重排以启动动画
-        requestAnimationFrame(() => {
-            this.overlay.classList.add('open');
-            this.drawer.classList.add('open');
-        });
+        // 添加类名
+        this.overlay.classList.add('open');
+        this.drawer.classList.add('open');
         
         // 禁止页面滚动
         document.body.style.overflow = 'hidden';
@@ -156,13 +156,13 @@ class Drawer {
     setSubtitle(subtitle) {
         const subtitleElement = this.drawer.querySelector('.drawer-subtitle');
         if (subtitleElement) {
-            subtitleElement.textContent = subtitle;
+            subtitleElement.innerHTML = subtitle;
         } else if (subtitle) {
             const titleElement = this.drawer.querySelector('.drawer-title');
             if (titleElement) {
                 const subtitleDiv = document.createElement('div');
                 subtitleDiv.className = 'drawer-subtitle';
-                subtitleDiv.textContent = subtitle;
+                subtitleDiv.innerHTML = subtitle;
                 titleElement.parentNode.insertBefore(subtitleDiv, titleElement.nextSibling);
             }
         }
