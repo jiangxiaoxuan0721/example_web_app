@@ -1,0 +1,253 @@
+/* KPI卡片组件样式 */
+.kpi-board {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.kpi-card {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #e9ecef;
+}
+
+.kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color, #1890ff), var(--secondary-color, #40a9ff));
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.kpi-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.kpi-card:hover::before {
+    transform: scaleX(1);
+}
+
+.kpi-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.kpi-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    background: linear-gradient(135deg, var(--primary-color, #1890ff), var(--secondary-color, #40a9ff));
+    color: white;
+    flex-shrink: 0;
+}
+
+.kpi-trend {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.kpi-trend.up {
+    color: var(--success-color, #52c41a);
+    background: rgba(82, 196, 26, 0.1);
+}
+
+.kpi-trend.down {
+    color: var(--danger-color, #f5222d);
+    background: rgba(245, 34, 45, 0.1);
+}
+
+.kpi-trend.stable {
+    color: var(--warning-color, #faad14);
+    background: rgba(250, 173, 20, 0.1);
+}
+
+.kpi-title {
+    font-size: 14px;
+    color: #4a5568;
+    margin-bottom: 8px;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.kpi-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 12px;
+    line-height: 1.2;
+}
+
+.kpi-value.primary {
+    color: var(--primary-color, #1890ff);
+}
+
+.kpi-value.success {
+    color: var(--success-color, #52c41a);
+}
+
+.kpi-value.warning {
+    color: var(--warning-color, #faad14);
+}
+
+.kpi-value.danger {
+    color: var(--danger-color, #f5222d);
+}
+
+.kpi-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary, #999);
+    margin-top: 8px;
+}
+
+.kpi-chart {
+    margin-top: 16px;
+    height: 60px;
+    background: #fafafa;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+}
+
+.kpi-sparkline {
+    width: 100%;
+    height: 100%;
+}
+
+/* 不同类型的KPI卡片 */
+.kpi-card.primary .kpi-icon {
+    background: linear-gradient(135deg, var(--primary-color, #1890ff), var(--secondary-color, #40a9ff));
+}
+
+.kpi-card.success .kpi-icon {
+    background: linear-gradient(135deg, var(--success-color, #52c41a), #73d13d);
+}
+
+.kpi-card.warning .kpi-icon {
+    background: linear-gradient(135deg, var(--warning-color, #faad14), #ffc53d);
+}
+
+.kpi-card.danger .kpi-icon {
+    background: linear-gradient(135deg, var(--danger-color, #f5222d), #ff4d4f);
+}
+
+.kpi-card.info .kpi-icon {
+    background: linear-gradient(135deg, #722ed1, #9254de);
+}
+
+/* 紧凑型KPI卡片 */
+.kpi-board.compact {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.kpi-board.compact .kpi-card {
+    padding: 20px;
+}
+
+.kpi-board.compact .kpi-value {
+    font-size: 28px;
+}
+
+.kpi-board.compact .kpi-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+}
+
+/* 大型KPI卡片 */
+.kpi-board.large {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.kpi-board.large .kpi-card {
+    padding: 32px;
+}
+
+.kpi-board.large .kpi-value {
+    font-size: 36px;
+}
+
+.kpi-board.large .kpi-icon {
+    width: 56px;
+    height: 56px;
+    font-size: 28px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .kpi-board {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .kpi-card {
+        padding: 20px;
+    }
+    
+    .kpi-value {
+        font-size: 28px;
+    }
+    
+    .kpi-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .kpi-header {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .kpi-trend {
+        align-self: flex-start;
+    }
+}
+
+/* 加载动画 */
+.kpi-card.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.kpi-card.loading .kpi-value::after {
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid var(--primary-color, #1890ff);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-left: 10px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

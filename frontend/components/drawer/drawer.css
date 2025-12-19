@@ -1,0 +1,382 @@
+/* 抽屉组件样式 */
+.drawer-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    z-index: 1000;
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.drawer-overlay.open {
+    display: block;
+    opacity: 1;
+}
+
+.drawer {
+    position: fixed;
+    top: 0;
+    right: -800px;
+    width: 800px;
+    height: 100%;
+    background: white;
+    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.15);
+    transition: right 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+}
+
+.drawer.open {
+    right: 0;
+}
+
+/* 不同尺寸的抽屉 */
+.drawer.small {
+    width: 400px;
+    right: -400px;
+}
+
+.drawer.large {
+    width: 1000px;
+    right: -1000px;
+}
+
+.drawer.full {
+    width: 100%;
+    right: -100%;
+}
+
+/* 不同方向的抽屉 */
+.drawer.left {
+    left: -800px;
+    right: auto;
+}
+
+.drawer.left.open {
+    left: 0;
+}
+
+.drawer.left.small {
+    left: -400px;
+}
+
+.drawer.left.large {
+    left: -1000px;
+}
+
+.drawer.left.full {
+    left: -100%;
+}
+
+.drawer-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color, #e8e8e8);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fafafa;
+    flex-shrink: 0;
+}
+
+.drawer-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-main, #333);
+    margin: 0;
+}
+
+.drawer-subtitle {
+    font-size: 14px;
+    color: var(--text-secondary, #666);
+    margin-top: 4px;
+}
+
+.drawer-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.drawer-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--text-secondary, #999);
+    padding: 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.drawer-close:hover {
+    color: var(--text-main, #333);
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.drawer-body {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+    background: white;
+}
+
+.drawer-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-color, #e8e8e8);
+    background: #fafafa;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+/* 抽屉内容样式 */
+.drawer-section {
+    margin-bottom: 32px;
+}
+
+.drawer-section:last-child {
+    margin-bottom: 0;
+}
+
+.drawer-section-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    border-left: 4px solid var(--primary-color, #1890ff);
+    padding-left: 12px;
+    color: var(--text-main, #333);
+}
+
+.drawer-section-subtitle {
+    font-size: 14px;
+    color: var(--text-secondary, #666);
+    margin-top: 4px;
+}
+
+/* 信息网格 */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #f0f0f0;
+}
+
+.info-grid.single-column {
+    grid-template-columns: 1fr;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-item label {
+    color: var(--text-secondary, #666);
+    font-size: 12px;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.info-item span {
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--text-main, #333);
+    word-break: break-all;
+}
+
+.info-item .value-highlight {
+    color: var(--primary-color, #1890ff);
+    font-weight: 600;
+}
+
+/* 状态指示器 */
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-indicator.success {
+    background: #f6ffed;
+    color: var(--success-color, #52c41a);
+    border: 1px solid #b7eb8f;
+}
+
+.status-indicator.warning {
+    background: #fffbe6;
+    color: var(--warning-color, #faad14);
+    border: 1px solid #ffe58f;
+}
+
+.status-indicator.error {
+    background: #fff1f0;
+    color: var(--danger-color, #f5222d);
+    border: 1px solid #ffa39e;
+}
+
+.status-indicator.info {
+    background: #e6f7ff;
+    color: var(--primary-color, #1890ff);
+    border: 1px solid #91d5ff;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+/* 时间线 */
+.drawer-timeline {
+    position: relative;
+    padding-left: 20px;
+}
+
+.drawer-timeline::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    background: #e8e8e8;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-item:last-child {
+    margin-bottom: 0;
+}
+
+.timeline-dot {
+    position: absolute;
+    left: -14px;
+    top: 6px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid var(--primary-color, #1890ff);
+}
+
+.timeline-content {
+    background: #f9f9f9;
+    padding: 12px 16px;
+    border-radius: 6px;
+    border: 1px solid #f0f0f0;
+}
+
+.timeline-time {
+    font-size: 12px;
+    color: var(--text-secondary, #666);
+    margin-bottom: 4px;
+}
+
+.timeline-text {
+    font-size: 14px;
+    color: var(--text-main, #333);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .drawer {
+        width: 100%;
+        right: -100%;
+    }
+    
+    .drawer.small,
+    .drawer.large {
+        width: 100%;
+        right: -100%;
+    }
+    
+    .drawer.left {
+        left: -100%;
+    }
+    
+    .drawer.left.small,
+    .drawer.left.large {
+        left: -100%;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .drawer-body {
+        padding: 16px;
+    }
+    
+    .drawer-header {
+        padding: 16px;
+    }
+    
+    .drawer-footer {
+        padding: 12px 16px;
+    }
+}
+
+/* 动画效果 */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+    }
+    to {
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(100%);
+    }
+}
+
+/* 加载状态 */
+.drawer.loading .drawer-body {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.drawer.loading .drawer-body::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 32px;
+    height: 32px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid var(--primary-color, #1890ff);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    transform: translate(-50%, -50%);
+}
+
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}

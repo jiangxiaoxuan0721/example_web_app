@@ -1,0 +1,108 @@
+/* 功能卡片样式 */
+.function-card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.function-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #1e3c72, #2a5298);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.function-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+}
+
+.function-card:hover::before {
+    transform: scaleX(1);
+}
+
+.card-icon {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, #1e3c72, #2a5298);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: white;
+}
+
+.card-title {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #1e3c72;
+    margin-bottom: 12px;
+}
+
+.card-description {
+    color: #666;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.card-status {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.status-available {
+    background: #e8f5e8;
+    color: #2d7d2d;
+}
+
+.status-development {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-coming-soon {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+
+
+/* 动画效果 */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.function-card {
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+.function-card:nth-child(1) { animation-delay: 0.1s; }
+.function-card:nth-child(2) { animation-delay: 0.2s; }
+.function-card:nth-child(3) { animation-delay: 0.3s; }
+.function-card:nth-child(4) { animation-delay: 0.4s; }
+.function-card:nth-child(5) { animation-delay: 0.5s; }
+.function-card:nth-child(6) { animation-delay: 0.6s; }

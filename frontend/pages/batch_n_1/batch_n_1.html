@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>批量 N-1 稳定性分析报告 (Enhanced Layout)</title>
+    <link rel="stylesheet" href="/pages/batch_n_1/batch_n_1.css">
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div>
+            <h1>Batch N-1 稳定性分析报告</h1>
+            <span class="batch-info" id="report-meta">生成时间: -- | 任务ID: --</span>
+        </div>
+        <button class="btn btn-primary" onclick="window.print()">🖨️ 导出报告/打印</button>
+    </div>
+
+    <div class="kpi-board">
+        <div class="kpi-card">
+            <div class="kpi-title">仿真总工况数</div>
+            <div class="kpi-value" id="kpi-total">--</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">电压稳定性异常</div>
+            <div class="kpi-value error" id="kpi-volt">--</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">频率稳定性异常</div>
+            <div class="kpi-value warning" id="kpi-freq">--</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">功角稳定性异常</div>
+            <div class="kpi-value error" id="kpi-angle">--</div>
+        </div>
+    </div>
+
+    <div class="main-card">
+        <div class="toolbar">
+            <input type="text" class="search-input" id="search-box" placeholder="搜索设备ID..." onkeyup="applyFilter()">
+            
+            <div class="v-divider"></div>
+
+            <button class="btn btn-filter" id="filter-unstable" onclick="toggleFilter('unstable')">
+                ⚠️ 所有异常
+            </button>
+            <button class="btn btn-filter type-error" id="filter-volt" onclick="toggleFilter('volt')">
+                ⚡ 电压越限
+            </button>
+            <button class="btn btn-filter type-warning" id="filter-freq" onclick="toggleFilter('freq')">
+                📉 频率失稳
+            </button>
+            <button class="btn btn-filter type-error" id="filter-angle" onclick="toggleFilter('angle')">
+                📐 功角失稳
+            </button>
+            
+            <div style="margin-left: auto; font-size: 13px; color: #999;">点击行查看详情</div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 15%">Case ID (TransKey)</th>
+                    <th style="width: 10%">故障类型</th>
+                    <th style="width: 12%">最低电压</th>
+                    <th style="width: 12%">最大频偏</th>
+                    <th style="width: 12%">最大功角差</th>
+                    <th style="width: 25%">稳定性结论</th>
+                    <th style="width: 8%">操作</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                </tbody>
+        </table>
+        <div id="empty-state" style="padding: 40px; text-align: center; color: #999; display: none;">
+            没有找到匹配的数据
+        </div>
+    </div>
+</div>
+
+<div class="drawer-overlay" id="overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+    <div class="drawer-header">
+        <div>
+            <h2 style="margin:0; font-size:18px;" id="d-title">Case Detail</h2>
+            <div id="d-status-tags" style="margin-top: 8px;"></div>
+        </div>
+        <button class="close-btn" onclick="closeDrawer()">×</button>
+    </div>
+    <div class="drawer-body">
+        
+        <div class="detail-section">
+            <div class="section-title">故障场景定义</div>
+            <div class="info-grid">
+                <div class="info-item"><label>设备标识 (TransKey)</label><span id="d-key">--</span></div>
+                <div class="info-item"><label>故障类型</label><span id="d-type">--</span></div>
+                <div class="info-item"><label>故障开始时间</label><span id="d-start-time">--</span> s</div>
+                <div class="info-item"><label>故障切除时间</label><span id="d-cut-time">--</span> s</div>
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <div class="section-title">关键稳定性指标 (KPIs)</div>
+            <div class="info-grid" style="background: #fffbe6; border-color: #ffe58f;">
+                <div class="info-item"><label>母线最低电压 (Min Voltage)</label><span id="d-volt">--</span></div>
+                <div class="info-item"><label>最大频率偏移 (Max Freq Dev)</label><span id="d-freq">--</span></div>
+                <div class="info-item"><label>发电机最大功角差 (Max Angle Diff)</label><span id="d-angle">--</span></div>
+                <div class="info-item"><label>综合判定</label><span id="d-conclusion">--</span></div>
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <div class="section-title">仿真波形分析</div>
+            <div class="img-grid">
+                <div class="chart-placeholder">
+                    <span class="chart-title">图1: 发电机功角 / Rotor Angle</span>
+                    <div class="chart-container" id="img-container-1"></div>
+                </div>
+                <div class="chart-placeholder">
+                    <span class="chart-title">图2: 母线电压 / Bus Voltage</span>
+                    <div class="chart-container" id="img-container-2"></div>
+                </div>
+                <div class="chart-placeholder">
+                    <span class="chart-title">图3: 系统频率 / Frequency</span>
+                    <div class="chart-container" id="img-container-3"></div>
+                </div>
+                <div class="chart-placeholder">
+                    <span class="chart-title">图4: 发电机有功 / Active Power</span>
+                    <div class="chart-container" id="img-container-4"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <div class="section-title">原始数据文件下载</div>
+            <table class="file-list-table">
+                <thead>
+                    <tr>
+                        <th>文件类型</th>
+                        <th>文件名</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="d-file-list">
+                    </tbody>
+            </table>
+        </div>
+        
+    </div>
+</div>
+
+<script src="/pages/batch_n_1/batch_n_1.js"></script>
+
+</body>
+</html>

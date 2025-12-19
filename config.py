@@ -9,8 +9,8 @@ class Config:
     FRONTEND_DIR = os.path.join(os.path.dirname(__file__), 'frontend')
     OUTPUT_DIR = os.path.join(os.path.dirname(__file__), 'output')
 
-    TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), 'frontend', 'templates')
-    STATIC_DIR = os.path.join(os.path.dirname(__file__), 'frontend', 'static')
+    TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), 'frontend', 'pages')
+    STATIC_DIR = os.path.join(os.path.dirname(__file__), 'frontend')
 
     SERVER_HOST = '0.0.0.0'
     SERVER_PORT = 50890
