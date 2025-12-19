@@ -39,6 +39,7 @@
         .toolbar { padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .search-input { padding: 6px 10px; border: 1px solid #d9d9d9; border-radius: 4px; width: 220px; outline: none; transition: border 0.3s; height: 32px; box-sizing: border-box;}
         .search-input:focus { border-color: var(--primary-color); }
+        .search-btn { margin-left: 8px; }
         
         .btn { padding: 5px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; transition: 0.2s; height: 32px; display: inline-flex; align-items: center; justify-content: center; }
         .btn-primary { background: var(--primary-color); color: white; }
@@ -165,7 +166,8 @@
 
     <div class="main-card">
         <div class="toolbar">
-            <input type="text" class="search-input" id="search-box" placeholder="搜索设备ID..." onkeyup="applyFilter()">
+            <input type="text" class="search-input" id="search-box" placeholder="搜索设备ID..." onkeypress="if(event.key === 'Enter') applyFilter()">
+            <button class="btn btn-primary search-btn" onclick="applyFilter()">搜索</button>
             
             <div class="v-divider"></div>
 
@@ -497,43 +499,69 @@
     // ==========================================
 
     function toggleFilter(type) {
-        // 切换状态
-        activeFilters[type] = !activeFilters[type];
+        // 检查当前按钮是否已经是激活状态
+        const wasActive = activeFilters[type];
         
-        // 更新按钮外观
-        const btn = document.getElementById(`filter-${type}`);
-        btn.setAttribute('data-active', activeFilters[type]);
+        // 清除所有筛选状态
+        Object.keys(activeFilters).forEach(key => {
+            activeFilters[key] = false;
+            const btn = document.getElementById(`filter-${key}`);
+            if (btn) {
+                btn.setAttribute('data-active', 'false');
+            }
+        });
+        
+        // 如果当前按钮之前不是激活状态，则激活它
+        if (!wasActive) {
+            activeFilters[type] = true;
+            const btn = document.getElementById(`filter-${type}`);
+            if (btn) {
+                btn.setAttribute('data-active', 'true');
+            }
+        }
         
         applyFilter();
     }
 
+    // 防抖函数
+    let debounceTimer;
+    function debouncedApplyFilter() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(applyFilter, 300);
+    }
+
     function applyFilter() {
-        const query = document.getElementById('search-box').value.toLowerCase();
-        
-        // 检查是否有任何过滤器处于激活状态
-        const hasActiveFilters = Object.values(activeFilters).some(v => v);
-
-        const filtered = processedData.filter(item => {
-            // 1. 文本搜索过滤
-            const matchesSearch = item.id.toLowerCase().includes(query);
-            if (!matchesSearch) return false;
-
-            // 2. 按钮状态过滤
-            // 如果没有选任何按钮，只看搜索结果
-            if (!hasActiveFilters) return true;
-
-            // 如果选了按钮，采用 OR 逻辑 (满足任一选中条件即可)
-            let matchFilter = false;
+        try {
+            const searchBox = document.getElementById('search-box');
+            if (!searchBox) return;
             
-            if (activeFilters.unstable && !item.isStable) matchFilter = true;
-            if (activeFilters.volt && !item.isVoltOk) matchFilter = true;
-            if (activeFilters.freq && !item.isFreqOk) matchFilter = true;
-            if (activeFilters.angle && !item.isAngleOk) matchFilter = true;
+            const query = searchBox.value.toLowerCase();
+            
+            // 检查是否有任何过滤器处于激活状态
+            const hasActiveFilters = Object.values(activeFilters).some(v => v);
 
-            return matchFilter;
-        });
+            const filtered = processedData.filter(item => {
+                // 1. 文本搜索过滤
+                const matchesSearch = !query || item.id.toLowerCase().includes(query);
+                if (!matchesSearch) return false;
 
-        renderTable(filtered);
+                // 2. 按钮状态过滤
+                // 如果没有选任何按钮，只看搜索结果
+                if (!hasActiveFilters) return true;
+
+                // 单选模式：只检查当前激活的筛选条件
+                if (activeFilters.unstable && !item.isStable) return true;
+                if (activeFilters.volt && !item.isVoltOk) return true;
+                if (activeFilters.freq && !item.isFreqOk) return true;
+                if (activeFilters.angle && !item.isAngleOk) return true;
+
+                return false;
+            });
+
+            renderTable(filtered);
+        } catch (error) {
+            console.error('搜索过滤错误:', error);
+        }
     }
 
     // ==========================================

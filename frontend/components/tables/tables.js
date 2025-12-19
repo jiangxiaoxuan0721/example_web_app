@@ -51,7 +51,8 @@ class DataTable {
             <div class="table-toolbar">
                 ${this.options.searchable ? `
                     <input type="text" class="table-search" placeholder="搜索..." 
-                           onkeyup="dataTableInstance.handleSearch(this.value)">
+                           onkeypress="if(event.key === 'Enter') { if(typeof applyFilter === 'function') applyFilter(); else dataTableInstance.handleSearch(this.value) }">
+                    <button class="btn btn-primary btn-sm" onclick="if(typeof applyFilter === 'function') applyFilter(); else dataTableInstance.handleSearch(this.previousElementSibling.value)">搜索</button>
                 ` : ''}
                 ${this.options.toolbarActions || ''}
             </div>

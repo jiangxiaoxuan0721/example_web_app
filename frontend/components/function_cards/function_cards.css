@@ -1,53 +1,24 @@
 /* 功能卡片样式 */
 .function-card {
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 12px;
-    padding: 30px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    transition: all 0.3s ease;
+    background: white;
+    border-radius: 6px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
     cursor: pointer;
-    position: relative;
-    overflow: hidden;
-}
-
-.function-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #1e3c72, #2a5298);
-    transform: scaleX(0);
-    transition: transform 0.3s ease;
 }
 
 .function-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
-}
-
-.function-card:hover::before {
-    transform: scaleX(1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .card-icon {
-    width: 60px;
-    height: 60px;
-    margin-bottom: 20px;
-    background: linear-gradient(135deg, #1e3c72, #2a5298);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    color: white;
+    display: none;
 }
 
 .card-title {
-    font-size: 1.4rem;
+    font-size: 18px;
     font-weight: 600;
     color: #1e3c72;
     margin-bottom: 12px;

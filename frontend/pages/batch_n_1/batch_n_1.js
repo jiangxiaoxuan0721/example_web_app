@@ -161,16 +161,16 @@ function initComponents() {
         toolbarActions: `
             <div class="v-divider"></div>
             <button class="btn btn-filter" id="filter-unstable" onclick="toggleFilter('unstable')">
-                ⚠️ 所有异常
+                所有异常
             </button>
             <button class="btn btn-filter type-error" id="filter-volt" onclick="toggleFilter('volt')">
-                ⚡ 电压越限
+                电压越限
             </button>
             <button class="btn btn-filter type-warning" id="filter-freq" onclick="toggleFilter('freq')">
-                📉 频率失稳
+                频率失稳
             </button>
             <button class="btn btn-filter type-error" id="filter-angle" onclick="toggleFilter('angle')">
-                📐 功角失稳
+                功角失稳
             </button>
             <div style="margin-left: auto; font-size: 13px; color: #999;">点击行查看详情</div>
         `,
@@ -270,7 +270,7 @@ function renderAngleCell(value, row) {
 
 function renderStatusCell(value, row) {
     if (row.isStable) {
-        return '<span class="table-tag table-tag-success">✅ 系统稳定</span>';
+        return '<span class="table-tag table-tag-success">系统稳定</span>';
     } else {
         return row.failureModes.map(m => {
             let cls = 'table-tag-warning';
@@ -281,7 +281,7 @@ function renderStatusCell(value, row) {
 }
 
 function renderActionsCell(value, row) {
-    return `<button class="btn btn-primary" style="padding:4px 10px; font-size:12px;" onclick="openDrawer(${row.index}, event)">详情</button>`;
+    return `<button class="btn btn-primary btn-sm" onclick="openDrawer(${row.index}, event)">查看</button>`;
 }
 
 // ==========================================
@@ -289,45 +289,71 @@ function renderActionsCell(value, row) {
 // ==========================================
 
 function toggleFilter(type) {
-    // 切换状态
-    activeFilters[type] = !activeFilters[type];
+    // 检查当前按钮是否已经是激活状态
+    const wasActive = activeFilters[type];
     
-    // 更新按钮外观
-    const btn = document.getElementById(`filter-${type}`);
-    btn.setAttribute('data-active', activeFilters[type]);
+    // 清除所有筛选状态
+    Object.keys(activeFilters).forEach(key => {
+        activeFilters[key] = false;
+        const btn = document.getElementById(`filter-${key}`);
+        if (btn) {
+            btn.setAttribute('data-active', 'false');
+        }
+    });
+    
+    // 如果当前按钮之前不是激活状态，则激活它
+    if (!wasActive) {
+        activeFilters[type] = true;
+        const btn = document.getElementById(`filter-${type}`);
+        if (btn) {
+            btn.setAttribute('data-active', 'true');
+        }
+    }
     
     applyFilter();
 }
 
 function applyFilter() {
-    // 获取搜索框的值
-    const searchInput = document.querySelector('.table-search');
-    const query = searchInput ? searchInput.value.toLowerCase() : '';
-    
-    // 检查是否有任何过滤器处于激活状态
-    const hasActiveFilters = Object.values(activeFilters).some(v => v);
-
-    const filtered = processedData.filter(item => {
-        // 1. 文本搜索过滤
-        const matchesSearch = item.id.toLowerCase().includes(query);
-        if (!matchesSearch) return false;
-
-        // 2. 按钮状态过滤
-        // 如果没有选任何按钮，只看搜索结果
-        if (!hasActiveFilters) return true;
-
-        // 如果选了按钮，采用 OR 逻辑 (满足任一选中条件即可)
-        let matchFilter = false;
+    try {
+        // 获取搜索框的值 - 尝试多个可能的搜索框
+        let query = '';
+        const searchInput1 = document.getElementById('search-box');
+        const searchInput2 = document.querySelector('.table-search');
         
-        if (activeFilters.unstable && !item.isStable) matchFilter = true;
-        if (activeFilters.volt && !item.isVoltOk) matchFilter = true;
-        if (activeFilters.freq && !item.isFreqOk) matchFilter = true;
-        if (activeFilters.angle && !item.isAngleOk) matchFilter = true;
+        if (searchInput1) {
+            query = searchInput1.value.toLowerCase();
+        } else if (searchInput2) {
+            query = searchInput2.value.toLowerCase();
+        }
+        
+        // 检查是否有任何过滤器处于激活状态
+        const hasActiveFilters = Object.values(activeFilters).some(v => v);
 
-        return matchFilter;
-    });
+        const filtered = processedData.filter(item => {
+            // 1. 文本搜索过滤
+            const matchesSearch = !query || item.id.toLowerCase().includes(query);
+            if (!matchesSearch) return false;
 
-    renderTable(filtered);
+            // 2. 按钮状态过滤
+            // 如果没有选任何按钮，只看搜索结果
+            if (!hasActiveFilters) return true;
+
+            // 单选模式：只检查当前激活的筛选条件
+            if (activeFilters.unstable && !item.isStable) return true;
+            if (activeFilters.volt && !item.isVoltOk) return true;
+            if (activeFilters.freq && !item.isFreqOk) return true;
+            if (activeFilters.angle && !item.isAngleOk) return true;
+
+            return false;
+        });
+
+        // 安全地渲染表格
+        if (dataTable && typeof dataTable.setData === 'function') {
+            renderTable(filtered);
+        }
+    } catch (error) {
+        console.error('搜索过滤错误:', error);
+    }
 }
 
 // ==========================================
@@ -396,14 +422,14 @@ function openDrawer(index, event) {
                         <tr>
                             <td>潮流计算结果 (Flow HDF5)</td>
                             <td style="word-break:break-all; font-family:monospace; color:#666;">${data.files.flow_url.split('/').pop() || 'download.h5'}</td>
-                            <td><a href="${data.files.flow_url}" class="download-btn" download target="_blank">⬇️ 下载</a></td>
+                            <td><a href="${data.files.flow_url}" class="download-btn" download target="_blank">下载</a></td>
                         </tr>
                     ` : ''}
                     ${data.files.emt_url ? `
                         <tr>
                             <td>电磁暂态结果 (EMT HDF5)</td>
                             <td style="word-break:break-all; font-family:monospace; color:#666;">${data.files.emt_url.split('/').pop() || 'download.h5'}</td>
-                            <td><a href="${data.files.emt_url}" class="download-btn" download target="_blank">⬇️ 下载</a></td>
+                            <td><a href="${data.files.emt_url}" class="download-btn" download target="_blank">下载</a></td>
                         </tr>
                     ` : ''}
                 </tbody>

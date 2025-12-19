@@ -1,15 +1,4 @@
 /* 页面特定样式 - 组件化后的补充样式 */
-:root {
-    --primary-color: #1890ff;
-    --success-color: #52c41a;
-    --warning-color: #faad14;
-    --error-color: #f5222d;
-    --bg-color: #f0f2f5;
-    --card-bg: #ffffff;
-    --text-main: #333;
-    --text-secondary: #666;
-    --border-color: #e8e8e8;
-}
 
 body { 
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
@@ -33,21 +22,22 @@ body {
 }
 
 .header h1 { 
-    font-size: 24px; 
+    font-size: 20px; 
     margin: 0; 
+    font-weight: 600;
 }
 
 .batch-info { 
     color: var(--text-secondary); 
-    font-size: 14px; 
-    margin-top: 5px; 
+    font-size: 13px; 
+    margin-top: 4px; 
     display: block; 
 }
 
 /* 主数据表格区 */
 .main-card { 
     background: var(--card-bg); 
-    border-radius: 8px; 
+    border-radius: 6px; 
     box-shadow: 0 1px 2px rgba(0,0,0,0.05); 
     overflow: hidden; 
 }
@@ -97,37 +87,34 @@ body {
 /* 波形图样式更新 */
 .img-grid { 
     display: grid; 
-    grid-template-columns: 1fr; /* 单列布局 */
-    gap: 24px; 
+    grid-template-columns: 1fr;
+    gap: 16px; 
 } 
 
 .chart-placeholder { 
     background: #fff; 
-    border: 1px solid #e8e8e8; 
-    border-radius: 8px; 
+    border: 1px solid var(--border-color); 
+    border-radius: 6px; 
     padding: 16px; 
 }
 
 .chart-title { 
-    font-size: 14px; 
+    font-size: 13px; 
     font-weight: 600; 
     margin-bottom: 12px; 
     display: block; 
-    color: #595959; 
-    border-left: 3px solid #bfbfbf; 
-    padding-left: 8px; 
+    color: var(--text-secondary); 
 }
 
 .chart-container { 
-    height: 320px; /* 增加高度，使大图更清晰 */
-    background: #f5f5f5; 
+    height: 280px;
+    background: #fafafa; 
     display: flex; 
     align-items: center; 
     justify-content: center; 
     border-radius: 4px; 
     overflow: hidden;
-    position: relative;
-    border: 1px solid #eee;
+    border: 1px solid var(--border-color);
 }
 
 .chart-container img {
@@ -135,25 +122,19 @@ body {
     height: 100%;
     object-fit: contain; 
     background: white;
-    transition: transform 0.3s;
-}
-
-.chart-container img:hover { 
-    transform: scale(1.02); 
-    cursor: zoom-in; 
 }
 
 /* 文件列表 */
 .file-list-table { 
     width: 100%; 
     border-collapse: collapse; 
-    font-size: 13px; 
-    border: 1px solid #e8e8e8; 
+    font-size: 12px; 
+    border: 1px solid var(--border-color); 
 }
 
 .file-list-table th, .file-list-table td { 
-    padding: 12px; 
-    border: 1px solid #e8e8e8; 
+    padding: 10px 12px; 
+    border: 1px solid var(--border-color); 
     text-align: left; 
 }
 
