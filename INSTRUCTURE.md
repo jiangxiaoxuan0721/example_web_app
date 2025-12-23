@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-这是一个基于Flask的电力系统分析Web应用，采用组件化前端架构，提供电力系统相关的分析功能。
+这是一个基于Flask的电力系统分析Web应用，采用组件化前端架构，提供电力系统相关的分析功能。项目支持环境变量配置，便于部署到不同环境。
 
 ## 项目结构
 
@@ -79,6 +79,7 @@ workspace\\example_web_app\\
 - **KPI卡片 (kpi_cards)**: 关键性能指标展示，支持动画和多种布局
 - **数据表格 (tables)**: 支持搜索、排序、分页、选择等功能
 - **抽屉组件 (drawer)**: 侧边详情面板，支持多种尺寸和方向
+- **图片组件 (picture)**: 支持图片和HTML内容展示，全屏查看和下载功能
 
 ### 页面功能
 
@@ -101,39 +102,69 @@ workspace\\example_web_app\\
    pip install flask
    ```
 
-2. **启动应用**
+2. **配置环境变量（可选）**
+
+   创建 `.env` 文件或直接设置系统环境变量：
+
+   ```bash
+   # .env 示例
+   SERVER_HOST=0.0.0.0
+   SERVER_PORT=50890
+   DEBUG=True
+   CLOUDPSS_TOKEN=your_token_here
+   ```
+
+3. **启动应用**
 
    ```bash
    python app.py
    ```
 
-3. **访问应用**
+4. **访问应用**
    - 本地访问: <http://127.0.0.1:50890>
-   - 网络访问: <http://198.18.0.1:50890>
+   - 网络访问: <http://192.168.1.100:50890> （根据实际IP）
 
 ## 配置说明
 
 ### config.py 配置
 
 ```python
+from pathlib import Path
+
 class Config:
-    # 目录配置
-    BACKEND_DIR = os.path.join(os.path.dirname(__file__), 'backend')
-    FRONTEND_DIR = os.path.join(os.path.dirname(__file__), 'frontend')
-    OUTPUT_DIR = os.path.join(os.path.dirname(__file__), 'output')
-    TEMPLATE_DIR = os.path.join(os.path.dirname(__file__), 'frontend', 'pages')
-    STATIC_DIR = os.path.join(os.path.dirname(__file__), 'frontend')
+    # 目录配置 - 使用 pathlib 和绝对路径
+    BASE_DIR = Path(__file__).resolve().parent
+    BACKEND_DIR = BASE_DIR / 'backend'
+    FRONTEND_DIR = BASE_DIR / 'frontend'
+    OUTPUT_DIR = BASE_DIR / 'output'
+    TEMPLATE_DIR = BASE_DIR / 'frontend' / 'pages'
+    STATIC_DIR = BASE_DIR / 'frontend'
 
-    # 服务器配置
-    SERVER_HOST = '0.0.0.0'  # 允许外部访问
-    SERVER_PORT = 50890
-    DEBUG = True
+    # 服务器配置 - 支持环境变量
+    SERVER_HOST = os.getenv('SERVER_HOST', '0.0.0.0')
+    SERVER_PORT = int(os.getenv('SERVER_PORT', 50890))
+    DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-    # CloudPSS配置
+    # CloudPSS配置 - 从环境变量读取
     CLOUDPSS = {
-        "TOKEN": "<CloudPSS Token>",
-        "API_URL": "https://cloudpss.net/"
+        "TOKEN": os.getenv('CLOUDPSS_TOKEN', ''),
+        "API_URL": os.getenv('CLOUDPSS_API_URL', 'https://cloudpss.net/')
     }
+```
+
+### 环境变量配置
+
+可以通过 `.env` 文件或系统环境变量配置：
+
+```bash
+# 服务器配置
+SERVER_HOST=0.0.0.0
+SERVER_PORT=50890
+DEBUG=True
+
+# CloudPSS配置
+CLOUDPSS_TOKEN=your_token_here
+CLOUDPSS_API_URL=https://cloudpss.net/
 ```
 
 ## 开发指南
@@ -258,10 +289,20 @@ drawer.open();
 
 ## 更新日志
 
-### v2.0.0 (最新)
+### v2.1.0 (最新)
+
+- 优化代码结构，删除未使用的图表相关方法
+- 简化picture组件，合并重复逻辑
+- 改进config配置，支持环境变量和pathlib
+- 简化app.py静态文件路由，统一处理逻辑
+- 添加错误处理中间件（404、500）
+- 文档更新：添加picture组件说明
+
+### v2.0.0
 
 - 完成组件化架构重构
 - 新增KPI卡片、数据表格、抽屉组件
+- 新增图片组件（picture）
 - 实现批量N-1分析页面
 - 添加CSS变量主题系统
 - 优化响应式设计和用户体验

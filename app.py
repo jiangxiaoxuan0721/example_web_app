@@ -3,26 +3,18 @@ main app module
 """
 from flask import Flask, render_template, jsonify, send_from_directory
 from config import Config
-import os
 
 app = Flask(
-    __name__, 
-    template_folder=Config.TEMPLATE_DIR,
-    static_folder=Config.STATIC_DIR
+    __name__,
+    template_folder=str(Config.TEMPLATE_DIR),
+    static_folder=str(Config.STATIC_DIR)
 )
 
-# 自定义静态文件路由
+# 静态文件路由 - 统一处理所有静态资源
 @app.route('/<path:filename>')
 def serve_static(filename):
-    """服务静态文件"""
-    # 检查是否是CSS或JS文件
-    if filename.endswith(('.css', '.js')):
-        return send_from_directory(Config.STATIC_DIR, filename)
-    # 检查是否是组件文件
-    elif filename.startswith('components/') or filename.startswith('pages/'):
-        return send_from_directory(Config.STATIC_DIR, filename)
-    else:
-        return send_from_directory(Config.STATIC_DIR, filename)
+    """服务静态文件（CSS、JS、组件文件等）"""
+    return send_from_directory(str(Config.STATIC_DIR), filename)
 
 @app.route('/')
 def home():
@@ -39,45 +31,21 @@ def batch_n1():
 # API路由示例
 @app.route('/api/status')
 def get_status():
+    """API: 获取系统状态"""
     return jsonify({
         'status': 'running',
         'message': '电力系统分析平台运行正常'
     })
 
-@app.route('/api/batch-n1/data')
-def get_batch_n1_data():
-    # 模拟批量N-1分析数据
-    data = {
-        'kpi': {
-            'total': 1250,
-            'voltage_errors': 23,
-            'frequency_errors': 8,
-            'angle_errors': 15
-        },
-        'cases': [
-            {
-                'caseId': 'CASE_001',
-                'transKey': 'TRANSFORMER_001',
-                'faultType': 'N-1',
-                'minVoltage': 0.95,
-                'maxFreqDeviation': 0.2,
-                'maxAngleDiff': 45.5,
-                'stability': '电压越限',
-                'status': 'error'
-            },
-            {
-                'caseId': 'CASE_002',
-                'transKey': 'TRANSFORMER_002',
-                'faultType': 'N-1',
-                'minVoltage': 0.98,
-                'maxFreqDeviation': 0.1,
-                'maxAngleDiff': 32.1,
-                'stability': '系统稳定',
-                'status': 'success'
-            }
-        ]
-    }
-    return jsonify(data)
+@app.errorhandler(404)
+def not_found(_):
+    """404错误处理"""
+    return render_template('not_support.html'), 404
+
+@app.errorhandler(500)
+def internal_error(_):
+    """500错误处理"""
+    return jsonify({'error': '服务器内部错误'}), 500
 
 if __name__ == "__main__":
     app.run(
