@@ -14,7 +14,7 @@ const rawData = [
       "max_freq_deviation": 55.3304598070532,
       "power_angle_ok": "True",
       "max_power_angle_diff": 6.212436219154938,
-      "minio_path1": "http://192.168.130.30:9100/psaagent/IEEE39/n_1/Waveform/2025/12/17/wave_2025_12_17_13_52_55_9e6860.png",
+      "minio_path1": "http://192.168.130.30:9100/psaagent/IEEE39/n_1/Waveform/2025/12/17/wave_2025_12_17_15_08_13_05a13b.html",
       "minio_path2": "http://192.168.130.30:9100/psaagent/IEEE39/n_1/Waveform/2025/12/17/wave_2025_12_17_13_52_59_15de6a.png",
       "minio_path3": "http://192.168.130.30:9100/psaagent/IEEE39/n_1/Waveform/2025/12/17/wave_2025_12_17_13_53_00_699b67.png",
       "minio_path4": "http://192.168.130.30:9100/psaagent/IEEE39/n_1/Waveform/2025/12/17/wave_2025_12_17_13_53_01_0d1ca5.png"
@@ -385,25 +385,10 @@ function openDrawer(index, event) {
             { label: '综合判定', value: data.isStable ? '满足 N-1 准则' : `不满足: ${data.failureModes.join(' & ')}`, highlight: true }
         ], { subtitle: '系统稳定性评估结果' })}
         
-        <div class="drawer-section">
+        <div id="waveform-section">
             <h4 class="drawer-section-title">仿真波形分析</h4>
-            <div class="img-grid">
-                <div class="chart-placeholder">
-                    <span class="chart-title">图1: 发电机功角 / Rotor Angle</span>
-                    <div class="chart-container">${data.images[0] ? `<img src="${data.images[0]}" alt="Waveform 1" onerror="this.src='https://via.placeholder.com/800x400?text=Image+Load+Error'">` : '<span style="color:#ccc">无图像数据</span>'}</div>
-                </div>
-                <div class="chart-placeholder">
-                    <span class="chart-title">图2: 母线电压 / Bus Voltage</span>
-                    <div class="chart-container">${data.images[1] ? `<img src="${data.images[1]}" alt="Waveform 2" onerror="this.src='https://via.placeholder.com/800x400?text=Image+Load+Error'">` : '<span style="color:#ccc">无图像数据</span>'}</div>
-                </div>
-                <div class="chart-placeholder">
-                    <span class="chart-title">图3: 系统频率 / Frequency</span>
-                    <div class="chart-container">${data.images[2] ? `<img src="${data.images[2]}" alt="Waveform 3" onerror="this.src='https://via.placeholder.com/800x400?text=Image+Load+Error'">` : '<span style="color:#ccc">无图像数据</span>'}</div>
-                </div>
-                <div class="chart-placeholder">
-                    <span class="chart-title">图4: 发电机有功 / Active Power</span>
-                    <div class="chart-container">${data.images[3] ? `<img src="${data.images[3]}" alt="Waveform 4" onerror="this.src='https://via.placeholder.com/800x400?text=Image+Load+Error'">` : '<span style="color:#ccc">无图像数据</span>'}</div>
-                </div>
+            <div class="img-grid" id="waveform-container">
+                <!-- 图片将由picture组件动态加载 -->
             </div>
         </div>
         
@@ -443,6 +428,49 @@ function openDrawer(index, event) {
         drawer.setSubtitle(data.isStable ? Drawer.createStatusIndicator('Stable', 'success') : Drawer.createStatusIndicator('Unstable', 'error'));
         drawer.setContent(content);
         drawer.open();
+        
+        // 等待抽屉打开后添加图片
+        setTimeout(() => {
+            const waveformContainer = drawer.drawer.querySelector('#waveform-container');
+            if (waveformContainer) {
+                // 清空容器
+                waveformContainer.innerHTML = '';
+                
+                // 添加波形图片
+                if (data.images[0]) {
+                    drawer.addPicture({
+                        title: '发电机功角 / Rotor Angle',
+                        source: data.images[0],
+                        height: '250px',
+                        appendTo: waveformContainer
+                    });
+                }
+                if (data.images[1]) {
+                    drawer.addPicture({
+                        title: '母线电压 / Bus Voltage',
+                        source: data.images[1],
+                        height: '250px',
+                        appendTo: waveformContainer
+                    });
+                }
+                if (data.images[2]) {
+                    drawer.addPicture({
+                        title: '系统频率 / Frequency',
+                        source: data.images[2],
+                        height: '250px',
+                        appendTo: waveformContainer
+                    });
+                }
+                if (data.images[3]) {
+                    drawer.addPicture({
+                        title: '发电机有功 / Active Power',
+                        source: data.images[3],
+                        height: '250px',
+                        appendTo: waveformContainer
+                    });
+                }
+            }
+        }, 100);
     }
 }
 

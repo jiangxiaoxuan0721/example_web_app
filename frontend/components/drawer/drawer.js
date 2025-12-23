@@ -196,6 +196,66 @@ class Drawer {
             this.setContent(newOptions.content);
         }
     }
+    
+    // 添加图片到抽屉
+    addPicture(options = {}) {
+        // 确保pictureManager已加载
+        if (typeof pictureManager === 'undefined') {
+            console.error('pictureManager未加载，请确保已引入picture.js');
+            return;
+        }
+        
+        // 创建唯一ID
+        const pictureId = options.id || `picture-${Math.random().toString(36).substr(2, 9)}`;
+        
+        // 确定目标容器
+        let targetContainer = options.appendTo;
+        if (!targetContainer) {
+            // 如果没有指定容器，则添加到抽屉内容中
+            const pictureHtml = Drawer.createPictureContainer(pictureId, options);
+            this.appendContent(pictureHtml);
+            targetContainer = this.drawer.querySelector(`#${pictureId}`);
+        }
+        
+        // 等待DOM更新后初始化图片组件
+        setTimeout(() => {
+            if (targetContainer && typeof pictureManager !== 'undefined') {
+                // 如果是选择器字符串，则获取DOM元素
+                if (typeof targetContainer === 'string') {
+                    targetContainer = document.querySelector(targetContainer);
+                }
+                
+                if (targetContainer) {
+                    // 如果是直接添加到指定容器中，创建容器并追加
+                    if (options.appendTo && typeof options.appendTo !== 'string') {
+                        const pictureHtml = Drawer.createPictureContainer(pictureId, options);
+                        // 创建一个临时div来解析HTML
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = pictureHtml;
+                        // 追加到目标容器
+                        targetContainer.appendChild(tempDiv.firstElementChild);
+                        // 获取新添加的容器
+                        targetContainer = targetContainer.querySelector(`#${pictureId}`);
+                    }
+                    
+                    // 创建picture组件
+                    pictureManager.create(pictureId, {
+                        source: options.source || '',
+                        title: options.title || '',
+                        subtitle: options.subtitle || '',
+                        width: '100%',
+                        height: options.height || '300px',
+                        fit: options.fit || 'contain',
+                        showFullscreen: options.showFullscreen !== false,
+                        showDownload: options.showDownload !== false,
+                        appendTo: targetContainer,
+                        onLoad: options.onLoad,
+                        onError: options.onError
+                    });
+                }
+            }
+        }, 0);
+    }
 
     destroy() {
         this.close();
@@ -276,6 +336,16 @@ class Drawer {
                 <div class="chart-container" style="height: ${options.height || '300px'};">
                     <canvas id="${chartId}"></canvas>
                 </div>
+            </div>
+        `;
+    }
+    
+    // 静态方法：创建图片容器
+    static createPictureContainer(id, options = {}) {
+        const pictureId = id || `picture-${Math.random().toString(36).substr(2, 9)}`;
+        return `
+            <div class="drawer-section">
+                <div id="${pictureId}" class="drawer-picture-container"></div>
             </div>
         `;
     }

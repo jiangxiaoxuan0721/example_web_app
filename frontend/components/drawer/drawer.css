@@ -380,3 +380,49 @@
     0% { transform: translate(-50%, -50%) rotate(0deg); }
     100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
+
+/* Picture组件在抽屉中的样式 */
+.drawer-picture-container {
+    margin: 0;
+    padding: 0;
+}
+
+.drawer-picture-container .picture-container {
+    border-radius: 0;
+    background: transparent;
+    margin: 0;
+    border: none;
+    box-shadow: none;
+}
+
+.drawer-picture-container .picture-header {
+    padding: 0 0 8px 0;
+    background: transparent;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.drawer-picture-container .picture-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: black;
+}
+
+.drawer-picture-container .picture-subtitle {
+    font-size: 14px;
+    margin-top: 2px;
+    color: black;
+}
+
+.drawer-picture-container .picture-wrapper {
+    border: 1px solid #e8e8e8;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.drawer-picture-container .picture-fullscreen-modal {
+    z-index: 10001; /* 确保全屏图片在抽屉上方 */
+}
+
+.drawer-picture-container .picture-partial-fullscreen-modal {
+    z-index: 10001; /* 确保80%全屏图片在抽屉上方 */
+}

@@ -1,0 +1,338 @@
+/* 图片组件样式 */
+.picture-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.picture-header {
+    padding: 16px;
+    background: #fff;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.picture-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+    color: var(--text-main, #333);
+}
+
+.picture-subtitle {
+    font-size: 14px;
+    color: var(--text-secondary, #666);
+}
+
+.picture-wrapper {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.picture-image {
+    width: 100%;
+    height: 100%;
+    transition: transform 0.3s ease;
+}
+
+.picture-container.loaded .picture-image {
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* 加载状态 */
+.picture-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #f5f5f5;
+    z-index: 2;
+}
+
+.loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid var(--primary-color, #1890ff);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 12px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-text {
+    font-size: 14px;
+    color: var(--text-secondary, #666);
+}
+
+/* 错误状态 */
+.picture-error {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #fafafa;
+    z-index: 2;
+}
+
+.error-icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+    color: var(--danger-color, #f5222d);
+}
+
+.error-text {
+    font-size: 14px;
+    color: var(--text-secondary, #666);
+    margin-bottom: 16px;
+}
+
+.retry-btn {
+    padding: 6px 16px;
+    background: var(--primary-color, #1890ff);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s ease;
+}
+
+.retry-btn:hover {
+    background: #40a9ff;
+}
+
+/* 工具栏 */
+.picture-toolbar {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 8px;
+    z-index: 3;
+}
+
+.toolbar-btn {
+    width: 36px;
+    height: 36px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s ease;
+}
+
+.toolbar-btn:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+/* 全屏模式 */
+.picture-fullscreen-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.3s ease;
+}
+
+.fullscreen-image {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.fullscreen-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s ease;
+}
+
+.fullscreen-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* 80%全屏模式 */
+.picture-partial-fullscreen-modal {
+    position: fixed;
+    top: 10%;
+    left: 10%;
+    width: 80%;
+    height: 80%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.3s ease;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.partial-fullscreen-image {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.partial-fullscreen-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s ease;
+}
+
+.partial-fullscreen-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* 图片画廊 */
+.picture-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin: 16px 0;
+}
+
+.gallery-item {
+    overflow: hidden;
+}
+
+/* 特殊适配：HTML链接的iframe */
+.picture-container iframe {
+    border: none;
+}
+
+/* iframe包装器，用于保持宽高比 */
+.iframe-wrapper {
+    background: #f5f5f5;
+    border-radius: 4px;
+}
+
+.iframe-wrapper iframe {
+    border: none;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .picture-gallery {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 12px;
+    }
+    
+    .picture-header {
+        padding: 12px;
+    }
+    
+    .picture-title {
+        font-size: 16px;
+    }
+    
+    .picture-subtitle {
+        font-size: 13px;
+    }
+    
+    .toolbar-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+}
+
+/* 移除了鼠标悬停时的图片放大效果 */
+
+/* 深色模式适配 */
+@media (prefers-color-scheme: dark) {
+    .picture-container {
+        background: #1f1f1f;
+    }
+    
+    .picture-header {
+        background: #2d2d2d;
+        border-bottom-color: #404040;
+    }
+    
+    .picture-title {
+        color: #f0f0f0;
+    }
+    
+    .picture-subtitle {
+        color: #a0a0a0;
+    }
+    
+    .picture-loading {
+        background: #2d2d2d;
+    }
+    
+    .loading-text {
+        color: #a0a0a0;
+    }
+    
+    .picture-error {
+        background: #2d2d2d;
+    }
+    
+    .error-text {
+        color: #a0a0a0;
+    }
+}
