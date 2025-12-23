@@ -228,19 +228,15 @@ function renderKPI() {
 
     const cards = [
         KPICards.createCard('total', '仿真总工况数', total, {
-            icon: '⚡',
             type: 'primary'
         }),
         KPICards.createCard('voltage', '电压稳定性异常', voltFail, {
-            icon: '⚡',
             type: 'danger'
         }),
         KPICards.createCard('frequency', '频率稳定性异常', freqFail, {
-            icon: '📉',
             type: 'warning'
         }),
         KPICards.createCard('angle', '功角稳定性异常', angleFail, {
-            icon: '📐',
             type: 'danger'
         })
     ];
@@ -442,6 +438,9 @@ function openDrawer(index, event) {
                         title: '发电机功角 / Rotor Angle',
                         source: data.images[0],
                         height: '250px',
+                        fit: 'contain', // 确保图片比例正确显示
+                        showFullscreen: true, // 确保显示全屏按钮
+                        showDownload: true,
                         appendTo: waveformContainer
                     });
                 }
@@ -450,6 +449,9 @@ function openDrawer(index, event) {
                         title: '母线电压 / Bus Voltage',
                         source: data.images[1],
                         height: '250px',
+                        fit: 'contain',
+                        showFullscreen: true,
+                        showDownload: true,
                         appendTo: waveformContainer
                     });
                 }
@@ -458,6 +460,9 @@ function openDrawer(index, event) {
                         title: '系统频率 / Frequency',
                         source: data.images[2],
                         height: '250px',
+                        fit: 'contain',
+                        showFullscreen: true,
+                        showDownload: true,
                         appendTo: waveformContainer
                     });
                 }
@@ -466,6 +471,9 @@ function openDrawer(index, event) {
                         title: '发电机有功 / Active Power',
                         source: data.images[3],
                         height: '250px',
+                        fit: 'contain',
+                        showFullscreen: true,
+                        showDownload: true,
                         appendTo: waveformContainer
                     });
                 }

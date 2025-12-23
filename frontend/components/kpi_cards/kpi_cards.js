@@ -40,18 +40,21 @@ class KPICards {
         const typeClass = card.type || 'primary';
         const trendClass = card.trend ? `trend-${card.trend.direction}` : '';
         const loadingClass = card.loading ? 'loading' : '';
+        const iconHtml = card.icon ? `<div class="kpi-icon">${card.icon}</div>` : '';
         
         return `
             <div class="kpi-card ${typeClass} ${loadingClass}" data-id="${card.id}">
-                <div class="kpi-icon">${card.icon || '📊'}</div>
-                <div class="kpi-title">${card.title}</div>
-                <div class="kpi-value ${typeClass}">${this.formatValue(card.value, card.format)}</div>
-                ${card.trend ? `
-                    <div class="kpi-trend ${trendClass}">
-                        ${card.trend.direction === 'up' ? '↑' : card.trend.direction === 'down' ? '↓' : '→'}
-                        ${card.trend.value}
-                    </div>
-                ` : ''}
+                ${iconHtml}
+                <div class="kpi-content">
+                    <div class="kpi-title">${card.title}</div>
+                    <div class="kpi-value ${typeClass}">${this.formatValue(card.value, card.format)}</div>
+                    ${card.trend ? `
+                        <div class="kpi-trend ${trendClass}">
+                            ${card.trend.direction === 'up' ? '↑' : card.trend.direction === 'down' ? '↓' : '→'}
+                            ${card.trend.value}
+                        </div>
+                    ` : ''}
+                </div>
             </div>
         `;
     }
@@ -224,7 +227,6 @@ class KPICards {
             id,
             title,
             value,
-            icon: options.icon || '📊',
             type: options.type || 'primary',
             format: options.format || 'number',
             subtitle: options.subtitle,
@@ -252,32 +254,3 @@ class KPICards {
         };
     }
 }
-
-// 示例使用
-/*
-const kpiCards = new KPICards('kpi-container', {
-    layout: 'default',
-    animated: true,
-    autoRefresh: true,
-    refreshInterval: 30000,
-    onRefresh: () => {
-        // 刷新数据的回调函数
-        console.log('Refreshing KPI data...');
-    }
-});
-
-const cards = [
-    KPICards.createCard('total', '仿真总工况数', 1250, {
-        icon: '⚡',
-        type: 'primary',
-        trend: KPICards.createTrend('up', '+12.5%')
-    }),
-    KPICards.createCard('voltage', '电压稳定性异常', 23, {
-        icon: '⚡',
-        type: 'danger',
-        trend: KPICards.createTrend('down', '-3.2%')
-    })
-];
-
-kpiCards.setCards(cards);
-*/

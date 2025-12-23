@@ -111,10 +111,13 @@ class Picture {
         // 创建工具栏
         const toolbar = document.createElement('div');
         toolbar.className = 'picture-toolbar';
-        toolbar.style.display = 'none';
+        // 默认显示工具栏，添加一个淡入效果
+        toolbar.style.opacity = '0';
+        toolbar.style.transition = 'opacity 0.3s ease';
         
         let toolbarButtons = '';
-        if (this.options.showFullscreen && !this.isHtmlLink()) {
+        // 对所有类型内容（包括HTML）都显示全屏按钮
+        if (this.options.showFullscreen) {
             toolbarButtons += '<button class="toolbar-btn fullscreen-btn" title="全屏查看">⛶</button>';
         }
         if (this.options.showDownload) {
@@ -149,6 +152,12 @@ class Picture {
                 this.loadingIndicator.style.display = 'none';
                 this.container.classList.add('loaded');
                 
+                // 显示工具栏
+                const toolbar = this.container.querySelector('.picture-toolbar');
+                if (toolbar && (this.options.showFullscreen || this.options.showDownload)) {
+                    toolbar.style.opacity = '1';
+                }
+                
                 if (this.options.onLoad) {
                     this.options.onLoad(this.image);
                 }
@@ -170,6 +179,12 @@ class Picture {
                 this.isLoaded = true;
                 this.loadingIndicator.style.display = 'none';
                 this.container.classList.add('loaded');
+                
+                // 显示工具栏
+                const toolbar = this.container.querySelector('.picture-toolbar');
+                if (toolbar && (this.options.showFullscreen || this.options.showDownload)) {
+                    toolbar.style.opacity = '1';
+                }
                 
                 if (this.options.onLoad) {
                     this.options.onLoad(this.image);
@@ -202,8 +217,18 @@ class Picture {
             });
         }
         
-        // 图片点击事件 - 80%全屏显示
-        if (!this.isHtmlLink()) {
+        // 图片/iframe点击事件 - 80%全屏显示（仅对图片）或全屏显示（对HTML）
+        if (this.isHtmlLink()) {
+            // HTML内容点击全屏
+            this.image.addEventListener('click', () => {
+                if (this.isLoaded && !this.hasError) {
+                    this.openFullscreen();
+                }
+            });
+            // 添加点击样式提示
+            this.image.style.cursor = 'pointer';
+        } else {
+            // 图片点击80%全屏显示
             this.image.addEventListener('click', () => {
                 if (this.isLoaded && !this.hasError) {
                     this.openPartialFullscreen();
@@ -231,14 +256,20 @@ class Picture {
         
         // 鼠标悬停显示工具栏
         if (this.options.showFullscreen || this.options.showDownload) {
+            // 内容加载完成后显示工具栏
+            if (this.isLoaded && !this.hasError) {
+                toolbar.style.opacity = '1';
+            }
+            
             this.container.addEventListener('mouseenter', () => {
                 if (this.isLoaded && !this.hasError) {
-                    toolbar.style.display = 'flex';
+                    toolbar.style.opacity = '1';
                 }
             });
             
             this.container.addEventListener('mouseleave', () => {
-                toolbar.style.display = 'none';
+                // 保持工具栏可见，但略微透明
+                toolbar.style.opacity = '0.7';
             });
         }
     }
@@ -254,28 +285,49 @@ class Picture {
     isHtmlLink() {
         if (!this.options.source) return false;
         return /\.(html?)(\?.*)?$/i.test(this.options.source) || 
-               this.options.source.includes('wave_') && this.options.source.includes('.html');
+               (this.options.source.includes('wave_') && this.options.source.includes('.html')) ||
+               this.options.source.endsWith('.html') || 
+               this.options.source.indexOf('.html?') !== -1;
     }
 
     openFullscreen() {
-        if (this.hasError || this.isHtmlLink()) return;
+        if (this.hasError) return;
         
         const modal = document.createElement('div');
-        modal.className = 'picture-fullscreen-modal';
+        modal.className = this.isHtmlLink() ? 'html-fullscreen-modal' : 'picture-fullscreen-modal';
         
-        const modalImg = document.createElement('img');
-        modalImg.className = 'fullscreen-image';
-        modalImg.src = this.image.src;
-        modalImg.alt = this.options.alt || this.options.title;
+        // 根据内容类型创建不同的元素
+        if (this.isHtmlLink()) {
+            // 为HTML内容创建全屏iframe
+            const modalFrame = document.createElement('iframe');
+            modalFrame.className = 'html-fullscreen-content';
+            modalFrame.src = this.options.source;
+            modalFrame.style.border = 'none';
+            modalFrame.style.borderRadius = '4px';
+            modalFrame.style.width = '95%';
+            modalFrame.style.height = '95%';
+            modalFrame.style.backgroundColor = 'white';
+            modalFrame.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
+            
+            modal.appendChild(modalFrame);
+        } else {
+            // 为图片创建全屏img元素
+            const modalImg = document.createElement('img');
+            modalImg.className = 'fullscreen-image';
+            modalImg.src = this.image.src;
+            modalImg.alt = this.options.alt || this.options.title;
+            
+            modal.appendChild(modalImg);
+        }
         
+        // 创建关闭按钮
         const closeBtn = document.createElement('button');
-        closeBtn.className = 'fullscreen-close';
+        closeBtn.className = this.isHtmlLink() ? 'html-fullscreen-close' : 'fullscreen-close';
         closeBtn.innerHTML = '×';
         closeBtn.addEventListener('click', () => {
             document.body.removeChild(modal);
         });
         
-        modal.appendChild(modalImg);
         modal.appendChild(closeBtn);
         document.body.appendChild(modal);
         
