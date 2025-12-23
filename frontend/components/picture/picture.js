@@ -145,67 +145,37 @@ class Picture {
     }
 
     bindEvents() {
-        if (this.isHtmlLink()) {
-            // iframe加载成功事件
-            this.image.addEventListener('load', () => {
-                this.isLoaded = true;
-                this.loadingIndicator.style.display = 'none';
-                this.container.classList.add('loaded');
-                
-                // 显示工具栏
-                const toolbar = this.container.querySelector('.picture-toolbar');
-                if (toolbar && (this.options.showFullscreen || this.options.showDownload)) {
-                    toolbar.style.opacity = '1';
-                }
-                
-                if (this.options.onLoad) {
-                    this.options.onLoad(this.image);
-                }
-            });
+        // 图片/iframe加载成功事件
+        this.image.addEventListener('load', () => {
+            this.isLoaded = true;
+            this.loadingIndicator.style.display = 'none';
+            this.container.classList.add('loaded');
             
-            // iframe加载失败事件
-            this.image.addEventListener('error', () => {
-                this.hasError = true;
-                this.loadingIndicator.style.display = 'none';
-                this.errorIndicator.style.display = 'flex';
-                
-                if (this.options.onError) {
-                    this.options.onError();
-                }
-            });
-        } else {
-            // 图片加载成功事件
-            this.image.addEventListener('load', () => {
-                this.isLoaded = true;
-                this.loadingIndicator.style.display = 'none';
-                this.container.classList.add('loaded');
-                
-                // 显示工具栏
-                const toolbar = this.container.querySelector('.picture-toolbar');
-                if (toolbar && (this.options.showFullscreen || this.options.showDownload)) {
-                    toolbar.style.opacity = '1';
-                }
-                
-                if (this.options.onLoad) {
-                    this.options.onLoad(this.image);
-                }
-            });
+            // 显示工具栏
+            const toolbar = this.container.querySelector('.picture-toolbar');
+            if (toolbar && (this.options.showFullscreen || this.options.showDownload)) {
+                toolbar.style.opacity = '1';
+            }
             
-            // 图片加载失败事件
-            this.image.addEventListener('error', () => {
-                this.hasError = true;
-                this.loadingIndicator.style.display = 'none';
-                this.errorIndicator.style.display = 'flex';
-                
-                if (this.options.fallback && !this.isHtmlLink()) {
-                    this.image.src = this.options.fallback;
-                }
-                
-                if (this.options.onError) {
-                    this.options.onError();
-                }
-            });
-        }
+            if (this.options.onLoad) {
+                this.options.onLoad(this.image);
+            }
+        });
+        
+        // 图片/iframe加载失败事件
+        this.image.addEventListener('error', () => {
+            this.hasError = true;
+            this.loadingIndicator.style.display = 'none';
+            this.errorIndicator.style.display = 'flex';
+            
+            if (this.options.fallback && !this.isHtmlLink()) {
+                this.image.src = this.options.fallback;
+            }
+            
+            if (this.options.onError) {
+                this.options.onError();
+            }
+        });
         
         // 重试按钮事件
         const retryBtn = this.errorIndicator.querySelector('.retry-btn');
@@ -217,26 +187,13 @@ class Picture {
             });
         }
         
-        // 图片/iframe点击事件 - 80%全屏显示（仅对图片）或全屏显示（对HTML）
-        if (this.isHtmlLink()) {
-            // HTML内容点击全屏
-            this.image.addEventListener('click', () => {
-                if (this.isLoaded && !this.hasError) {
-                    this.openFullscreen();
-                }
-            });
-            // 添加点击样式提示
-            this.image.style.cursor = 'pointer';
-        } else {
-            // 图片点击80%全屏显示
-            this.image.addEventListener('click', () => {
-                if (this.isLoaded && !this.hasError) {
-                    this.openPartialFullscreen();
-                }
-            });
-            // 添加点击样式提示
-            this.image.style.cursor = 'pointer';
-        }
+        // 图片/iframe点击事件
+        this.image.addEventListener('click', () => {
+            if (this.isLoaded && !this.hasError) {
+                this.openFullscreen();
+            }
+        });
+        this.image.style.cursor = 'pointer';
         
         // 全屏按钮事件
         const fullscreenBtn = this.container.querySelector('.fullscreen-btn');
@@ -294,11 +251,10 @@ class Picture {
         if (this.hasError) return;
         
         const modal = document.createElement('div');
-        modal.className = this.isHtmlLink() ? 'html-fullscreen-modal' : 'picture-fullscreen-modal';
+        modal.className = 'picture-fullscreen-modal';
         
-        // 根据内容类型创建不同的元素
+        // 创建全屏内容元素
         if (this.isHtmlLink()) {
-            // 为HTML内容创建全屏iframe
             const modalFrame = document.createElement('iframe');
             modalFrame.className = 'html-fullscreen-content';
             modalFrame.src = this.options.source;
@@ -308,73 +264,27 @@ class Picture {
             modalFrame.style.height = '95%';
             modalFrame.style.backgroundColor = 'white';
             modalFrame.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
-            
             modal.appendChild(modalFrame);
         } else {
-            // 为图片创建全屏img元素
             const modalImg = document.createElement('img');
             modalImg.className = 'fullscreen-image';
             modalImg.src = this.image.src;
             modalImg.alt = this.options.alt || this.options.title;
-            
             modal.appendChild(modalImg);
         }
         
         // 创建关闭按钮
         const closeBtn = document.createElement('button');
-        closeBtn.className = this.isHtmlLink() ? 'html-fullscreen-close' : 'fullscreen-close';
+        closeBtn.className = 'fullscreen-close';
         closeBtn.innerHTML = '×';
-        closeBtn.addEventListener('click', () => {
-            document.body.removeChild(modal);
-        });
-        
+        closeBtn.addEventListener('click', () => document.body.removeChild(modal));
         modal.appendChild(closeBtn);
+        
         document.body.appendChild(modal);
         
         // 点击背景关闭
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                document.body.removeChild(modal);
-            }
-        });
-        
-        // ESC键关闭
-        const handleKeydown = (e) => {
-            if (e.key === 'Escape') {
-                document.body.removeChild(modal);
-                document.removeEventListener('keydown', handleKeydown);
-            }
-        };
-        document.addEventListener('keydown', handleKeydown);
-    }
-
-    openPartialFullscreen() {
-        if (this.hasError || this.isHtmlLink()) return;
-        
-        const modal = document.createElement('div');
-        modal.className = 'picture-partial-fullscreen-modal';
-        
-        const modalImg = document.createElement('img');
-        modalImg.className = 'partial-fullscreen-image';
-        modalImg.src = this.image.src;
-        modalImg.alt = this.options.alt || this.options.title;
-        
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'partial-fullscreen-close';
-        closeBtn.innerHTML = '×';
-        closeBtn.addEventListener('click', () => {
-            document.body.removeChild(modal);
-        });
-        
-        modal.appendChild(modalImg);
-        modal.appendChild(closeBtn);
-        document.body.appendChild(modal);
-        
-        // 点击背景关闭
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                document.body.removeChild(modal);
-            }
+            if (e.target === modal) document.body.removeChild(modal);
         });
         
         // ESC键关闭
@@ -428,49 +338,23 @@ class Picture {
         this.image.alt = this.options.alt || this.options.title;
         
         // 为新创建的元素添加事件监听
-        const bindImageEvents = () => {
-            if (this.isHtmlLink()) {
-                // iframe加载成功事件
-                this.image.addEventListener('load', () => {
-                    this.isLoaded = true;
-                    this.loadingIndicator.style.display = 'none';
-                    this.container.classList.add('loaded');
-                    
-                    if (this.options.onLoad) {
-                        this.options.onLoad(this.image);
-                    }
-                });
-                
-                // iframe加载失败事件
-                this.image.addEventListener('error', () => {
-                    this.hasError = true;
-                    this.loadingIndicator.style.display = 'none';
-                    this.errorIndicator.style.display = 'flex';
-                    
-                    if (this.options.onError) {
-                        this.options.onError();
-                    }
-                });
-            } else {
-                // 图片加载成功事件
-                this.image.addEventListener('load', () => {
-                    this.isLoaded = true;
-                    this.loadingIndicator.style.display = 'none';
-                    this.container.classList.add('loaded');
-                    
-                    if (this.options.onLoad) {
-                        this.options.onLoad(this.image);
-                    }
-                });
-                
-                // 图片加载失败事件
-                this.image.addEventListener('error', () => {
-                    this.hasError = true;
-                    this.loadingIndicator.style.display = 'none';
-                    this.errorIndicator.style.display = 'flex';
-                });
+        this.image.addEventListener('load', () => {
+            this.isLoaded = true;
+            this.loadingIndicator.style.display = 'none';
+            this.container.classList.add('loaded');
+            if (this.options.onLoad) {
+                this.options.onLoad(this.image);
             }
-        };
+        });
+        
+        this.image.addEventListener('error', () => {
+            this.hasError = true;
+            this.loadingIndicator.style.display = 'none';
+            this.errorIndicator.style.display = 'flex';
+            if (this.options.onError) {
+                this.options.onError();
+            }
+        });
 
         if (this.isHtmlLink()) {
             // 为iframe创建一个容器以保持宽高比
@@ -509,7 +393,6 @@ class Picture {
             wrapper.replaceChild(this.image, oldImage);
         }
         
-        bindImageEvents();
         this.loadImage();
     }
 

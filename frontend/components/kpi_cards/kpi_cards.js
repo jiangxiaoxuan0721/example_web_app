@@ -81,16 +81,6 @@ class KPICards {
         return value;
     }
 
-    renderMiniChart(chartData) {
-        if (!chartData || !chartData.data) return '';
-        
-        return `
-            <div class="kpi-chart">
-                <canvas class="kpi-sparkline" id="sparkline-${chartData.id}"></canvas>
-            </div>
-        `;
-    }
-
     animateCards() {
         const cards = this.container.querySelectorAll('.kpi-card');
         cards.forEach((card, index) => {
@@ -103,69 +93,6 @@ class KPICards {
                 card.style.transform = 'translateY(0)';
             }, index * 100);
         });
-        
-        // 渲染迷你图表
-        setTimeout(() => {
-            this.renderSparklines();
-        }, 500);
-    }
-
-    renderSparklines() {
-        this.cards.forEach(card => {
-            if (card.chart && card.chart.data) {
-                this.drawSparkline(`sparkline-${card.chart.id}`, card.chart);
-            }
-        });
-    }
-
-    drawSparkline(canvasId, chartData) {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas) return;
-        
-        const ctx = canvas.getContext('2d');
-        const rect = canvas.getBoundingClientRect();
-        canvas.width = rect.width;
-        canvas.height = rect.height;
-        
-        const data = chartData.data;
-        const width = canvas.width;
-        const height = canvas.height;
-        const padding = 8;
-        
-        const maxValue = Math.max(...data);
-        const minValue = Math.min(...data);
-        const range = maxValue - minValue || 1;
-        
-        ctx.strokeStyle = chartData.color || '#1890ff';
-        ctx.lineWidth = 2;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        
-        ctx.beginPath();
-        data.forEach((value, index) => {
-            const x = padding + (index / (data.length - 1)) * (width - 2 * padding);
-            const y = height - padding - ((value - minValue) / range) * (height - 2 * padding);
-            
-            if (index === 0) {
-                ctx.moveTo(x, y);
-            } else {
-                ctx.lineTo(x, y);
-            }
-        });
-        ctx.stroke();
-        
-        // 添加渐变填充
-        if (chartData.fill) {
-            const gradient = ctx.createLinearGradient(0, 0, 0, height);
-            gradient.addColorStop(0, chartData.color || '#1890ff');
-            gradient.addColorStop(1, 'rgba(24, 144, 255, 0.1)');
-            
-            ctx.fillStyle = gradient;
-            ctx.lineTo(width - padding, height - padding);
-            ctx.lineTo(padding, height - padding);
-            ctx.closePath();
-            ctx.fill();
-        }
     }
 
     setCards(cards) {
@@ -244,13 +171,4 @@ class KPICards {
         };
     }
 
-    // 静态方法：创建图表数据
-    static createChart(id, data, options = {}) {
-        return {
-            id,
-            data,
-            color: options.color,
-            fill: options.fill !== false
-        };
-    }
 }

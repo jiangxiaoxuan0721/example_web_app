@@ -305,41 +305,6 @@ class Drawer {
         `;
     }
 
-    // 静态方法：创建时间线
-    static createTimeline(items) {
-        const itemsHtml = items.map(item => `
-            <div class="timeline-item">
-                <div class="timeline-dot"></div>
-                <div class="timeline-content">
-                    <div class="timeline-time">${item.time}</div>
-                    <div class="timeline-text">${item.text}</div>
-                </div>
-            </div>
-        `).join('');
-        
-        return `
-            <div class="drawer-section">
-                <h4 class="drawer-section-title">时间线</h4>
-                <div class="drawer-timeline">
-                    ${itemsHtml}
-                </div>
-            </div>
-        `;
-    }
-
-    // 静态方法：创建图表容器
-    static createChartContainer(title, chartId, options = {}) {
-        return `
-            <div class="drawer-section">
-                <h4 class="drawer-section-title">${title}</h4>
-                ${options.subtitle ? `<div class="drawer-section-subtitle">${options.subtitle}</div>` : ''}
-                <div class="chart-container" style="height: ${options.height || '300px'};">
-                    <canvas id="${chartId}"></canvas>
-                </div>
-            </div>
-        `;
-    }
-    
     // 静态方法：创建图片容器
     static createPictureContainer(id, options = {}) {
         const pictureId = id || `picture-${Math.random().toString(36).substr(2, 9)}`;

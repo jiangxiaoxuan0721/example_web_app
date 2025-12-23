@@ -122,20 +122,6 @@
     margin-top: 8px;
 }
 
-.kpi-chart {
-    margin-top: 16px;
-    height: 60px;
-    background: #fafafa;
-    border-radius: 4px;
-    position: relative;
-    overflow: hidden;
-}
-
-.kpi-sparkline {
-    width: 100%;
-    height: 100%;
-}
-
 /* 不同类型的KPI卡片 */
 .kpi-card.primary .kpi-icon {
     background: linear-gradient(135deg, var(--primary-color, #1890ff), var(--secondary-color, #40a9ff));
