@@ -1,0 +1,154 @@
+/**
+ * 步骤导航器样式
+ */
+
+.step-navigator {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.steps-container {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.steps-container::before {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: var(--border-color, #e8e8e8);
+    z-index: 1;
+}
+
+.step-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    cursor: not-allowed;
+    transition: all 0.3s ease;
+    flex: 1;
+    opacity: 0.6;
+}
+
+.step-item.clickable {
+    cursor: pointer;
+    opacity: 1;
+}
+
+.step-item.clickable:hover .step-number {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+}
+
+.step-item.clickable:hover .step-title {
+    color: var(--primary-color, #1890ff);
+}
+
+.step-number {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: var(--card-bg, #ffffff);
+    border: 2px solid var(--border-color, #e8e8e8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: var(--text-main, #333);
+}
+
+.step-title {
+    text-align: center;
+    font-size: 14px;
+    color: var(--text-main, #333);
+    max-width: 120px;
+}
+
+.step-item.active .step-number {
+    background-color: var(--primary-color, #1890ff);
+    border-color: var(--primary-color, #1890ff);
+    color: white;
+}
+
+.step-item.active .step-title {
+    color: var(--primary-color, #1890ff);
+    font-weight: bold;
+}
+
+.step-item.completed .step-number {
+    background-color: var(--success-color, #52c41a);
+    border-color: var(--success-color, #52c41a);
+    color: white;
+}
+
+.step-item.completed .step-title {
+    color: var(--success-color, #52c41a);
+}
+
+.nav-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.nav-button {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 4px;
+    background-color: var(--background-color, #ffffff);
+    color: var(--text-color, #333);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.nav-button:hover:not(:disabled) {
+    background-color: var(--hover-bg-color, #f5f5f5);
+}
+
+.nav-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.nav-button.next-button:not(:disabled) {
+    background-color: var(--primary-color, #4a6cf7);
+    border-color: var(--primary-color, #4a6cf7);
+    color: white;
+}
+
+.nav-button.next-button:not(:disabled):hover {
+    background-color: var(--primary-hover-color, #3a5ce5);
+}
+
+.nav-button.prev-button:not(:disabled) {
+    background-color: var(--secondary-color, #6c757d);
+    border-color: var(--secondary-color, #6c757d);
+    color: white;
+}
+
+.nav-button.prev-button:not(:disabled):hover {
+    background-color: var(--secondary-hover-color, #5a6268);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .step-title {
+        font-size: 12px;
+        max-width: 80px;
+    }
+    
+    .nav-buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+}

@@ -1,0 +1,126 @@
+/* 验证面板组件样式 */
+.validation-panel-container {
+    margin-bottom: 15px;
+}
+
+.panel-header {
+    margin-bottom: 15px;
+}
+
+.panel-header h2 {
+    margin: 0 0 6px 0;
+    font-size: 18px;
+    color: #333;
+}
+
+.panel-header p {
+    margin: 0;
+    font-size: 13px;
+    color: #666;
+}
+
+.validation-results {
+    margin: 15px 0;
+}
+
+.validation-card {
+    display: flex;
+    align-items: flex-start;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    border-left: 4px solid;
+    background: #fff;
+}
+
+.validation-success {
+    border-left-color: #52c41a;
+    background: #f6ffed;
+}
+
+.validation-warning {
+    border-left-color: #faad14;
+    background: #fffbe6;
+}
+
+.validation-error {
+    border-left-color: #f5222d;
+    background: #fff2f0;
+}
+
+.card-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.validation-success .card-icon {
+    color: #52c41a;
+}
+
+.validation-warning .card-icon {
+    color: #faad14;
+}
+
+.validation-error .card-icon {
+    color: #f5222d;
+}
+
+.card-content h4 {
+    margin: 0 0 4px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.card-content p {
+    margin: 0;
+    font-size: 13px;
+    color: #666;
+}
+
+.batch-count-input {
+    max-width: 500px;
+    margin: 15px auto;
+}
+
+.batch-count-input label {
+    display: block;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.input-wrapper input {
+    flex: 1;
+    padding: 10px;
+    font-size: 14px;
+    border: 1px solid #d9d9d9;
+    border-radius: 4px;
+}
+
+.input-wrapper span {
+    color: #666;
+    white-space: nowrap;
+    font-size: 14px;
+}
+
+.batch-count-input small {
+    display: block;
+    margin-top: 6px;
+    color: #666;
+    font-size: 12px;
+}

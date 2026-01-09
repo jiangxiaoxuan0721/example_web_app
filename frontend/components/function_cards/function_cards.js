@@ -3,10 +3,30 @@ class FunctionCards {
     constructor() {
         this.cards = [
             {
+                id: 'n1-wizard',
+                title: 'N-1仿真向导',
+                description: '交互式N-1仿真流程引导，支持单次和批量仿真模式，逐步配置参数并查看结果。',
+                icon: `
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+                        <line x1="12" y1="22" x2="12" y2="11.5"></line>
+                        <circle cx="12" cy="7" r="3"></circle>
+                    </svg>
+                `,
+                status: 'available',
+                statusText: '可用',
+                className: '',
+                action: () => this.handleN1Wizard()
+            },
+            {
                 id: 'n1-analysis',
-                title: 'N-1分析',
-                description: '电力系统N-1安全分析，评估系统在单个元件故障时的稳定性和可靠性。',
-                icon: '',
+                title: 'N-1快速分析',
+                description: '快速执行N-1安全分析，使用预设参数评估系统在单个元件故障时的稳定性。',
+                icon: `
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+                    </svg>
+                `,
                 status: 'available',
                 statusText: '可用',
                 className: '',
@@ -102,9 +122,15 @@ class FunctionCards {
         return cardDiv;
     }
 
+    handleN1Wizard() {
+        console.log('启动N-1仿真向导');
+        // 跳转到N-1仿真向导入口页面
+        window.location.href = '/pages/n1_wizard/wizard_entry.html';
+    }
+
     handleN1Analysis() {
-        console.log('启动N-1分析');
-        // 跳转到批量N-1分析页面
+        console.log('启动N-1快速分析');
+        // 跳转到批量N-1分析页面（已存在的）
         window.location.href = '/batch-n1';
     }
 

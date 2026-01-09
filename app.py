@@ -28,6 +28,10 @@ def not_supported():
 def batch_n1():
     return render_template('batch_n_1/batch_n_1.html')
 
+@app.route('/n1-wizard')
+def n1_wizard():
+    return render_template('n1_wizard/wizard_entry.html')
+
 # API路由示例
 @app.route('/api/status')
 def get_status():

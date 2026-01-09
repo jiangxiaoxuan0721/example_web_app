@@ -22,8 +22,8 @@
 }
 
 .btn-primary:hover {
-    background: #1664c0;
-    border-color: #1664c0;
+    background: var(--secondary-color);
+    border-color: var(--secondary-color);
 }
 
 .btn-primary:active {
@@ -99,4 +99,18 @@
 .btn-block {
     display: block;
     width: 100%;
+}
+
+.btn-icon {
+    padding: 5px;
+    border-radius: 4px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.btn-icon:hover {
+    background-color: var(--hover-bg);
+    color: var(--text-main);
 }

@@ -1,0 +1,252 @@
+/**
+ * 仿真结果展示组件样式
+ */
+
+.simulation-results {
+    width: 100%;
+    padding: 20px;
+    background-color: var(--background-color, #ffffff);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: var(--text-secondary, #666);
+    text-align: center;
+}
+
+.empty-state-icon {
+    margin-bottom: 15px;
+    color: var(--text-light, #ccc);
+}
+
+.empty-state-message {
+    font-size: 16px;
+}
+
+.section-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: var(--text-color, #333);
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+    padding-bottom: 8px;
+}
+
+.results-summary {
+    margin-bottom: 25px;
+}
+
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.summary-card {
+    padding: 15px;
+    background-color: var(--card-bg, #f9f9f9);
+    border-radius: 6px;
+    border-left: 4px solid var(--primary-color, #4a6cf7);
+}
+
+.card-label {
+    font-size: 14px;
+    color: var(--text-secondary, #666);
+    margin-bottom: 5px;
+}
+
+.card-value {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-color, #333);
+}
+
+.card-value.stable {
+    color: var(--success-color, #10b981);
+}
+
+.card-value.unstable {
+    color: var(--error-color, #e53e3e);
+}
+
+.results-charts {
+    margin-bottom: 25px;
+}
+
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 20px;
+}
+
+.chart-container {
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.chart-title {
+    font-size: 16px;
+    font-weight: 500;
+    padding: 12px 15px;
+    background-color: var(--card-bg, #f9f9f9);
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+    margin: 0;
+}
+
+.chart-element {
+    height: 300px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.chart-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+    background-color: var(--card-bg, #f9f9f9);
+    color: var(--text-secondary, #666);
+}
+
+.chart-info {
+    text-align: center;
+}
+
+.result-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.results-data {
+    margin-bottom: 25px;
+}
+
+.table-container {
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    background-color: var(--card-bg, #f9f9f9);
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-color, #333);
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+
+.data-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+
+.data-table tr:last-child td {
+    border-bottom: none;
+}
+
+.data-table tr:nth-child(even) {
+    background-color: var(--table-alt-bg, #f9f9f9);
+}
+
+.data-table tr:hover {
+    background-color: var(--table-hover-bg, #f5f5f5);
+}
+
+.results-analysis {
+    margin-bottom: 25px;
+}
+
+.analysis-content {
+    padding: 15px;
+    background-color: var(--card-bg, #f9f9f9);
+    border-radius: 6px;
+    line-height: 1.6;
+    color: var(--text-color, #333);
+}
+
+.results-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color, #e0e0e0);
+}
+
+.action-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.export-button {
+    background-color: var(--primary-color, #4a6cf7);
+    color: white;
+}
+
+.export-button:hover {
+    background-color: var(--primary-hover-color, #3a5ce5);
+}
+
+.analyze-button {
+    background-color: var(--secondary-color, #6c757d);
+    color: white;
+}
+
+.analyze-button:hover {
+    background-color: var(--secondary-hover-color, #5a6268);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .simulation-results {
+        padding: 15px;
+    }
+    
+    .summary-cards {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 10px;
+    }
+    
+    .charts-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .chart-element {
+        height: 250px;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+    }
+    
+    .results-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .action-button {
+        width: 100%;
+    }
+}
