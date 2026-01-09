@@ -20,6 +20,7 @@
                 <p class="subtitle">N-1 Simulation Wizard</p>
             </div>
             <div class="header-right">
+                <button id="refreshBtn" class="btn btn-secondary">刷新</button>
                 <button id="helpBtn" class="btn btn-secondary">帮助</button>
             </div>
         </header>
@@ -91,6 +92,11 @@
             // 绑定返回按钮
             document.getElementById('backBtn').addEventListener('click', () => {
                 window.location.href = '/pages/index.html';
+            });
+
+            // 绑定刷新按钮
+            document.getElementById('refreshBtn').addEventListener('click', () => {
+                window.location.reload();
             });
 
             // 绑定帮助按钮

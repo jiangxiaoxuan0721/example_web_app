@@ -34,6 +34,7 @@ class N1WizardBaseTemplate {
                 <p class="subtitle">步骤 ${stepIndex + 1}/${mode === 'single' ? 8 : 6}: ${stepTitle}</p>
             </div>
             <div class="header-right">
+                <button id="refreshBtn" class="btn btn-secondary">刷新</button>
                 <button id="helpBtn" class="btn btn-secondary">帮助</button>
             </div>
         </header>

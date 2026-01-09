@@ -348,9 +348,10 @@ body {
 }
 
 .header-left, .header-right {
-    width: 120px;
+    width: 160px;
     display: flex;
     justify-content: center;
+    gap: 8px;
 }
 
 .header-center {

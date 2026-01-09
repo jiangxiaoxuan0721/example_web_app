@@ -113,6 +113,7 @@ function updatePageTitle(mode, stepIndex, stepConfig) {
 
 function bindCommonEvents() {
     const backBtn = document.getElementById('backBtn');
+    const refreshBtn = document.getElementById('refreshBtn');
     const helpBtn = document.getElementById('helpBtn');
     const closeHelpBtn = document.getElementById('closeHelpBtn');
     const helpDialog = document.getElementById('helpDialog');
@@ -120,6 +121,12 @@ function bindCommonEvents() {
     if (backBtn) {
         backBtn.addEventListener('click', () => {
             window.location.href = '/pages/index.html';
+        });
+    }
+
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            refreshPage();
         });
     }
 
@@ -147,4 +154,30 @@ function bindCommonEvents() {
             }
         });
     }
+}
+
+function refreshPage() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode') || 'single';
+    const step = parseInt(urlParams.get('step')) || 0;
+
+    // 清除当前内容
+    const stepBody = document.getElementById('stepBody');
+    const stepActions = document.getElementById('stepActions');
+    if (stepBody) stepBody.innerHTML = '';
+    if (stepActions) stepActions.innerHTML = '';
+
+    // 重新加载配置
+    window.stepContentManager.config = null;
+    window.stepContentManager.loadConfig();
+
+    // 等待配置加载后重新渲染
+    const checkConfig = setInterval(() => {
+        if (window.stepContentManager.config) {
+            clearInterval(checkConfig);
+            if (stepBody && stepActions) {
+                window.stepContentManager.renderStepContent(stepBody, stepActions);
+            }
+        }
+    }, 100);
 }
