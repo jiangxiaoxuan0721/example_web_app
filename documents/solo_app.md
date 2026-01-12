@@ -7,6 +7,8 @@ triggers:
 - App
 - app
 - 应用
+- n-1
+- batch
 - Web
 - web
 - 网站
@@ -26,14 +28,24 @@ if you are asking to build a web app, refer to following guidelines:
    ```
 
 2. 启动应用：
-
+please find your Available Hosts for example
+    http://localhost:53161 (port 53161)
+    http://localhost:58335 (port 58335)
+    and choose one port to replace default port 50890 in .env or config.py
+then
    ```bash
-   python app.py
+   python app.py &  # 确保后台运行不占用终端
    ```
 
 3. 验证应用：
-   使用 [browser: goto] 访问 `http://<IP>:50890`，确保应用正常运行。
-   **注意**：不要使用 localhost 或 127.0.0.1，默认 IP 为 192.168.130.30，端口需确保可被外部访问。
+<important>
+<important>
+<important>
+**应用启动后，请使用 [browser 工具] 访问 `http://192.168.130.30:port`，确保应用正常运行。**
+**注意：不要使用 localhost 或 127.0.0.1，默认 IP 为 192.168.130.30，端口来自Available Hosts。**
+</important>
+</important>
+</important>
 
 </Quick_start>
 
@@ -84,11 +96,11 @@ class Config:
     BASE_DIR = Path(__file__).resolve().parent
     TEMPLATE_DIR = BASE_DIR / 'frontend' / 'pages'
     STATIC_DIR = BASE_DIR / 'frontend'
-    
+
     SERVER_HOST = os.getenv('SERVER_HOST', '0.0.0.0')
     SERVER_PORT = int(os.getenv('SERVER_PORT', 50890))
     DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1')
-    
+
     CLOUDPSS = {
         "TOKEN": os.getenv('CLOUDPSS_TOKEN', ''),
         "API_URL": os.getenv('CLOUDPSS_API_URL', 'https://cloudpss.net/')
@@ -103,7 +115,7 @@ class Config:
 from flask import Flask, render_template, jsonify, send_from_directory
 from config import Config
 
-app = Flask(__name__, template_folder=str(Config.TEMPLATE_DIR), 
+app = Flask(__name__, template_folder=str(Config.TEMPLATE_DIR),
             static_folder=str(Config.STATIC_DIR))
 
 @app.route('/<path:filename>')
@@ -141,7 +153,7 @@ class YourComponent {
         this.options = options;
         this.init();
     }
-    
+
     init() { this.render(); this.bindEvents(); }
     render() { /* 渲染逻辑 */ }
     bindEvents() { /* 事件绑定 */ }
@@ -188,3 +200,6 @@ class YourComponent {
 5、代码质量原则：单一职责、无重复代码、适当注释。
 
 </Programming_standards>
+<data_source>
+after executing n-1 batch simulation, your data will be aviable in “~/.psa_tasks/{date_hash}” directory, in other cases, you can use cloudpss tools to generate data in backend and store it in /workspace/{appdir}/output, then you can use it in frontend
+</data_source>
