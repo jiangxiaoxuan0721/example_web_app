@@ -135,7 +135,7 @@ class ConfigResponse(BaseResponse):
 
 class SchemaResponse(BaseResponse):
     """Schema 响应"""
-    schema: Optional[UISchema] = Field(None, description="UISchema")
+    ui_schema: Optional[UISchema] = Field(None, alias="schema", description="UISchema")
 
 
 class PatchResponse(BaseResponse):
@@ -145,5 +145,5 @@ class PatchResponse(BaseResponse):
 
 class EventResponse(BaseResponse):
     """事件处理响应（可能返回 Schema 或 Patch）"""
-    schema: Optional[UISchema] = Field(None, description="UISchema")
+    ui_schema: Optional[UISchema] = Field(None, alias="schema", description="UISchema")
     patch: Optional[Dict[str, Any]] = Field(None, description="UI Patch")

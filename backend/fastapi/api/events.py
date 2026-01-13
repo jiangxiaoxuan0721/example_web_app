@@ -25,12 +25,14 @@ async def handle_events(event: UIEvent):
         response = agent_service.process_event(event)
 
         # 过滤只包含 EventResponse 定义的字段，避免多余参数错误
+        # 注意：使用 "schema" 而不是 "ui_schema"，因为前端期望的字段名是 "schema"
         valid_fields = {"status", "message", "error", "schema", "patch"}
         filtered_response = {
             k: v for k, v in response.items()
             if k in valid_fields
         }
 
+        # 返回时使用 schema 字段名（通过 alias 映射到 ui_schema）
         return EventResponse(**filtered_response)
 
     except Exception as e:

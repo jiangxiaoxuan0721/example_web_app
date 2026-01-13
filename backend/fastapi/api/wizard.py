@@ -28,13 +28,13 @@ async def get_wizard_config():
 async def init_wizard():
     """
     初始化 Wizard
-    
+
     返回模式选择页面的 UISchema
     """
     schema = generate_mode_selection_schema()
-    
+
     return SchemaResponse(
-        schema=schema,
+        ui_schema=schema,
         status="success"
     )
 
@@ -43,32 +43,32 @@ async def init_wizard():
 async def get_step_schema(mode: str, step_index: int):
     """
     获取指定步骤的 UISchema
-    
+
     Args:
         mode: 模式名称（single/batch）
         step_index: 步骤索引（0-based）
-    
+
     返回:
         UISchema 响应
     """
     try:
         schema = generate_step_schema(mode, step_index)
-        
+
         if schema:
             return SchemaResponse(
-                schema=schema,
+                ui_schema=schema,
                 status="success"
             )
         else:
             return SchemaResponse(
-                schema=None,
+                ui_schema=None,
                 status="error",
                 error=f"模式 '{mode}' 或步骤 {step_index} 不存在"
             )
-    
+
     except Exception as e:
         return SchemaResponse(
-            schema=None,
+            ui_schema=None,
             status="error",
             error=str(e)
         )
