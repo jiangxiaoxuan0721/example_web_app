@@ -1,59 +1,54 @@
-import { UISchema, UIPatch } from '../types/schema';
+/** Patch 工具函数 */
 
 /**
- * 根据 dot path 获取嵌套对象中的值
- * @param obj 目标对象
- * @param path 点路径，如 "state.params.speed"
- * @returns 路径对应的值
+ * 应用 patch 到 schema
+ * @param schema - 原始 schema
+ * @param patch - patch 对象（键为点路径，值为任意类型）
+ * @returns 应用 patch 后的新 schema
  */
-export const getByDotPath = (obj: any, path: string): any => {
-  return path.split('.').reduce((current, key) => current?.[key], obj);
-};
+export function applyPatchToSchema<T extends Record<string, any>>(
+  schema: T,
+  patch: Record<string, any>
+): T {
+  const newSchema = { ...schema };
 
-/**
- * 根据 dot path 设置嵌套对象中的值
- * @param obj 目标对象
- * @param path 点路径，如 "state.params.speed"
- * @param value 要设置的值
- */
-export const setByDotPath = (obj: any, path: string, value: any): void => {
-  const keys = path.split('.');
-  const lastKey = keys.pop()!;
-  
-  const target = keys.reduce((current, key) => {
-    if (current[key] === undefined) {
-      current[key] = {};
+  // 应用 patch（简单的点路径实现）
+  for (const [path, value] of Object.entries(patch)) {
+    const keys = path.split('.');
+    let current: any = newSchema;
+
+    for (let i = 0; i < keys.length - 1; i++) {
+      if (!current[keys[i]]) {
+        current[keys[i]] = {};
+      }
+      current = current[keys[i]];
     }
-    return current[key];
-  }, obj);
-  
-  target[lastKey] = value;
-};
 
-/**
- * 应用 Patch 到 UISchema
- * @param schema 原始 Schema
- * @param patch 要应用的 Patch
- * @returns 应用 Patch 后的新 Schema（不可变）
- */
-export const applyPatch = (schema: UISchema, patch: UIPatch): UISchema => {
-  // 深拷贝 Schema
-  const newSchema: UISchema = JSON.parse(JSON.stringify(schema));
-  
-  // 应用每个 patch 操作
-  Object.entries(patch).forEach(([path, value]) => {
-    setByDotPath(newSchema, path, value);
-  });
-  
+    current[keys[keys.length - 1]] = value;
+  }
+
   return newSchema;
-};
+}
 
 /**
- * 批量应用多个 Patch
- * @param schema 原始 Schema
- * @param patches Patch 数组
- * @returns 应用所有 Patch 后的新 Schema
+ * 从 schema 中读取字段值
+ * @param schema - schema 对象
+ * @param bindPath - 绑定路径（如 "state.params"）
+ * @param fieldKey - 字段键（如 "message"）
+ * @returns 字段值
  */
-export const applyPatches = (schema: UISchema, patches: UIPatch[]): UISchema => {
-  return patches.reduce<UISchema>((currentSchema, patch) => applyPatch(currentSchema, patch), schema);
-};
+export function getFieldValue(
+  schema: any,
+  bindPath: string,
+  fieldKey: string
+): any {
+  // 1. 先解析 block.bind 路径
+  let baseObj: any = schema;
+  if (bindPath) {
+    const bindPathKeys = bindPath.split('.');
+    baseObj = bindPathKeys.reduce((obj: any, key: string) => obj?.[key], schema);
+  }
+  // 2. 再读取 field.key
+  const fieldKeys = fieldKey.split('.');
+  return fieldKeys.reduce((obj: any, key: string) => obj?.[key], baseObj);
+}

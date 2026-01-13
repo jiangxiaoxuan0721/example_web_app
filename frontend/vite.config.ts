@@ -16,9 +16,13 @@ export default defineConfig({
     },
   },
   server: {
-    host: '0.0.0.0',  // 允许从任何地址访问
-    port: 3000,
+    host: '0.0.0.0',
+    port: 5173,
     proxy: {
+      '/ui': {
+        target: 'http://localhost:8001',
+        changeOrigin: true,
+      },
       '/api': {
         target: 'http://localhost:8001',
         changeOrigin: true,
@@ -26,3 +30,4 @@ export default defineConfig({
     },
   },
 })
+
