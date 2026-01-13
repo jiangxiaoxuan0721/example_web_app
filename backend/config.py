@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     cors_allow_headers: list = ["*"]
     
     # 配置文件路径
-    config_path: str = "../../src/data/wizard_config.json"
+    config_path: str = "../frontend/src/data/wizard_config.json"
     
     # MCP 设置
     mcp_enabled: bool = True
