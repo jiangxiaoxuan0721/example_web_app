@@ -20,7 +20,9 @@ async def get_wizard_config():
     
     return ConfigResponse(
         modes=modes,
-        status="success"
+        status="success",
+        message="Configuration loaded successfully",
+        error=None
     )
 
 
@@ -34,7 +36,9 @@ async def init_wizard():
     schema = generate_mode_selection_schema()
 
     return SchemaResponse(
-        ui_schema=schema,
+        schema=schema,
+        message="Mode selection schema retrieved successfully",
+        error=None,
         status="success"
     )
 
@@ -56,19 +60,23 @@ async def get_step_schema(mode: str, step_index: int):
 
         if schema:
             return SchemaResponse(
-                ui_schema=schema,
+                schema=schema,
+                message="Step schema retrieved successfully",
+                error=None,
                 status="success"
             )
         else:
             return SchemaResponse(
-                ui_schema=None,
-                status="error",
-                error=f"模式 '{mode}' 或步骤 {step_index} 不存在"
+                schema=None,
+                message="",
+                error=f"模式 '{mode}' 或步骤 {step_index} 不存在",
+                status="error"
             )
 
     except Exception as e:
         return SchemaResponse(
-            ui_schema=None,
-            status="error",
-            error=str(e)
+            schema=None,
+            message="",
+            error=str(e),
+            status="error"
         )

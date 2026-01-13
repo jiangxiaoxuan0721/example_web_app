@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     
     # 服务器设置
     host: str = "0.0.0.0"
-    port: int = 8000
+    port: int = 8001
     
     # CORS 设置
     cors_origins: list = ["http://localhost:3000", "http://127.0.0.1:3000"]
