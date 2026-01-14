@@ -5,12 +5,6 @@ from typing import Optional, Dict, Any, List
 from enum import Enum
 
 
-class WizardMode(str, Enum):
-    """Wizard 模式"""
-    SINGLE = "single"
-    BATCH = "batch"
-
-
 class EventType(str, Enum):
     """事件类型"""
     FIELD_CHANGE = "field_change"
@@ -34,7 +28,7 @@ class EventPayload(BaseModel):
 class UIEvent(BaseModel):
     """UI 事件"""
     type: EventType = Field(..., description="事件类型")
-    payload: EventPayload = Field(default_factory=EventPayload, description="事件载荷")
+    payload: EventPayload = Field(default_factory=lambda: EventPayload(**{}), description="事件载荷")
     pageKey: Optional[str] = Field(None, description="页面键")
 
 

@@ -357,3 +357,84 @@ backend/
 - 不存持久化状态
 
 这是最纯粹的前后端分离，Schema 驱动的 UI 架构。
+
+---
+
+## MCP 工具集成
+
+MCP (Model Context Protocol) 工具为 AI Agent 提供 UI Schema 修改能力。
+
+### 可用工具
+
+#### 1. `patch_ui_state`
+
+应用结构化补丁来修改 UI Schema 状态和结构。
+
+**参数：**
+- `instance_id`: 目标实例 ID
+  - `"__CREATE__"` 创建新实例
+  - `"__DELETE__"` 删除实例
+- `patches`: 补丁操作数组
+- `new_instance_id`: 创建实例时必需
+- `target_instance_id`: 删除实例时必需
+
+**示例：**
+
+```python
+# 更新状态
+await patch_ui_state(
+    instance_id="counter",
+    patches=[
+        {"op": "set", "path": "state.params.count", "value": 42}
+    ]
+)
+
+# 创建新实例
+await patch_ui_state(
+    instance_id="__CREATE__",
+    new_instance_id="my_instance",
+    patches=[
+        {"op": "set", "path": "meta", "value": {"pageKey": "my_instance", ...}},
+        {"op": "set", "path": "state", "value": {"params": {}, "runtime": {}}},
+        {"op": "set", "path": "blocks", "value": []},
+        {"op": "set", "path": "actions", "value": []}
+    ]
+)
+
+# 删除实例
+await patch_ui_state(
+    instance_id="__DELETE__",
+    target_instance_id="old_instance",
+    patches=[]
+)
+```
+
+#### 2. `get_schema`
+
+获取指定实例的当前 UI Schema。
+
+```python
+result = await get_schema(instance_id="demo")
+# 返回: {"status": "success", "instance_id": "demo", "schema": {...}}
+```
+
+#### 3. `list_instances`
+
+列出所有可用的 UI Schema 实例。
+
+```python
+result = await list_instances()
+# 返回: {"status": "success", "instances": [...], "total": 3}
+```
+
+### 本地测试
+
+```bash
+cd backend/mcp
+python test_mcp.py
+```
+
+### 详细文档
+
+- [PATCH_SPEC.md](./PATCH_SPEC.md) - Patch 工具详细规范
+- [backend/mcp/README.md](./backend/mcp/README.md) - MCP 工具使用文档

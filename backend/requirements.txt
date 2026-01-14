@@ -1,6 +1,4 @@
-fastapi==0.115.0
-uvicorn==0.32.0
-pydantic==2.9.2
-pydantic-settings==2.6.0
-fastmcp==0.1.0
-websockets==14.1
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.5.2
+websockets==12.0

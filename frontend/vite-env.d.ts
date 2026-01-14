@@ -1,7 +1,9 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
+  
   readonly VITE_API_URL?: string
+  readonly VITE_API_PORT?: string
   // Vite 内置的 DEV, MODE, PROD, SSR 等属性已经在 vite/client 中定义
 }
 
