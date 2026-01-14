@@ -10,6 +10,11 @@ export { default as ActionButton } from './ActionButton';
 export { default as PatchHistory } from './PatchHistory';
 export { default as DebugInfo } from './DebugInfo';
 
+// 新架构组件
+export { default as GenericFieldRenderer } from './GenericFieldRenderer';
+export { registerFieldRenderer } from './GenericFieldRenderer';
+export { registerBlockRenderer, getRegisteredBlockTypes } from './BlockRenderer';
+
 // 表单组件
 export { default as InputField } from './InputField';
 export { default as NumberInput } from './NumberInput';

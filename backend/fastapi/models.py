@@ -68,6 +68,8 @@ class FieldConfig(BaseModel):
     value: Optional[Any] = Field(None, description="值")
     description: Optional[str] = Field(None, description="描述")
     options: Optional[List[Dict[str, str]]] = Field(None, description="选项")
+    content_type: Optional[str] = Field(None, description="内容类型（如json）")
+    editable: Optional[bool] = Field(True, description="是否可编辑")
 
 
 class BlockProps(BaseModel):

@@ -9,6 +9,7 @@ def get_default_instances() -> dict[str, UISchema]:
         "demo": _create_demo_schema(),
         "counter": _create_counter_schema(),
         "form": _create_form_schema(),
+        "json_viewer": _create_json_viewer_schema(),
     }
 
 
@@ -41,7 +42,7 @@ def _create_demo_schema() -> UISchema:
                             value=None,
                             description=None,
                             options=None
-                        )
+                        ) # type: ignore
                     ],
                     showProgress=None,
                     showStatus=None,
@@ -86,7 +87,9 @@ def _create_counter_schema() -> UISchema:
                             rid=None,
                             value=None,
                             description=None,
-                            options=None
+                            options=None,
+                            content_type=None,
+                            editable=False
                         )
                     ],
                     showProgress=None,
@@ -133,7 +136,9 @@ def _create_form_schema() -> UISchema:
                             rid=None,
                             value=None,
                             description=None,
-                            options=None
+                            options=None,
+                            content_type=None,
+                            editable=True
                         ),
                         FieldConfig(
                             label="邮箱",
@@ -142,7 +147,9 @@ def _create_form_schema() -> UISchema:
                             rid=None,
                             value=None,
                             description=None,
-                            options=None
+                            options=None,
+                            content_type=None,
+                            editable=True
                         )
                     ],
                     showProgress=None,
@@ -156,6 +163,66 @@ def _create_form_schema() -> UISchema:
         ],
         actions=[
             ActionConfig(id="submit", label="提交", style="primary"),
+            ActionConfig(id="clear", label="清空", style="danger")
+        ]
+    )
+
+
+def _create_json_viewer_schema() -> UISchema:
+    """创建 JSON 查看器 Schema"""
+    return UISchema(
+        meta=MetaInfo(
+            pageKey="json_viewer",
+            step=StepInfo(current=1, total=1),
+            status="idle",
+            schemaVersion="1.0"
+        ),
+        state=StateInfo(
+            params=dict(
+                json_data={"example": "data", "number": 123, "nested": {"key": "value"}},
+                editable=True,
+                theme="light"
+            ),
+            runtime={}
+        ),
+        layout=LayoutInfo(type="single"),
+        blocks=[
+            Block(
+                id="json_block",
+                type="form",
+                bind="state.params",
+                props=BlockProps(
+                    fields=[
+                        FieldConfig(
+                            label="JSON 数据",
+                            key="json_data",
+                            type="json",
+                            content_type="json",
+                            editable=True,
+                            description="可编辑的JSON数据"
+                        ), # type: ignore
+                        FieldConfig(
+                            label="可编辑模式",
+                            key="editable",
+                            type="checkbox",
+                            description="启用/禁用编辑功能"
+                        ), # type: ignore
+                        FieldConfig(
+                            label="主题",
+                            key="theme",
+                            type="select",
+                            options=[
+                                {"label": "浅色", "value": "light"},
+                                {"label": "深色", "value": "dark"}
+                            ]
+                        ) # type: ignore
+                    ]
+                ) # type: ignore
+            )
+        ],
+        actions=[
+            ActionConfig(id="format", label="格式化", style="secondary"),
+            ActionConfig(id="validate", label="验证JSON", style="primary"),
             ActionConfig(id="clear", label="清空", style="danger")
         ]
     )
