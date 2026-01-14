@@ -1,16 +1,16 @@
 """MCP Tools for Agent Programmable UI Runtime"""
 
+import asyncio
 from fastmcp import FastMCP
 from typing import List, Dict, Any, Optional
-import sys
-import os
 import httpx
+from backend.config import settings
 
 # 创建 FastMCP 服务器
 mcp = FastMCP("ui-patch-server")
 
 # FastAPI 后端地址（从环境变量读取，默认 localhost:8001）
-FASTAPI_BASE_URL = os.getenv("FASTAPI_URL", "http://localhost:8001")
+FASTAPI_BASE_URL = f"http://192.168.130.12:{settings.port}"
 
 
 async def apply_patch_to_fastapi(
@@ -192,6 +192,6 @@ if __name__ == "__main__":
     mcp.run(
         transport="streamable-http",
         port=8766,
-        host="localhost",
+        host="0.0.0.0",
         path="/mcp",
     )

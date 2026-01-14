@@ -3,8 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from ..core.history import PatchHistoryManager
-from ..core.manager import SchemaManager
+from ..core import PatchHistoryManager, SchemaManager
 from .services.websocket import WebSocketManager
 from ..config import settings
 
