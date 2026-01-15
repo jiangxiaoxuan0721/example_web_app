@@ -65,13 +65,30 @@ export default function App() {
     }
   }, [currentInstanceId, loadPatches]);
   
-  // WebSocket 接收实时 Patch
-  useWebSocket((patch) => {
-    console.log('[App] 通过 WebSocket 收到 Patch:', patch);
-    applyPatch(patch);
-    // 刷新 Patch 历史记录
-    loadPatches();
-  });
+  // WebSocket 接收实时 Patch 和实例切换消息
+  useWebSocket(
+    // 处理 Patch
+    (patch) => {
+      console.log('[App] 通过 WebSocket 收到 Patch:', patch);
+      applyPatch(patch);
+      // 刷新 Patch 历史记录
+      loadPatches();
+    },
+    // 处理实例切换
+    (instanceId, schema) => {
+      console.log('[App] 通过 WebSocket 切换到实例:', instanceId);
+      if (instanceId !== currentInstanceId) {
+        // 切换到新实例
+        handleInstanceSwitch(instanceId);
+        
+        // 如果提供了 schema，直接使用它
+        if (schema) {
+          // schema 来自 WebSocket，类型为 Record<string, any>，在这里做类型断言以满足 setSchema 的 UISchema 参数
+          setSchema(schema as any);
+        }
+      }
+    }
+  );
   
   // 处理实例切换
   const handleInstanceSwitch = (newInstanceId: string) => {
@@ -93,52 +110,98 @@ export default function App() {
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      height: '100vh',
+      minHeight: '100vh',
       fontFamily: 'Arial, sans-serif',
-      padding: '20px'
+      padding: '20px',
+      backgroundColor: '#f5f5f5'
     }}>
-      {/* 实例选择器 */}
-      <InstanceSelector 
-        currentInstanceId={currentInstanceId} 
-        onInstanceSwitch={handleInstanceSwitch}
-      />
-      
-      {/* Schema 渲染容器 */}
+      {/* 顶部固定区域 - 实例选择器 */}
       <div style={{
-        border: '1px solid #ccc',
+        marginBottom: '20px',
+        backgroundColor: 'white',
+        padding: '15px',
         borderRadius: '8px',
-        padding: '40px',
-        maxWidth: '600px',
-        width: '100%',
-        textAlign: 'center'
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
       }}>
-        {/* 渲染 Blocks */}
-        {schema?.blocks?.map((block) => (
-          <BlockRenderer
-            key={block.id}
-            block={block}
-            schema={schema!}  // schema 已经通过 schema? 检查，这里可以安全使用
-          />
-        ))}
-        
-        {/* 渲染 Actions */}
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-          {schema?.actions?.map((action) => (
-            <ActionButton
-              key={action.id}
-              action={action}
-              onClick={() => useEventEmitter().emitActionClick(action.id)}
+        <InstanceSelector 
+          currentInstanceId={currentInstanceId} 
+          onInstanceSwitch={handleInstanceSwitch}
+        />
+      </div>
+      
+      {/* 主要内容区域 - 可滚动 */}
+      <div style={{
+        flex: 1,
+        overflow: 'auto',
+        maxWidth: '1200px',
+        margin: '0 auto',
+        width: '100%'
+      }}>
+        {/* Schema 渲染容器 */}
+        <div style={{
+          border: '1px solid #ccc',
+          borderRadius: '8px',
+          padding: '30px',
+          backgroundColor: 'white',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          textAlign: 'left'
+        }}>
+          {/* 渲染 Blocks */}
+          {schema?.blocks?.map((block) => (
+            <BlockRenderer
+              key={block.id}
+              block={block}
+              schema={schema!}  // schema 已经通过 schema? 检查，这里可以安全使用
             />
           ))}
+          
+          {/* 渲染 Actions */}
+          <div style={{ 
+            display: 'flex', 
+            gap: '10px', 
+            justifyContent: 'center',
+            marginTop: '20px',
+            paddingTop: '15px',
+            borderTop: '1px solid #eee'
+          }}>
+            {schema?.actions?.map((action) => (
+              <ActionButton
+                key={action.id}
+                action={action}
+                onApiClick={() => useEventEmitter().emitActionClick(action.id)}
+                onNavigate={handleInstanceSwitch}
+              />
+            ))}
+          </div>
+          
+          {/* 调试信息 - 折叠式 */}
+          {schema && (
+            <details style={{ 
+              marginTop: '20px', 
+              paddingTop: '15px',
+              borderTop: '1px solid #eee'
+            }}>
+              <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#666' }}>
+                调试信息 (点击展开)
+              </summary>
+              <div style={{ marginTop: '10px' }}>
+                <DebugInfo schema={schema} instanceId={currentInstanceId} wsConnected={true} />
+              </div>
+            </details>
+          )}
+          
+          {/* Patch 历史记录 - 折叠式 */}
+          <details style={{ 
+            marginTop: '15px'
+          }}>
+            <summary style={{ cursor: 'pointer', fontWeight: 'bold', color: '#666' }}>
+              Patch 历史记录 (点击展开)
+            </summary>
+            <div style={{ marginTop: '10px' }}>
+              <PatchHistory patches={patches} onReplay={replayPatch} />
+            </div>
+          </details>
         </div>
-        
-        {/* Patch 历史记录 */}
-        <PatchHistory patches={patches} onReplay={replayPatch} />
-        
-        {/* 调试信息 */}
-        {schema && <DebugInfo schema={schema} instanceId={currentInstanceId} wsConnected={true} />}
       </div>
     </div>
   );

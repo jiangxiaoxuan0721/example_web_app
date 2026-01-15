@@ -5,6 +5,7 @@ import type { FieldConfig } from '../types/schema';
 import type { UISchema } from '../types/schema';
 import { useFieldValue, useFieldPatch } from '../store/schemaStore';
 import { useEventEmitter } from '../utils/eventEmitter';
+import ImageRenderer from './ImageRenderer';
 
 // 字段渲染器接口
 export interface FieldRenderer {
@@ -24,6 +25,72 @@ interface FieldRendererProps {
 interface FieldRendererRegistry {
   [fieldType: string]: FieldRenderer;
 }
+
+// 渲染图片字段的辅助函数
+const renderImage = ({ field, value }: { 
+  field: FieldConfig; 
+  value: any;
+}) => {
+  // 提取图片信息
+  const imageUrl = typeof value === 'string' ? value : (value?.url || '');
+  const imageTitle = typeof value === 'object' ? (value?.title || field.description) : field.description;
+  const imageAlt = typeof value === 'object' ? (value?.alt || field.label) : field.label;
+  
+  // 如果没有URL，显示占位符
+  if (!imageUrl) {
+    return (
+      <div style={{ marginBottom: '16px' }}>
+        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+          {field.label}
+        </label>
+        <div style={{
+          border: '1px dashed #ccc',
+          borderRadius: '4px',
+          padding: '20px',
+          textAlign: 'center',
+          color: '#888'
+        }}>
+          无图片URL
+        </div>
+        {field.description && (
+          <div style={{ marginTop: '4px', color: '#666', fontSize: '12px' }}>
+            {field.description}
+          </div>
+        )}
+      </div>
+    );
+  }
+  
+  // 使用最佳配置
+  const defaultProps = {
+    height: field.imageHeight || 'auto',
+    fit: field.imageFit || 'contain',
+    showFullscreen: field.showFullscreen !== false,
+    showDownload: field.showDownload !== false,
+    subtitle: field.subtitle,
+    lazy: field.lazy,
+    fallback: field.fallback
+  };
+  
+  return (
+    <div style={{ marginBottom: '16px' }}>
+      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+        {field.label}
+      </label>
+      <ImageRenderer
+        source={imageUrl}
+        title={imageTitle}
+        alt={imageAlt}
+        {...defaultProps}
+      />
+      {field.description && (
+        <div style={{ marginTop: '4px', color: '#666', fontSize: '12px' }}>
+          {field.description}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // 默认渲染器注册表
 const defaultRenderers: FieldRendererRegistry = {
@@ -226,7 +293,41 @@ const defaultRenderers: FieldRendererRegistry = {
         </div>
       ))}
     </div>
-  )
+  ),
+  
+  html: ({ field, value }) => {
+    // HTML字段是只读的，不支持编辑
+    return (
+      <div style={{ marginBottom: '16px' }}>
+        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+          {field.label}
+        </label>
+        <div
+          style={{
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+            padding: '12px',
+            backgroundColor: '#f9f9f9',
+            minHeight: '100px',
+            maxHeight: '400px',
+            overflow: 'auto'
+          }}
+          dangerouslySetInnerHTML={{ __html: String(value || '') }}
+        />
+        {field.description && (
+          <div style={{ marginTop: '4px', color: '#666', fontSize: '12px' }}>
+            {field.description}
+          </div>
+        )}
+      </div>
+    );
+  },
+  
+
+  
+  image: ({ field, value }) => {
+    return renderImage({ field, value });
+  }
 };
 
 // 全局渲染器注册表

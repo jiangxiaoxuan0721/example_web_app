@@ -8,24 +8,27 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSchema } from './useSchema';
 
 interface WSMessage {
-  type: 'patch';
+  type: 'patch' | 'switch_instance';
   instance_id: string;
   patch_id?: number;
-  patch: Record<string, any>;
+  patch?: Record<string, any>;
+  schema?: Record<string, any>;
 }
 
-export function useWebSocket(onPatch: (patch: Record<string, any>) => void) {
+export function useWebSocket(onPatch: (patch: Record<string, any>) => void, onSwitchInstance?: (instanceId: string, schema?: Record<string, any>) => void) {
   const { currentInstanceId } = useSchema();
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
   const onPatchRef = useRef(onPatch);
+  const onSwitchInstanceRef = useRef(onSwitchInstance);
   const instanceIdRef = useRef(currentInstanceId);
   const [connected, setConnected] = useState(false);
 
-  // 始终保持 onPatchRef 的最新值
+  // 始终保持 onPatchRef 和 onSwitchInstanceRef 的最新值
   useEffect(() => {
     onPatchRef.current = onPatch;
-  }, [onPatch]);
+    onSwitchInstanceRef.current = onSwitchInstance;
+  }, [onPatch, onSwitchInstance]);
 
   // 连接函数
   const connect = useCallback(() => {
@@ -69,6 +72,11 @@ export function useWebSocket(onPatch: (patch: Record<string, any>) => void) {
         if (message.type === 'patch' && message.patch) {
           console.log('[WS] 应用 Patch:', message.patch);
           onPatchRef.current(message.patch);
+        } else if (message.type === 'switch_instance' && message.instance_id) {
+          console.log('[WS] 切换实例到:', message.instance_id);
+          if (onSwitchInstanceRef.current) {
+            onSwitchInstanceRef.current(message.instance_id, message.schema);
+          }
         }
       } catch (err) {
         console.error('[WS] 解析消息失败:', err);

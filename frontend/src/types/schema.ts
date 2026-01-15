@@ -1,6 +1,24 @@
+/** 图片配置接口 */
+export interface PictureConfig {
+  /** 是否显示全屏按钮 */
+  showFullscreen?: boolean;
+  /** 是否显示下载按钮 */
+  showDownload?: boolean;
+  /** 图片高度 */
+  imageHeight?: string;
+  /** 图片适应方式 */
+  imageFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down';
+  /** 是否懒加载 */
+  lazy?: boolean;
+  /** 加载失败时的回退内容 */
+  fallback?: string;
+  /** 子标题 */
+  subtitle?: string;
+}
+
 /** Schema 类型定义 */
 
-export interface FieldConfig {
+export interface FieldConfig extends PictureConfig {
   label: string;
   key: string;
   type: string;
@@ -31,6 +49,8 @@ export interface ActionConfig {
   id: string;
   label: string;
   style: string;
+  action_type?: string;  // 'api'（默认）或 'navigate'
+  target_instance?: string;  // 目标实例ID（当action_type=navigate时使用）
 }
 
 export interface StepInfo {

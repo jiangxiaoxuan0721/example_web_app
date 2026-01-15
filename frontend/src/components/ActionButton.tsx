@@ -4,10 +4,11 @@ import { ActionConfig } from '../types/schema';
 
 interface ActionButtonProps {
   action: ActionConfig;
-  onClick: () => void;
+  onApiClick: () => void;  // API 操作回调
+  onNavigate?: (targetInstance: string) => void;  // 导航操作回调（可选）
 }
 
-export default function ActionButton({ action, onClick }: ActionButtonProps) {
+export default function ActionButton({ action, onApiClick, onNavigate }: ActionButtonProps) {
   const getBackgroundColor = (hover: boolean = false) => {
     if (action.style === 'primary') {
       return hover ? '#0056b3' : '#007bff';
@@ -18,9 +19,20 @@ export default function ActionButton({ action, onClick }: ActionButtonProps) {
     }
   };
 
+  // 确定点击处理方式
+  const handleClick = () => {
+    if (action.action_type === 'navigate' && onNavigate && action.target_instance) {
+      // 导航到目标实例
+      onNavigate(action.target_instance);
+    } else {
+      // 默认为 API 操作
+      onApiClick();
+    }
+  };
+
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
       style={{
         padding: '12px 24px',
         fontSize: '16px',
@@ -37,8 +49,12 @@ export default function ActionButton({ action, onClick }: ActionButtonProps) {
       onMouseLeave={(e) => {
         e.currentTarget.style.background = getBackgroundColor(false);
       }}
+      title={action.action_type === 'navigate' ? `导航到实例: ${action.target_instance}` : undefined}
     >
       {action.label}
+      {action.action_type === 'navigate' && (
+        <span style={{ marginLeft: '5px' }}>→</span>
+      )}
     </button>
   );
 }
