@@ -179,6 +179,47 @@ async def list_instances() -> Dict[str, Any]:
     return await list_instances_from_fastapi()
 
 
+async def access_instance_from_fastapi(instance_id: str) -> Dict[str, Any]:
+    """通过 HTTP API 访问指定实例"""
+    try:
+        async with httpx.AsyncClient() as client:
+            # 设置实例状态为活跃
+            url = f"{FASTAPI_BASE_URL}/ui/access"
+            payload = {"instance_id": instance_id}
+            response = await client.post(url, json=payload, timeout=10.0)
+
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return {
+                    "status": "error",
+                    "error": f"FastAPI returned status {response.status_code}",
+                    "detail": response.text
+                }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": f"Failed to call FastAPI: {str(e)}"
+        }
+
+
+@mcp.tool()
+async def access_instance(instance_id: str) -> Dict[str, Any]:
+    """
+    Access a specific UI instance and mark it as active.
+
+    Args:
+        instance_id: Instance ID to access (e.g., "demo", "counter", "form").
+
+    Returns:
+        Dict containing operation status and the instance schema.
+    """
+    print(f"[MCP] 访问实例: {instance_id}")
+    result = await access_instance_from_fastapi(instance_id)
+    print(f"[MCP] 访问结果: {result}")
+    return result
+
+
 # 启动 MCP 服务器（用于本地测试）
 if __name__ == "__main__":
     import os
@@ -188,6 +229,7 @@ if __name__ == "__main__":
     print("  - patch_ui_state: Apply structured patches to modify UI")
     print("  - get_schema: Get current UI Schema")
     print("  - list_instances: List all available instances")
+    print("  - access_instance: Access a specific UI instance and mark it as active")
     print()
     mcp.run(
         transport="streamable-http",

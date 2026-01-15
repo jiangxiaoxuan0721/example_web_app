@@ -70,6 +70,14 @@ class FieldConfig(BaseModel):
     options: Optional[List[Dict[str, str]]] = Field(None, description="选项")
     content_type: Optional[str] = Field(None, description="内容类型（如json）")
     editable: Optional[bool] = Field(True, description="是否可编辑")
+    # 图片相关属性
+    showFullscreen: Optional[bool] = Field(True, description="是否显示全屏按钮")
+    showDownload: Optional[bool] = Field(True, description="是否显示下载按钮")
+    imageHeight: Optional[str] = Field("auto", description="图片高度")
+    imageFit: Optional[str] = Field("contain", description="图片适应方式")
+    lazy: Optional[bool] = Field(None, description="是否懒加载")
+    fallback: Optional[str] = Field(None, description="加载失败时的回退内容")
+    subtitle: Optional[str] = Field(None, description="子标题")
 
 
 class BlockProps(BaseModel):
@@ -96,6 +104,8 @@ class ActionConfig(BaseModel):
     id: str = Field(..., description="操作 ID")
     label: str = Field(..., description="操作标签")
     style: str = Field(default="secondary", description="操作样式")
+    action_type: Optional[str] = Field(default="api", description="操作类型：api（默认）/ navigate")
+    target_instance: Optional[str] = Field(None, description="目标实例ID（当action_type=navigate时使用）")
 
 
 class UISchema(BaseModel):

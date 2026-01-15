@@ -42,6 +42,9 @@ default_instance_id = "demo"
 for instance_id, schema in get_default_instances().items():
     schema_manager.set(instance_id, schema)
 
+# 将WebSocket管理器存储到应用状态中，以便在路由中访问
+app.state.ws_manager = ws_manager
+
 # 注册路由（使用 routes 模块的注册函数）
 from .routes.event_routes import register_event_routes
 from .routes.patch_routes import register_patch_routes
@@ -50,7 +53,7 @@ from .routes.websocket_routes import register_websocket_routes
 
 register_event_routes(app, schema_manager, event_handler, patch_history, ws_manager, default_instance_id)
 register_patch_routes(app, schema_manager, patch_history, ws_manager)
-register_schema_routes(app, schema_manager, default_instance_id)
+register_schema_routes(app, schema_manager, default_instance_id, ws_manager)
 register_websocket_routes(app, ws_manager, schema_manager)
 
 

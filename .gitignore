@@ -9,6 +9,7 @@ __pycache__/
 # Environment
 .env
 .venv
+.vite
 venv/
 ENV/
 
