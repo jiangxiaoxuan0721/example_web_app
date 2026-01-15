@@ -1,16 +1,17 @@
 # MCP 工具使用示例
 
-本文档展示了如何使用新添加的 MCP 工具来最小化 UI 操作。
+本文档展示了如何使用 MCP 工具来最小化 UI 操作。
 
 ## 1. 删除字段示例
 
 ### 场景：从表单中删除"电话"字段
 
 ```python
-# 使用 remove_field_from_ui 工具
-result = await remove_field_from_ui(
+# 使用 patch_ui_state 工具的删除字段快捷方式
+result = await patch_ui_state(
     instance_id="form",
     field_key="telephone",
+    remove_field=True,
     block_index=0  # 默认为0，第一个表单块
 )
 
@@ -18,14 +19,15 @@ result = await remove_field_from_ui(
 # {
 #     "status": "success",
 #     "message": "Field 'telephone' removed successfully",
-#     "instance_id": "form"
+#     "instance_id": "form",
+#     "auto_refreshed": True
 # }
 ```
 
-### 等价的 patch_ui_state 调用（更复杂）
+### 等价的完整 patch_ui_state 调用（更复杂）
 
 ```python
-# 使用 patch_ui_state 工具（需要更多代码）
+# 使用 patch_ui_state 工具的手动补丁方式（需要更多代码）
 result = await patch_ui_state(
     instance_id="form",
     patches=[
@@ -43,8 +45,8 @@ result = await patch_ui_state(
 ### 场景：更新表单中的"邮箱"字段
 
 ```python
-# 使用 update_field_in_ui 工具
-result = await update_field_in_ui(
+# 使用 patch_ui_state 工具的更新字段快捷方式
+result = await patch_ui_state(
     instance_id="form",
     field_key="email",
     updates={
@@ -60,14 +62,15 @@ result = await update_field_in_ui(
 # {
 #     "status": "success",
 #     "message": "Field 'email' updated successfully",
-#     "instance_id": "form"
+#     "instance_id": "form",
+#     "auto_refreshed": True
 # }
 ```
 
-### 等价的 patch_ui_state 调用（更复杂）
+### 等价的完整 patch_ui_state 调用（更复杂）
 
 ```python
-# 使用 patch_ui_state 工具（需要更多代码）
+# 使用 patch_ui_state 工具的手动补丁方式（需要更多代码）
 result = await patch_ui_state(
     instance_id="form",
     patches=[
@@ -95,13 +98,14 @@ result = await patch_ui_state(
 schema = await get_schema(instance_id="form")
 
 # 2. 删除不需要的字段
-await remove_field_from_ui(
+await patch_ui_state(
     instance_id="form",
-    field_key="old_field"
+    field_key="old_field",
+    remove_field=True
 )
 
 # 3. 更新现有字段
-await update_field_in_ui(
+await patch_ui_state(
     instance_id="form",
     field_key="name",
     updates={
@@ -140,9 +144,10 @@ current_schema = await get_schema(instance_id="registration_form")
 # 2. 删除冗余字段
 redundant_fields = ["fax", "middle_name", "mailing_address"]
 for field_key in redundant_fields:
-    result = await remove_field_from_ui(
+    result = await patch_ui_state(
         instance_id="registration_form",
-        field_key=field_key
+        field_key=field_key,
+        remove_field=True
     )
     if result.get("status") == "error":
         print(f"Failed to remove field {field_key}: {result.get('error')}")
@@ -169,7 +174,7 @@ field_updates = {
 }
 
 for field_key, updates in field_updates.items():
-    result = await update_field_in_ui(
+    result = await patch_ui_state(
         instance_id="registration_form",
         field_key=field_key,
         updates=updates
@@ -229,9 +234,10 @@ print(f"表单验证结果: {validation_result}")
 
 ```python
 # 删除字段时的错误处理
-result = await remove_field_from_ui(
+result = await patch_ui_state(
     instance_id="form",
-    field_key="nonexistent_field"
+    field_key="nonexistent_field",
+    remove_field=True
 )
 
 if result.get("status") == "error":
@@ -244,7 +250,7 @@ if result.get("status") == "error":
         print(f"删除字段时出错: {error_message}")
 
 # 更新字段时的错误处理
-result = await update_field_in_ui(
+result = await patch_ui_state(
     instance_id="form",
     field_key="email",
     updates={"invalid_property": "value"}  # 无效属性
@@ -252,12 +258,25 @@ result = await update_field_in_ui(
 
 if result.get("status") == "error":
     print(f"更新字段时出错: {result.get('error')}")
+
+# 检查自动刷新状态
+if result.get("auto_refreshed"):
+    print("实例已自动刷新")
+elif result.get("auto_refresh_error"):
+    print(f"实例刷新失败: {result.get('auto_refresh_error')}")
 ```
 
 ## 优势总结
 
-1. **简化操作**：使用 `remove_field_from_ui` 和 `update_field_in_ui` 工具，无需手动构建复杂的补丁结构
+1. **简化操作**：使用 `patch_ui_state` 工具的字段快捷方式，无需手动构建复杂的补丁结构
 2. **减少错误**：工具内部处理了路径构建、索引计算等细节，减少了出错可能性
 3. **代码清晰**：意图更加明确，代码更易读和维护
-4. **一致性**：所有工具使用相同的错误处理和响应格式
-5. **组合使用**：可以与现有的 `patch_ui_state` 和其他工具无缝组合使用
+4. **自动刷新**：字段操作后自动刷新实例，确保前端立即显示最新状态
+5. **一致性**：所有工具使用相同的错误处理和响应格式
+6. **组合使用**：可以与现有的其他工具无缝组合使用
+
+## 架构改进
+
+- **定义与实现分离**：工具定义在 `tool_definitions.py` 中，实现在 `tool_implements.py` 中
+- **代码组织更清晰**：更容易维护和扩展
+- **可测试性提高**：可以独立测试工具的定义和实现

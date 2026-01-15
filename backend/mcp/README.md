@@ -4,19 +4,42 @@
 
 MCP (Model Context Protocol) 工具集，为 AI Agent 提供 UI Schema 修改能力。
 
+## 架构更新
+
+工具定义和实现已分离以提高代码组织性和可维护性：
+
+- `tool_definitions.py`: 包含工具的装饰器和定义，包括参数和文档
+- `tool_implements.py`: 包含工具的实际实现逻辑
+- `tools.py`: 作为入口点，导入并运行 MCP 服务器
+
+## 新增功能
+
+### 字段操作自动刷新
+
+当使用 `patch_ui_state` 工具更新或删除字段时，系统会自动刷新对应的实例，确保前端能够立即显示最新状态。这与修改界面元素时的行为保持一致。
+
+在返回结果中，会包含以下额外字段：
+- `auto_refreshed`: 布尔值，指示是否已自动刷新实例
+- `auto_refresh_error`: 字符串（可选），如果刷新失败则包含错误信息
+
 ## 工具列表
 
 ### 1. `patch_ui_state`
 
-应用结构化补丁来修改 UI Schema 状态和结构。这是修改 UI 的唯一方式，不允许直接修改。
+应用结构化补丁来修改 UI Schema 状态和结构。这是修改 UI 的唯一方式，不允许直接修改。此工具已增强，支持字段操作快捷方式，并在更新/删除字段后自动刷新实例。
 
 **参数**:
+
 - `instance_id` (str): 目标实例 ID（如 "demo", "counter", "form"）
   - 使用 `"__CREATE__"` 创建新实例
   - 使用 `"__DELETE__"` 删除实例
-- `patches` (List[Dict[str, Any]]): 补丁操作数组
+- `patches` (List[Dict[str, Any]]): 补丁操作数组（使用字段快捷操作时为可选）
 - `new_instance_id` (Optional[str]): 创建实例时必需
 - `target_instance_id` (Optional[str]): 删除实例时必需
+- `field_key` (Optional[str]): 要更新/删除的字段键（用于字段操作快捷方式）
+- `updates` (Optional[Dict[str, Any]]): 字段属性字典（用于更新字段快捷方式）
+- `remove_field` (Optional[bool]): 如果为 True，删除指定字段（用于删除字段快捷方式）
+- `block_index` (Optional[int]): 表单块索引（默认为 0，第一个块）
 
 **示例**:
 
@@ -27,6 +50,23 @@ MCP (Model Context Protocol) 工具集，为 AI Agent 提供 UI Schema 修改能
     "patches": [
         {"op": "set", "path": "state.params.count", "value": 42}
     ]
+}
+
+# 更新字段（快捷方式）
+{
+    "instance_id": "form",
+    "field_key": "email",
+    "updates": {
+        "label": "Email Address",
+        "type": "email"
+    }
+}
+
+# 删除字段（快捷方式）
+{
+    "instance_id": "form",
+    "field_key": "email",
+    "remove_field": true
 }
 
 # 添加新 Block
@@ -95,9 +135,11 @@ MCP (Model Context Protocol) 工具集，为 AI Agent 提供 UI Schema 修改能
 获取指定实例的当前 UI Schema。
 
 **参数**:
+
 - `instance_id` (Optional[str]): 实例 ID。如果未提供，返回默认实例 ("demo")
 
 **返回**:
+
 ```json
 {
     "status": "success",
@@ -117,6 +159,7 @@ MCP (Model Context Protocol) 工具集，为 AI Agent 提供 UI Schema 修改能
 列出所有可用的 UI Schema 实例。
 
 **返回**:
+
 ```json
 {
     "status": "success",
@@ -197,12 +240,14 @@ MCP (Model Context Protocol) 工具集，为 AI Agent 提供 UI Schema 修改能
 ### 快速启动（推荐）
 
 **Windows (PowerShell):**
+
 ```powershell
 cd backend/mcp
 .\start_http.ps1
 ```
 
 **Linux/Mac:**
+
 ```bash
 cd backend/mcp
 python start_http.py
@@ -227,6 +272,7 @@ python tools.py
 ```
 
 服务器将在以下地址启动：
+
 - HTTP 端点: `http://localhost:8766`
 - SSE 端点: `http://localhost:8766/sse`
 
@@ -273,6 +319,7 @@ python test_tools.py
 ```
 
 **Linux/Mac:**
+
 ```json
 {
   "mcpServers": {

@@ -6,6 +6,10 @@
 
 from typing import List, Dict, Any, Optional
 from fastmcp import FastMCP
+from .interfaces import (
+    PatchInput, PatchInputWithShortcuts, PatchOperation, 
+    ValidateCompletionInput, ValidateCompletionResult
+)
 
 # 创建FastMCP服务器实例
 mcp = FastMCP("ui-patch-server")
