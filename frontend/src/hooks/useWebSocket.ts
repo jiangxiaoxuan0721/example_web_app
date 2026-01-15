@@ -8,11 +8,13 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSchema } from './useSchema';
 
 interface WSMessage {
-  type: 'patch' | 'switch_instance';
+  type: 'patch' | 'switch_instance' | 'schema_update' | 'access_instance';
   instance_id: string;
   patch_id?: number;
   patch?: Record<string, any>;
   schema?: Record<string, any>;
+  redirect_url?: string;
+  highlight?: string;
 }
 
 export function useWebSocket(onPatch: (patch: Record<string, any>) => void, onSwitchInstance?: (instanceId: string, schema?: Record<string, any>) => void) {
@@ -72,11 +74,32 @@ export function useWebSocket(onPatch: (patch: Record<string, any>) => void, onSw
         if (message.type === 'patch' && message.patch) {
           console.log('[WS] 应用 Patch:', message.patch);
           onPatchRef.current(message.patch);
+        } else if (message.type === 'schema_update' && message.schema) {
+          console.log('[WS] 应用完整 Schema 更新:', message.schema);
+          // 直接设置整个schema，适用于add操作后的更新
+          if (onSwitchInstanceRef.current) {
+            onSwitchInstanceRef.current(instanceIdRef.current, message.schema);
+          }
+          
+          // 检查是否有跳转链接
+          if (message.redirect_url) {
+            console.log('[WS] 跳转到:', message.redirect_url);
+            window.location.href = message.redirect_url;
+          }
         } else if (message.type === 'switch_instance' && message.instance_id) {
           console.log('[WS] 切换实例到:', message.instance_id);
           if (onSwitchInstanceRef.current) {
             onSwitchInstanceRef.current(message.instance_id, message.schema);
           }
+        } else if (message.type === 'access_instance' && message.instance_id) {
+          console.log('[WS] 访问实例:', message.instance_id, '高亮字段:', message.highlight);
+          // 构建带有高亮参数的URL
+          const url = new URL(window.location.href);
+          url.searchParams.set('instanceId', message.instance_id);
+          if (message.highlight) {
+            url.searchParams.set('highlight', message.highlight);
+          }
+          window.location.href = url.toString();
         }
       } catch (err) {
         console.error('[WS] 解析消息失败:', err);

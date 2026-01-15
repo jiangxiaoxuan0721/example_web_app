@@ -7,6 +7,7 @@ interface BlockRendererProps {
   block: Block;
   schema: UISchema;
   disabled?: boolean;
+  highlightField?: string | null;
 }
 
 /**
@@ -18,7 +19,7 @@ export interface BlockRenderer {
 
 // 块渲染器注册表
 const blockRenderers: Record<string, BlockRenderer> = {
-  form: ({ block, schema, disabled }) => (
+  form: ({ block, schema, disabled, highlightField }) => (
     <div key={block.id} style={{ marginBottom: '20px' }}>
       {block.props?.fields?.map((field) => (
         <GenericFieldRenderer
@@ -27,6 +28,7 @@ const blockRenderers: Record<string, BlockRenderer> = {
           schema={schema}
           bindPath={block.bind}
           disabled={disabled}
+          highlighted={field.key === highlightField}
         />
       ))}
     </div>
@@ -74,7 +76,7 @@ export const getRegisteredBlockTypes = (): string[] => {
 /**
  * 通用块渲染器组件
  */
-export default function BlockRenderer({ block, schema, disabled }: BlockRendererProps) {
+export default function BlockRenderer({ block, schema, disabled, highlightField }: BlockRendererProps) {
   const renderer = blockRenderers[block.type];
   
   if (!renderer) {
@@ -82,5 +84,5 @@ export default function BlockRenderer({ block, schema, disabled }: BlockRenderer
     return null;
   }
   
-  return renderer({ block, schema, disabled });
+  return renderer({ block, schema, disabled, highlightField });
 }

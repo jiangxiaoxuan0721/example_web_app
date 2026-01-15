@@ -19,6 +19,7 @@ interface FieldRendererProps {
   value: any;
   onChange: (value: any) => void;
   disabled?: boolean;
+  highlighted?: boolean;
 }
 
 // 字段类型注册表
@@ -94,7 +95,7 @@ const renderImage = ({ field, value }: {
 
 // 默认渲染器注册表
 const defaultRenderers: FieldRendererRegistry = {
-  text: ({ field, value, onChange, disabled }) => (
+  text: ({ field, value, onChange, disabled, highlighted }) => (
     <div style={{ marginBottom: '16px' }}>
       <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
         {field.label}
@@ -108,17 +109,19 @@ const defaultRenderers: FieldRendererRegistry = {
         style={{
           width: '100%',
           padding: '12px',
-          border: '1px solid #ddd',
+          border: highlighted ? '2px solid #007bff' : '1px solid #ddd',
           borderRadius: '4px',
           background: '#fff',
           fontSize: '16px',
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          boxShadow: highlighted ? '0 0 5px rgba(0, 123, 255, 0.5)' : 'none',
+          transition: 'all 0.3s ease'
         }}
       />
     </div>
   ),
   
-  number: ({ field, value, onChange, disabled }) => (
+  number: ({ field, value, onChange, disabled, highlighted }) => (
     <div style={{ marginBottom: '16px' }}>
       <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
         {field.label}
@@ -132,11 +135,13 @@ const defaultRenderers: FieldRendererRegistry = {
         style={{
           width: '100%',
           padding: '12px',
-          border: '1px solid #ddd',
+          border: highlighted ? '2px solid #007bff' : '1px solid #ddd',
           borderRadius: '4px',
           background: '#fff',
           fontSize: '16px',
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          boxShadow: highlighted ? '0 0 5px rgba(0, 123, 255, 0.5)' : 'none',
+          transition: 'all 0.3s ease'
         }}
       />
     </div>
@@ -187,7 +192,7 @@ const defaultRenderers: FieldRendererRegistry = {
     </div>
   ),
   
-  select: ({ field, value, onChange, disabled }) => (
+  select: ({ field, value, onChange, disabled, highlighted }) => (
     <div style={{ marginBottom: '16px' }}>
       <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
         {field.label}
@@ -199,11 +204,13 @@ const defaultRenderers: FieldRendererRegistry = {
         style={{
           width: '100%',
           padding: '12px',
-          border: '1px solid #ddd',
+          border: highlighted ? '2px solid #007bff' : '1px solid #ddd',
           borderRadius: '4px',
           background: '#fff',
           fontSize: '16px',
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          boxShadow: highlighted ? '0 0 5px rgba(0, 123, 255, 0.5)' : 'none',
+          transition: 'all 0.3s ease'
         }}
       >
         <option value="">请选择...</option>
@@ -357,12 +364,14 @@ export default function GenericFieldRenderer({
   field,
   schema,
   bindPath,
-  disabled = false
+  disabled = false,
+  highlighted = false
 }: {
   field: FieldConfig;
   schema: UISchema;
   bindPath: string;
   disabled?: boolean;
+  highlighted?: boolean;
 }) {
   // 从 Store 获取值
   const storedValue = useFieldValue(bindPath, field.key);
@@ -396,6 +405,7 @@ export default function GenericFieldRenderer({
     bindPath,
     value: localValue,
     onChange: handleChange,
-    disabled
+    disabled,
+    highlighted
   });
 }

@@ -18,6 +18,7 @@ import { useSchema } from './hooks/useSchema';
 import { usePatchHistory } from './hooks/usePatchHistory';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useEventEmitter } from './utils/eventEmitter';
+import { getInstanceIdFromUrl, getHighlightFromUrl } from './utils/url';
 import Loading from './components/Loading';
 import ErrorState from './components/ErrorState';
 import InstanceSelector from './components/InstanceSelector';
@@ -40,6 +41,9 @@ export default function App() {
   const { currentInstanceId, schema, loading, error } = useSchema();
   const { setSchema, applyPatch, setInstanceId } = useSchemaStore();
   const { emitInstanceSwitch } = useEventEmitter();
+  
+  // 获取URL中的高亮字段
+  const highlightField = getHighlightFromUrl();
   
   // ============ Patch 历史管理 ============
   const { patches, loadPatches, replayPatch } = usePatchHistory(applyPatch);
@@ -152,6 +156,7 @@ export default function App() {
               key={block.id}
               block={block}
               schema={schema!}  // schema 已经通过 schema? 检查，这里可以安全使用
+              highlightField={highlightField}
             />
           ))}
           

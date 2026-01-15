@@ -16,3 +16,11 @@ export function buildUrlWithInstanceId(instanceId: string): string {
   url.searchParams.set('instanceId', instanceId);
   return url.toString();
 }
+
+/**
+ * 从 URL 参数获取高亮字段
+ */
+export function getHighlightFromUrl(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('highlight');
+}
