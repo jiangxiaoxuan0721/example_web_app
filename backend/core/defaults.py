@@ -1,6 +1,6 @@
 """默认 Schema 实例"""
 
-from .fastapi.models import UISchema, MetaInfo, StateInfo, LayoutInfo, Block, ActionConfig, StepInfo, BlockProps, FieldConfig
+from ..fastapi.models import UISchema, MetaInfo, StateInfo, LayoutInfo, Block, ActionConfig, StepInfo, BlockProps, FieldConfig
 
 
 def get_default_instances() -> dict[str, UISchema]:

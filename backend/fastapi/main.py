@@ -25,7 +25,7 @@ app.add_middleware(
 )
 
 # 初始化服务
-from ..defaults import get_default_instances
+from backend.core.defaults import get_default_instances
 from .services.instance_service import InstanceService
 from .services.event_handler import EventHandler
 
