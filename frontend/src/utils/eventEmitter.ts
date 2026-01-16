@@ -144,10 +144,11 @@ const handleInstanceSwitch = async (
 ): Promise<void> => {
   const { instanceId } = payload;
   
-  // 直接更新URL来切换实例
-  const url = new URL(window.location.href);
-  url.searchParams.set('instanceId', instanceId);
-  window.location.href = url.toString();
+  // 更新localStorage而不是URL
+  localStorage.setItem('instanceId', instanceId);
+  
+  // 触发自定义事件通知useSchema钩子
+  window.dispatchEvent(new CustomEvent('instanceSwitch', { detail: { instanceId } }));
   
   console.log(`[EventEmitter] Instance switch to: ${instanceId}`);
 };

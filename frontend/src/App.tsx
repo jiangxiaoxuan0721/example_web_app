@@ -42,8 +42,8 @@ export default function App() {
   const { setSchema, applyPatch, setInstanceId } = useSchemaStore();
   const { emitInstanceSwitch } = useEventEmitter();
   
-  // 获取URL中的高亮字段
-  const highlightField = getHighlightFromUrl();
+  // 获取localStorage中的高亮字段
+  const highlightField = getHighlightFromUrl(); // 使用这个函数会自动从URL迁移到localStorage
   
   // ============ Patch 历史管理 ============
   const { patches, loadPatches, replayPatch } = usePatchHistory(applyPatch);

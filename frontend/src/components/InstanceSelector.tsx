@@ -46,8 +46,10 @@ export default function InstanceSelector({ currentInstanceId, onInstanceSwitch }
     if (onInstanceSwitch) {
       onInstanceSwitch(instanceId);
     } else {
-      // Fallback to URL navigation
-      window.location.href = `?instanceId=${instanceId}`;
+      // Fallback to localStorage update
+      localStorage.setItem('instanceId', instanceId);
+      // 手动触发页面刷新以加载新实例
+      window.location.reload();
     }
   };
 

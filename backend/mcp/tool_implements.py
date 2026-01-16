@@ -7,11 +7,6 @@
 from typing import List, Dict, Any, Optional
 import httpx
 from backend.config import settings
-from .interfaces import (
-    PatchInput, PatchInputWithShortcuts, PatchOperation, 
-    ValidateCompletionInput, ValidateCompletionResult,
-    FieldConfig, Block, ActionConfig, UISchema
-)
 
 # FastAPI 后端地址（从环境变量读取，默认 localhost:8001）
 FASTAPI_BASE_URL = f"http://localhost:{settings.port}"
