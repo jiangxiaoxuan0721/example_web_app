@@ -1,17 +1,47 @@
 /** API 工具函数 */
 
+// Schema缓存，加速实例切换
+const schemaCache = new Map<string, any>();
+const CACHE_TTL = 5 * 60 * 1000; // 5分钟缓存
+const cacheTimestamps = new Map<string, number>();
+
 /**
- * 加载 Schema
+ * 加载 Schema（带缓存）
  * @param instanceId - 实例 ID
  * @returns Schema 响应
  */
 export async function loadSchema(instanceId: string) {
-  console.log(`[API] 加载 Schema，instanceId: ${instanceId}`);
+  // 检查缓存
+  const now = Date.now();
+  const cachedTimestamp = cacheTimestamps.get(instanceId);
+  const cachedSchema = schemaCache.get(instanceId);
+  
+  if (cachedSchema && cachedTimestamp && (now - cachedTimestamp < CACHE_TTL)) {
+    console.log(`[API] 从缓存加载 Schema，instanceId: ${instanceId}`);
+    return {
+      status: 'success',
+      instance_id: instanceId,
+      schema: cachedSchema
+    };
+  }
+  
+  console.log(`[API] 从服务器加载 Schema，instanceId: ${instanceId}`);
   const url = `/ui/schema?instanceId=${instanceId}`;
   console.log(`[API] 请求 URL: ${url}`);
   
   try {
-    const response = await fetch(url);
+    // 添加超时控制
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3秒超时
+    
+    const response = await fetch(url, { 
+      signal: controller.signal,
+      headers: {
+        'Cache-Control': 'no-cache',
+      }
+    });
+    clearTimeout(timeoutId);
+    
     console.log(`[API] 响应状态: ${response.status}`);
     
     if (!response.ok) {
@@ -21,10 +51,63 @@ export async function loadSchema(instanceId: string) {
     
     const data = await response.json();
     console.log(`[API] 响应数据:`, data);
+    
+    // 更新缓存
+    if (data.status === 'success' && data.schema) {
+      schemaCache.set(instanceId, data.schema);
+      cacheTimestamps.set(instanceId, now);
+    }
+    
     return data;
   } catch (error) {
     console.error(`[API] 请求失败:`, error);
+    // 如果请求失败但有缓存，返回缓存数据
+    if (cachedSchema) {
+      console.log(`[API] 请求失败，使用缓存数据，instanceId: ${instanceId}`);
+      return {
+        status: 'success',
+        instance_id: instanceId,
+        schema: cachedSchema,
+        cached: true // 标记为缓存数据
+      };
+    }
     throw error;
+  }
+}
+
+/**
+ * 预加载所有实例的Schema
+ * @param instanceIds - 实例ID列表
+ * @returns Promise
+ */
+export async function preloadSchemas(instanceIds: string[]) {
+  console.log(`[API] 预加载实例Schemas: ${instanceIds.join(', ')}`);
+  const promises = instanceIds.map(id => 
+    loadSchema(id).catch(error => {
+      console.error(`[API] 预加载实例 ${id} 失败:`, error);
+      return null;
+    })
+  );
+  
+  try {
+    await Promise.all(promises);
+    console.log(`[API] 预加载完成`);
+  } catch (error) {
+    console.error(`[API] 预加载过程中出错:`, error);
+  }
+}
+
+/**
+ * 清除Schema缓存
+ * @param instanceId - 可选，指定实例ID，不指定则清除所有
+ */
+export function clearSchemaCache(instanceId?: string) {
+  if (instanceId) {
+    schemaCache.delete(instanceId);
+    cacheTimestamps.delete(instanceId);
+  } else {
+    schemaCache.clear();
+    cacheTimestamps.clear();
   }
 }
 

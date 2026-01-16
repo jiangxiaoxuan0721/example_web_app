@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { UISchema } from '../types/schema';
-import { loadSchema } from '../utils/api';
+import { loadSchema, preloadSchemas, clearSchemaCache } from '../utils/api';
 import { getInstanceIdFromUrl } from '../utils/url';
 
 export function useSchema() {
@@ -10,7 +10,9 @@ export function useSchema() {
   const [schema, setSchema] = useState<UISchema | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadingText, setLoadingText] = useState<string>('加载中...');
   const currentInstanceIdRef = useRef(currentInstanceId);
+  const initializedRef = useRef(false); // 标记是否已初始化
 
   // 更新 ref
   useEffect(() => {
@@ -35,6 +37,7 @@ export function useSchema() {
       const { instanceId } = event.detail;
       if (instanceId !== currentInstanceIdRef.current) {
         console.log(`[前端] 实例ID变化 (自定义事件): ${instanceId}`);
+        setLoadingText('切换实例中...');
         setCurrentInstanceId(instanceId);
       }
     };
@@ -43,6 +46,7 @@ export function useSchema() {
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === 'instanceId' && event.newValue !== currentInstanceIdRef.current) {
         console.log(`[前端] 实例ID变化 (跨标签页): ${event.newValue}`);
+        setLoadingText('切换实例中...');
         setCurrentInstanceId(event.newValue || 'demo');
       }
     };
@@ -51,7 +55,7 @@ export function useSchema() {
     window.addEventListener('instanceSwitch', handleInstanceSwitch as EventListener);
     window.addEventListener('storage', handleStorageChange);
 
-    // 轮询检测 localStorage 变化（作为备用机制）
+    // 降低轮询频率，减少CPU占用
     const intervalId = setInterval(() => {
       const storedInstanceId = localStorage.getItem('instanceId');
       if (storedInstanceId && storedInstanceId !== currentInstanceIdRef.current) {
@@ -62,10 +66,11 @@ export function useSchema() {
 
         debounceTimer = setTimeout(() => {
           console.log(`[前端] 实例ID变化 (轮询检测): ${storedInstanceId}`);
+          setLoadingText('切换实例中...');
           setCurrentInstanceId(storedInstanceId);
         }, 50); // 50ms 防抖
       }
-    }, 200); // 降低轮询频率到每200ms一次，减少CPU占用
+    }, 500); // 降低轮询频率到每500ms一次
 
     return () => {
       window.removeEventListener('popstate', handlePopState);
@@ -92,12 +97,42 @@ export function useSchema() {
         return;
       }
       
+      // 如果不是第一次加载，显示更具体的加载状态
+      if (initializedRef.current) {
+        setLoadingText('切换实例中...');
+      } else {
+        setLoadingText('加载中...');
+      }
+      
       const data = await loadSchema(currentInstanceId);
       console.log('[前端] Schema API 响应:', data);
 
       if (data.status === 'success' && data.schema) {
         setSchema(data.schema);
         console.log('[前端] Schema 加载成功:', data.schema);
+        
+        // 如果是第一次加载，预加载其他实例
+        if (!initializedRef.current) {
+          initializedRef.current = true;
+          // 获取所有可用实例
+          try {
+            const instancesResponse = await fetch('/ui/instances');
+            const instancesData = await instancesResponse.json();
+            if (instancesData.status === 'success' && instancesData.instances) {
+              const instanceIds = instancesData.instances
+                .map((inst: any) => inst.instance_id)
+                .filter((id: string) => id !== currentInstanceId);
+              
+              // 预加载其他实例（不等待完成）
+              if (instanceIds.length > 0) {
+                console.log(`[前端] 预加载其他实例: ${instanceIds.join(', ')}`);
+                preloadSchemas(instanceIds);
+              }
+            }
+          } catch (error) {
+            console.warn('[前端] 预加载其他实例失败:', error);
+          }
+        }
       } else {
         console.error('[前端] Schema API 返回错误:', data);
         setError(data.error || '加载 Schema 失败');
@@ -107,6 +142,7 @@ export function useSchema() {
       setError('加载 Schema 失败');
     } finally {
       setLoading(false);
+      setLoadingText('加载中...');
     }
   }, [currentInstanceId]);
 
@@ -119,6 +155,8 @@ export function useSchema() {
     schema,
     loading,
     error,
+    loadingText,
+    clearCache: clearSchemaCache,
     loadSchema: fetchSchema
   };
 }

@@ -38,7 +38,7 @@ import DebugInfo from './components/DebugInfo';
 // registerBlockRenderer('custom', CustomBlockRenderer);
 
 export default function App() {
-  const { currentInstanceId, schema, loading, error } = useSchema();
+  const { currentInstanceId, schema, loading, error, loadingText } = useSchema();
   const { setSchema, applyPatch, setInstanceId } = useSchemaStore();
   const { emitInstanceSwitch } = useEventEmitter();
   
@@ -101,7 +101,7 @@ export default function App() {
   
   // 加载中
   if (loading) {
-    return <Loading />;
+    return <Loading text={loadingText} />;
   }
   
   // 错误状态

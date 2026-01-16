@@ -53,6 +53,7 @@ export function useWebSocket(onPatch: (patch: Record<string, any>) => void, onSw
     const wsUrl = `ws://localhost:${port}/ui/ws/${currentInstanceId}`;
     console.log('[WS] 连接到:', wsUrl);
 
+    // 使用快速连接模式
     wsRef.current = new WebSocket(wsUrl);
     instanceIdRef.current = currentInstanceId;
 
@@ -115,13 +116,13 @@ export function useWebSocket(onPatch: (patch: Record<string, any>) => void, onSw
       console.log('[WS] 连接已断开');
       setConnected(false);
 
-      // 如果不是主动切换实例，则重连
+      // 如果不是主动切换实例，则快速重连
       if (instanceIdRef.current === currentInstanceId) {
-        console.log('[WS] 5秒后尝试重连...');
+        console.log('[WS] 1秒后尝试重连...');
         reconnectTimerRef.current = setTimeout(() => {
           console.log('[WS] 尝试重连...');
           connect();
-        }, 5000);
+        }, 1000); // 减少重连延迟
       }
     };
   }, [currentInstanceId]);
