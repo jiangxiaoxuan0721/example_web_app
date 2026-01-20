@@ -18,7 +18,7 @@ import { useSchema } from './hooks/useSchema';
 import { usePatchHistory } from './hooks/usePatchHistory';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useEventEmitter } from './utils/eventEmitter';
-import { getInstanceIdFromUrl, getHighlightFromUrl } from './utils/url';
+import { getHighlightFromUrl } from './utils/url';
 import Loading from './components/Loading';
 import ErrorState from './components/ErrorState';
 import InstanceSelector from './components/InstanceSelector';
