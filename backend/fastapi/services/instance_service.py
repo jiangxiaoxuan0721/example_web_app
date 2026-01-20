@@ -40,9 +40,9 @@ class InstanceService:
                 meta_data = value
                 new_schema = UISchema(
                     meta=MetaInfo(
-                        pageKey=meta_data.get("pageKey", instance_id),
-                        step=StepInfo(**meta_data.get("step", {"current": 1, "total": 1})),
-                        status=meta_data.get("status", "idle")
+                        pageKey=getattr(meta_data, "pageKey", instance_id),
+                        step=StepInfo(**getattr(meta_data, "step", {"current": 1, "total": 1})),
+                        status=getattr(meta_data, "status", "idle")
                     ),
                     state=StateInfo(params={}, runtime={}),
                     layout=LayoutInfo(type="single"),
@@ -52,8 +52,8 @@ class InstanceService:
             elif path == "state" and new_schema:
                 state_data = value
                 new_schema.state = StateInfo(
-                    params=state_data.get("params", {}),
-                    runtime=state_data.get("runtime", {})
+                    params=getattr(state_data, "params", {}),
+                    runtime=getattr(state_data, "runtime", {})
                 )
             elif path == "blocks" and new_schema:
                 blocks_data = value or []

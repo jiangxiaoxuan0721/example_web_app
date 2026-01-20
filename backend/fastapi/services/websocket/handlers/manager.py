@@ -3,8 +3,6 @@
 from typing import Optional
 import logging
 from fastapi import WebSocket
-from fastapi.websockets import WebSocketState
-
 from ..connection.pool import ConnectionPool
 from .dispatcher import MessageDispatcher
 from ..connection.monitor import ConnectionMonitor
