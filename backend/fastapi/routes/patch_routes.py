@@ -243,51 +243,64 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
             schema.blocks.append(block)
             print(f"[PatchRoutes] Added new block: {block.id}")
 
-            # Initialize state for the block if it has a bind path
-            bind_path = getattr(block, "bind", None) if hasattr(block, "bind") else None
-            if bind_path and bind_path.startswith("state."):
-                # Extract the state key path (e.g., "state.params.counter" -> "params.counter")
-                state_keys = bind_path.split(".", 1)[1].split(".")
-                print(f"[PatchRoutes] Initializing state for new block - bind_path: {bind_path}, state_keys: {state_keys}")
+            # Initialize state for the block
+            # Check if block has props with fields (form block)
+            if hasattr(block, "props") and block.props and hasattr(block.props, "fields") and block.props.fields:
+                # For form blocks, initialize state keys for each field in params only
+                print(f"[PatchRoutes] Form block detected, will initialize state for all fields")
+                for field in block.props.fields:
+                    field_key = getattr(field, "key", None) if hasattr(field, "key") else field.get("key")
+                    if field_key:
+                        # Initialize in params if not exists (form data goes to params)
+                        if field_key not in schema.state.params:
+                            schema.state.params[field_key] = ""
+                            print(f"[PatchRoutes] ✓ Initialized state.params.{field_key} = ''")
+            else:
+                # For non-form blocks, initialize state based on bind path
+                bind_path = getattr(block, "bind", None) if hasattr(block, "bind") else None
+                if bind_path and bind_path.startswith("state."):
+                    # Extract the state key path (e.g., "state.params.counter" -> "params.counter")
+                    state_keys = bind_path.split(".", 1)[1].split(".")
+                    print(f"[PatchRoutes] Initializing state for new block - bind_path: {bind_path}, state_keys: {state_keys}")
 
-                # Only initialize if there's a specific key (not just "params" or "runtime")
-                if len(state_keys) == 1 and state_keys[0] in ["params", "runtime"]:
-                    # Block binds to state.params or state.runtime directly - don't create anything
-                    print(f"[PatchRoutes] Block binds to top-level state ({state_keys[0]}), skipping initialization")
-                else:
-                    try:
-                        # Navigate to the state dictionary
-                        current = schema.state
+                    # Only initialize if there's a specific key (not just "params" or "runtime")
+                    if len(state_keys) == 1 and state_keys[0] in ["params", "runtime"]:
+                        # Block binds to state.params or state.runtime directly - don't create anything
+                        print(f"[PatchRoutes] Block binds to top-level state ({state_keys[0]}), skipping initialization")
+                    else:
+                        try:
+                            # Navigate to the state dictionary
+                            current = schema.state
 
-                        # Navigate through nested dictionaries, creating missing ones
-                        for j, key in enumerate(state_keys[:-1]):
-                            print(f"[PatchRoutes] Navigating to key: {key}, current type: {type(current)}")
-                            if key == "params" and hasattr(current, "params"):
-                                current = current.params
-                            elif key == "runtime" and hasattr(current, "runtime"):
-                                current = current.runtime
-                            elif isinstance(current, dict):
-                                if key not in current:
-                                    # Create missing nested dictionaries
-                                    current[key] = {}
-                                    print(f"[PatchRoutes] Created missing nested dict for key: {key}")
-                                current = current[key]
-                            else:
-                                current = None
-                                break
+                            # Navigate through nested dictionaries, creating missing ones
+                            for j, key in enumerate(state_keys[:-1]):
+                                print(f"[PatchRoutes] Navigating to key: {key}, current type: {type(current)}")
+                                if key == "params" and hasattr(current, "params"):
+                                    current = current.params
+                                elif key == "runtime" and hasattr(current, "runtime"):
+                                    current = current.runtime
+                                elif isinstance(current, dict):
+                                    if key not in current:
+                                        # Create missing nested dictionaries
+                                        current[key] = {}
+                                        print(f"[PatchRoutes] Created missing nested dict for key: {key}")
+                                    current = current[key]
+                                else:
+                                    current = None
+                                    break
 
-                        # Initialize the final key if it doesn't exist
-                        if current is not None and isinstance(current, dict):
-                            final_key = state_keys[-1]
-                            if final_key not in current:
-                                current[final_key] = {}
-                                print(f"[PatchRoutes] ✓ Initialized state for new block: {bind_path} (created key: {final_key})")
-                            else:
-                                print(f"[PatchRoutes] State key '{final_key}' already exists for: {bind_path}")
-                    except (KeyError, AttributeError) as e:
-                        print(f"[PatchRoutes] Warning: Failed to initialize state for {bind_path}: {e}")
-                        import traceback
-                        print(f"[PatchRoutes] Traceback:\n{traceback.format_exc()}")
+                            # Initialize the final key if it doesn't exist
+                            if current is not None and isinstance(current, dict):
+                                final_key = state_keys[-1]
+                                if final_key not in current:
+                                    current[final_key] = {}
+                                    print(f"[PatchRoutes] ✓ Initialized state for new block: {bind_path} (created key: {final_key})")
+                                else:
+                                    print(f"[PatchRoutes] State key '{final_key}' already exists for: {bind_path}")
+                        except (KeyError, AttributeError) as e:
+                            print(f"[PatchRoutes] Warning: Failed to initialize state for {bind_path}: {e}")
+                            import traceback
+                            print(f"[PatchRoutes] Traceback:\n{traceback.format_exc()}")
 
             return
 
