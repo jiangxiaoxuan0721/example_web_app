@@ -1,0 +1,974 @@
+/**
+ * PTA (Prompt to App) 样式表
+ *
+ * 使用独立的 CSS 类，避免与主应用 Tailwind 样式冲突
+ * 确保组件级别的样式隔离
+ * 使用 :scope 和高特异性选择器确保样式不被覆盖
+ */
+
+/* ====== 全局样式重置（仅在 PTA 容器内生效） ====== */
+
+.pta-isolated-container * {
+  box-sizing: border-box !important;
+}
+
+.pta-isolated-container button {
+  cursor: pointer !important;
+  border: none !important;
+  outline: none !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+}
+
+.pta-isolated-container input,
+.pta-isolated-container textarea,
+.pta-isolated-container select {
+  font-family: inherit !important;
+  font-size: inherit !important;
+}
+
+/* ====== 容器布局（带 Sidebar） ====== */
+
+.pta-layout {
+  /* 使用 flex 布局，高度占满父容器 */
+  display: flex !important;
+  flex-direction: row !important;
+  width: 100% !important;
+  height: 100vh !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif !important;
+  background-color: #f5f5f5 !important;
+  overflow: hidden !important;
+}
+
+.pta-layout--no-sidebar {
+  flex-direction: column !important;
+}
+
+/* ====== Sidebar 样式 ====== */
+
+.pta-sidebar {
+  position: relative !important;
+  width: 240px !important;
+  flex-shrink: 0 !important;
+  background-color: white !important;
+  border-right: 1px solid #e5e7eb !important;
+  transition: width 0.3s ease !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.pta-sidebar--collapsed {
+  width: 0px !important;
+  border-right: none !important;
+  overflow: visible !important;
+}
+
+.pta-sidebar--collapsed .pta-sidebar__content {
+  display: none !important;
+}
+
+.pta-sidebar__toggle {
+  position: absolute !important;
+  right: -20px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 20px !important;
+  height: 40px !important;
+  background: white !important;
+  border: 1px solid #e5e7eb !important;
+  border-left: none !important;
+  border-radius: 0 4px 4px 0 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #666 !important;
+  font-size: 12px !important;
+  transition: all 0.2s ease !important;
+  z-index: 1000 !important;
+}
+
+.pta-sidebar--collapsed .pta-sidebar__toggle {
+  right: -20px !important;
+}
+
+.pta-sidebar__toggle:hover {
+  background-color: #f9fafb !important;
+  color: #333 !important;
+}
+
+.pta-sidebar__toggle-icon {
+  transition: transform 0.3s ease !important;
+}
+
+.pta-sidebar__toggle-icon--collapsed {
+  transform: rotate(180deg) !important;
+}
+
+.pta-sidebar__content {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+.pta-sidebar__header {
+  padding: 16px !important;
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+.pta-sidebar__title {
+  margin: 0 !important;
+  font-size: 14px !important;
+  font-weight: bold !important;
+  color: #333 !important;
+}
+
+.pta-sidebar__nav {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding: 8px 0 !important;
+}
+
+.pta-sidebar__nav::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+.pta-sidebar__nav::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.pta-sidebar__nav::-webkit-scrollbar-thumb {
+  background: #d1d5db !important;
+  border-radius: 3px !important;
+}
+
+.pta-sidebar__nav::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af !important;
+}
+
+.pta-sidebar__list {
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.pta-sidebar__item {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.pta-sidebar__link {
+  width: 100% !important;
+  padding: 10px 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  background: none !important;
+  border: none !important;
+  border-left: 3px solid transparent !important;
+  cursor: pointer !important;
+  text-align: left !important;
+  font-size: 13px !important;
+  color: #666 !important;
+  transition: all 0.2s ease !important;
+  font-family: inherit !important;
+}
+
+.pta-sidebar__link:hover {
+  background-color: #f9fafb !important;
+  color: #333 !important;
+  border-left-color: #d1d5db !important;
+}
+
+.pta-sidebar__link--active {
+  background-color: #eff6ff !important;
+  color: #007bff !important;
+  border-left-color: #007bff !important;
+  font-weight: 500 !important;
+}
+
+.pta-sidebar__link-text {
+  flex: 1 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.pta-sidebar__link-indicator {
+  font-size: 8px !important;
+  opacity: 0.8 !important;
+}
+
+.pta-sidebar__footer {
+  padding: 12px 16px !important;
+  border-top: 1px solid #e5e7eb !important;
+  background-color: #f9fafb !important;
+}
+
+.pta-sidebar__footer-text {
+  font-size: 11px !important;
+  color: #9ca3af !important;
+}
+
+/* ====== 主容器 ====== */
+
+.pta-container {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+
+/* ====== 顶部区域 ====== */
+
+.pta-header {
+  /* 固定的顶部区域 */
+  flex-shrink: 0 !important;
+  background-color: white !important;
+  padding: 15px !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ====== 主内容区域 ====== */
+
+.pta-content {
+  /* 可滚动的内容区域 */
+  flex: 1 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  min-height: 0 !important;
+  padding: 0 20px !important;
+  max-width: 1200px !important;
+  margin: 0 auto !important;
+  width: calc(100% - 40px) !important;
+}
+
+/* ====== Schema 容器 ====== */
+
+.pta-container > .pta-content > .pta-schema-container {
+  border: 1px solid #ccc !important;
+  border-radius: 8px !important;
+  padding: 30px !important;
+  background-color: white !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  text-align: left !important;
+}
+
+/* ====== Actions 容器 ====== */
+
+.pta-container > .pta-content > .pta-schema-container > .pta-actions-container {
+  display: flex !important;
+  gap: 10px !important;
+  justify-content: center !important;
+  margin-top: 20px !important;
+  padding-top: 15px !important;
+  border-top: 1px solid #eee !important;
+}
+
+/* ====== 折叠详情 ====== */
+
+.pta-container > .pta-content > .pta-schema-container > .pta-details {
+  margin-top: 20px !important;
+  padding-top: 15px !important;
+  border-top: 1px solid #eee !important;
+}
+
+.pta-container > .pta-content > .pta-schema-container > .pta-details > .pta-details-summary {
+  cursor: pointer !important;
+  font-weight: bold !important;
+  color: #666 !important;
+  padding: 5px 0 !important;
+  user-select: none !important;
+}
+
+.pta-container > .pta-content > .pta-schema-container > .pta-details:hover > .pta-details-summary {
+  color: #333 !important;
+}
+
+.pta-container > .pta-content > .pta-schema-container > .pta-details > .pta-details-content {
+  margin-top: 10px !important;
+  padding: 0 10px !important;
+}
+
+/* ====== 滚动条样式 ====== */
+
+.pta-container > .pta-content::-webkit-scrollbar {
+  width: 10px !important;
+}
+
+.pta-container > .pta-content::-webkit-scrollbar-track {
+  background: #f1f1f1 !important;
+  border-radius: 5px !important;
+}
+
+.pta-container > .pta-content::-webkit-scrollbar-thumb {
+  background: #888 !important;
+  border-radius: 5px !important;
+}
+
+.pta-container > .pta-content::-webkit-scrollbar-thumb:hover {
+  background: #555 !important;
+}
+
+/* Firefox 滚动条样式 */
+.pta-container > .pta-content {
+  scrollbar-width: thin !important;
+  scrollbar-color: #888 #f1f1f1 !important;
+}
+
+/* ====== 响应式设计 ====== */
+
+@media (max-width: 768px) {
+  .pta-container > .pta-header {
+    padding: 10px !important;
+    margin-bottom: 15px !important;
+  }
+
+  .pta-container > .pta-content {
+    padding: 0 10px !important;
+    width: calc(100% - 20px) !important;
+  }
+
+  .pta-container > .pta-content > .pta-schema-container {
+    padding: 20px !important;
+  }
+
+  .pta-container > .pta-content > .pta-schema-container > .pta-actions-container {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+}
+
+/* ====== 过渡动画 ====== */
+
+.pta-container > .pta-content > .pta-schema-container > .pta-details {
+  transition: all 0.2s ease !important;
+}
+
+.pta-container > .pta-content > .pta-schema-container > .pta-details[open] {
+  margin-bottom: 10px !important;
+}
+
+/* ====== 确保不被 Tailwind 覆盖 ====== */
+
+/* 使用更高的特异性，确保 PTA 样式优先 */
+.pta-container > * {
+  box-sizing: border-box !important;
+}
+
+/* 避免主应用的全局样式影响 */
+.pta-container a {
+  color: #0070f3 !important;
+  text-decoration: none !important;
+}
+
+.pta-container a:hover {
+  text-decoration: underline !important;
+}
+
+.pta-container button {
+  cursor: pointer !important;
+  border: none !important;
+  outline: none !important;
+}
+
+.pta-container input,
+.pta-container textarea,
+.pta-container select {
+  font-family: inherit !important;
+  font-size: inherit !important;
+}
+
+/* ====== 打印样式 ====== */
+
+@media print {
+  .pta-container > .pta-header,
+    .pta-container > .pta-content > .pta-schema-container > .pta-details {
+    display: none !important;
+  }
+
+  .pta-container > .pta-content {
+    overflow: visible !important;
+  }
+}
+
+/* ====== 实例选择器样式 ====== */
+
+.pta-container > .pta-header > .pta-instance-selector {
+  position: relative !important;
+  display: inline-block !important;
+}
+
+/* 当前实例按钮 */
+.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__current {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 16px !important;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3) !important;
+}
+
+.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__current:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4) !important;
+}
+
+.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__current:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3) !important;
+}
+
+/* 实例标签 */
+.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__current > .pta-instance-selector__label {
+  flex: 1 !important;
+  text-align: left !important;
+}
+
+/* 下拉箭头 */
+.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__arrow {
+  transition: transform 0.2s ease !important;
+  font-size: 12px !important;
+  opacity: 0.9 !important;
+}
+
+.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__arrow--open {
+  transform: rotate(180deg) !important;
+}
+
+/* 下拉菜单 */
+.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__dropdown {
+  position: absolute !important;
+  top: calc(100% + 8px) !important;
+  left: 0 !important;
+  min-width: 200px !important;
+  background: white !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid #e5e7eb !important;
+  z-index: 1000 !important;
+  overflow: hidden !important;
+  animation: pta-dropdown-fade-in 0.2s ease !important;
+}
+
+@keyframes pta-dropdown-fade-in {
+  from {
+    opacity: 0 !important;
+    transform: translateY(-8px) !important;
+  }
+  to {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+  }
+}
+
+/* 下拉菜单项 */
+.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__dropdown > .pta-instance-selector__item {
+  padding: 10px 16px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  border-left: 3px solid transparent !important;
+}
+
+.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__dropdown > .pta-instance-selector__item:hover {
+  background-color: #f8fafc !important;
+  border-left-color: #667eea !important;
+}
+
+.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__dropdown > .pta-instance-selector__item--active {
+  background: linear-gradient(90deg, #f0f9ff 0%, #e0f2fe 100%) !important;
+  border-left-color: #0070f3 !important;
+}
+
+/* 下拉项内容布局 */
+.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__dropdown > .pta-instance-selector__item > .pta-instance-selector__item-main {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+}
+
+/* 实例名称 */
+.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__dropdown > .pta-instance-selector__item > .pta-instance-selector__item-main > .pta-instance-selector__item-name {
+  font-weight: 500 !important;
+  color: #333 !important;
+}
+
+/* 当前实例徽章 */
+.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__dropdown > .pta-instance-selector__item > .pta-instance-selector__item-main > .pta-instance-selector__item-badge {
+  background: #10b981 !important;
+  color: white !important;
+  font-size: 10px !important;
+  padding: 2px 6px !important;
+  border-radius: 10px !important;
+  font-weight: bold !important;
+}
+
+/* 实例描述 */
+.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__dropdown > .pta-instance-selector__item > .pta-instance-selector__item-desc {
+  font-size: 12px !important;
+  color: #666 !important;
+  margin-top: 4px !important;
+  line-height: 1.4 !important;
+}
+
+/* 点击遮罩 */
+.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 999 !important;
+  background: transparent !important;
+}
+
+/* 加载状态 */
+.pta-instance-selector--loading {
+  padding: 8px 16px !important;
+  background: #f3f4f6 !important;
+  border-radius: 6px !important;
+  color: #666 !important;
+  font-size: 14px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* 加载动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ====== 加载状态容器 ====== */
+
+.pta-loading-container {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 100% !important;
+  gap: 20px !important;
+  animation: fadeIn 0.3s ease-in !important;
+}
+
+/* 加载状态文本 */
+.pta-loading-text {
+  color: #666 !important;
+  font-size: 14px !important;
+  animation: pulse 1.5s ease-in-out infinite !important;
+}
+
+/* ====== 错误状态组件 ====== */
+
+.pta-error-state {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 100vh !important;
+  color: #dc3545 !important;
+  text-align: center !important;
+  padding: 20px !important;
+}
+
+.pta-error-state__message {
+  font-size: 18px !important;
+  font-weight: bold !important;
+  margin-bottom: 20px !important;
+}
+
+.pta-error-state__links {
+  font-size: 14px !important;
+  color: #666 !important;
+}
+
+.pta-error-state__link {
+  color: #007bff !important;
+  text-decoration: none !important;
+  margin: 0 4px !important;
+  transition: color 0.2s ease !important;
+}
+
+.pta-error-state__link:hover {
+  color: #0056b3 !important;
+  text-decoration: underline !important;
+}
+
+/* ====== Action Button 组件 ====== */
+
+.pta-action-button {
+  padding: 12px 24px !important;
+  font-size: 16px !important;
+  border-radius: 4px !important;
+  border: none !important;
+  cursor: pointer !important;
+  background: #6c757d !important;
+  color: white !important;
+  transition: background 0.2s ease !important;
+  font-family: inherit !important;
+}
+
+.pta-action-button--primary {
+  background: #007bff !important;
+}
+
+.pta-action-button--primary:hover {
+  background: #0056b3 !important;
+}
+
+.pta-action-button--danger {
+  background: #dc3545 !important;
+}
+
+.pta-action-button--danger:hover {
+  background: #c82333 !important;
+}
+
+.pta-action-button--default:hover {
+  background: #545b62 !important;
+}
+
+.pta-action-button__navigate-icon {
+  margin-left: 5px !important;
+  font-size: 14px !important;
+}
+
+/* ====== Patch History 组件 ====== */
+
+.pta-patch-history {
+  margin-top: 30px !important;
+  padding: 15px !important;
+  background: #f5f5f5 !important;
+  border-radius: 4px !important;
+  font-size: 12px !important;
+  text-align: left !important;
+  max-height: 300px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+.pta-patch-history__title {
+  font-weight: bold !important;
+  margin-bottom: 8px !important;
+  display: block !important;
+  color: #333 !important;
+}
+
+.pta-patch-history__empty {
+  padding: 20px !important;
+  text-align: center !important;
+  color: #999 !important;
+  font-style: italic !important;
+}
+
+.pta-patch-history__list {
+  margin-top: 8px !important;
+}
+
+.pta-patch-history__item {
+  margin-bottom: 8px !important;
+  padding: 8px !important;
+  background: white !important;
+  border: 1px solid #ddd !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.pta-patch-history__item:hover {
+  background: #f0f0f0 !important;
+  transform: translateX(2px) !important;
+}
+
+.pta-patch-history__item--replaying {
+  opacity: 0.6 !important;
+  cursor: wait !important;
+  border-color: #007bff !important;
+}
+
+.pta-patch-history__item-header {
+  font-weight: bold !important;
+  margin-bottom: 4px !important;
+  color: #333 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.pta-patch-history__item--replaying .pta-patch-history__item-header {
+  color: #007bff !important;
+}
+
+.pta-patch-history__item-content {
+  margin: 0 !important;
+  font-size: 10px !important;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+  white-space: pre-wrap !important;
+  word-break: break-all !important;
+  color: #666 !important;
+}
+
+/* ====== Block Renderer 组件 ====== */
+
+.pta-block {
+  margin-bottom: 24px !important;
+  padding: 20px !important;
+  background: white !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.pta-block--highlighted {
+  border: 2px solid #007bff !important;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.3) !important;
+}
+
+.pta-block__title {
+  font-size: 18px !important;
+  font-weight: bold !important;
+  margin-bottom: 16px !important;
+  padding-bottom: 8px !important;
+  border-bottom: 2px solid #f3f4f6 !important;
+  color: #333 !important;
+}
+
+.pta-block__content {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+}
+
+/* ====== Field 组件通用样式 ====== */
+
+.pta-field {
+  margin-bottom: 16px !important;
+}
+
+.pta-field__label {
+  display: block !important;
+  margin-bottom: 8px !important;
+  font-weight: bold !important;
+  color: #333 !important;
+}
+
+.pta-field__input {
+  width: 100% !important;
+  padding: 12px !important;
+  border: 1px solid #ddd !important;
+  border-radius: 4px !important;
+  background: #fff !important;
+  font-size: 16px !important;
+  font-family: inherit !important;
+  box-sizing: border-box !important;
+  transition: all 0.3s ease !important;
+}
+
+.pta-field__input:focus {
+  outline: none !important;
+  border-color: #007bff !important;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1) !important;
+}
+
+.pta-field__input--highlighted {
+  border: 2px solid #007bff !important;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5) !important;
+}
+
+.pta-field__input:disabled {
+  background: #f5f5f5 !important;
+  cursor: not-allowed !important;
+}
+
+.pta-field__description {
+  margin-top: 4px !important;
+  color: #666 !important;
+  font-size: 14px !important;
+}
+
+/* ====== Checkbox 样式 ====== */
+
+.pta-field--checkbox {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.pta-field--checkbox .pta-field__label {
+  margin-bottom: 0 !important;
+  font-weight: bold !important;
+}
+
+/* ====== Radio 样式 ====== */
+
+.pta-radio-group {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+.pta-radio-option {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  cursor: pointer !important;
+}
+
+/* ====== JSON 字段样式 ====== */
+
+.pta-field__input--json {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+  font-size: 14px !important;
+  background: #f8f8f8 !important;
+}
+
+.pta-field__input--json.pta-field__input--invalid {
+  border-color: #dc3545 !important;
+}
+
+.pta-field__error {
+  color: #dc3545 !important;
+  font-size: 12px !important;
+  margin-top: 4px !important;
+}
+
+/* ====== HTML 字段样式 ====== */
+
+.pta-field__html-content {
+  border: 1px solid #ddd !important;
+  border-radius: 4px !important;
+  padding: 12px !important;
+  background-color: #f9f9f9 !important;
+  min-height: 100px !important;
+  max-height: 400px !important;
+  overflow: auto !important;
+}
+
+/* ====== Details 组件样式 ====== */
+
+.pta-details {
+  margin-top: 20px !important;
+  padding-top: 15px !important;
+  border-top: 1px solid #eee !important;
+  transition: all 0.2s ease !important;
+}
+
+.pta-details[open] {
+  margin-bottom: 10px !important;
+}
+
+.pta-details__summary {
+  cursor: pointer !important;
+  font-weight: bold !important;
+  color: #666 !important;
+  padding: 5px 0 !important;
+  user-select: none !important;
+  list-style: none !important;
+  outline: none !important;
+}
+
+.pta-details__summary::-webkit-details-marker {
+  display: none !important;
+}
+
+.pta-details__summary:hover {
+  color: #333 !important;
+}
+
+.pta-details__content {
+  margin-top: 10px !important;
+  padding: 0 10px !important;
+}
+
+/* ====== Debug Info 组件样式 ====== */
+
+.pta-debug-info {
+  font-size: 12px !important;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+  color: #666 !important;
+}
+
+.pta-debug-info__section {
+  margin-bottom: 12px !important;
+}
+
+.pta-debug-info__key {
+  font-weight: bold !important;
+  color: #333 !important;
+}
+
+.pta-debug-info__value {
+  color: #007bff !important;
+}
+
+.pta-debug-info__json {
+  background: #f5f5f5 !important;
+  padding: 8px !important;
+  border-radius: 4px !important;
+  overflow-x: auto !important;
+  white-space: pre-wrap !important;
+  word-break: break-all !important;
+}
+
+/* ====== 通用响应式样式 ====== */
+
+@media (max-width: 768px) {
+  /* 移动端隐藏 sidebar */
+  .pta-sidebar {
+    display: none !important;
+  }
+
+  .pta-block {
+    padding: 15px !important;
+  }
+
+  .pta-field__input {
+    padding: 10px !important;
+    font-size: 14px !important;
+  }
+
+  .pta-action-button {
+    padding: 10px 20px !important;
+    font-size: 14px !important;
+  }
+}
+
+/* ====== 平板端 Sidebar 优化 ====== */
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .pta-sidebar {
+    width: 200px !important;
+  }
+}
+

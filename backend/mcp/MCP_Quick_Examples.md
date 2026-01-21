@@ -749,20 +749,36 @@ await patch_ui_state(
 
 ### Q: 我应该什么时候使用 `add`，什么时候用 `set`？
 
-**A**: 
-- `add`: 在数组**末尾**添加新元素
+**A**:
+- `add`: 在数组**末尾**添加新元素（如添加字段、block、action）
 - `set`: 设置整个数组的值，或修改特定路径的值
+- `replace`: 替换整个数组或特定路径的值（功能同 `set`）
+- `remove`: 从数组中删除元素（需提供完整的 `value`，工具会按 `id` 或内容匹配）
 
 ```python
 # 添加新字段（在末尾）
 {"op": "add", "path": "blocks.0.props.fields", "value": new_field}
+
+# 添加新 block
+{"op": "add", "path": "blocks", "value": {"id": "new_block", "type": "form", ...}}
+
+# 添加新 action
+{"op": "add", "path": "actions", "value": {"id": "new_action", "label": "按钮", ...}}
 
 # 替换整个字段数组
 {"op": "set", "path": "blocks.0.props.fields", "value": [field1, field2, field3]}
 
 # 修改特定字段
 {"op": "set", "path": "blocks.0.props.fields.1", "value": updated_field}
+
+# 删除 block（通过 id 匹配）
+{"op": "remove", "path": "blocks", "value": {"id": "old_block"}}
+
+# 删除 action（通过 id 匹配）
+{"op": "remove", "path": "actions", "value": {"id": "old_action"}}
 ```
+
+**重要**: 不要使用 `blocks/-` 或 `actions/-` 这种格式，这是无效的！
 
 ### Q: 如何删除一个实例？
 

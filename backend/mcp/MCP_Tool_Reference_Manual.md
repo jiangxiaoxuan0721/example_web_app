@@ -110,13 +110,13 @@ async def patch_ui_state(
 
 #### 操作类型
 
-| Op 类型 | 行为 | 允许的路径 | 必需字段 |
-|---------|------|------------|----------|
-| `set` | 在路径设置值（如缺失则创建） | 任意路径 | `path`, `value` |
-| `add` | 在数组末尾添加项 | `blocks+`, `actions+` | `path`, `value` |
-| `replace` | 替换路径上的项/数组 | `blocks`, `actions` | `path`, `value` |
-| `remove` | 删除特定项 | `blocks-{id}`, `actions-{id}` | `path` |
-| `clear` | 清除/重置为默认 | `state.params`, `state.runtime` | `path` |
+| Op 类型 | 行为 | 允许的路径格式 | 必需字段 |
+|---------|------|----------------|----------|
+| `set` | 设置路径值（如缺失则创建） | 任意路径（如 `state.params.count`） | `path`, `value` |
+| `add` | 在数组末尾添加元素 | **数组路径**（如 `blocks`, `actions`, `blocks.0.props.fields`） | `path`, `value` |
+| `replace` | 替换整个数组或特定路径的值 | 任意路径 | `path`, `value` |
+| `remove` | 从数组中删除元素（按值匹配） | **数组路径**（如 `blocks`, `actions`, `blocks.0.props.fields`） | `path`, `value` |
+| `clear` | 清空/重置为默认 | `state.params`, `state.runtime` | `path` |
 
 #### 支持的路径模式
 
@@ -125,18 +125,87 @@ async def patch_ui_state(
 - `state.runtime.{key}` - 设置运行时状态
 
 **Blocks 路径**:
-- `blocks` - 替换所有 blocks
-- `blocks+` - 在末尾添加 blocks
-- `blocks-{index}` - 替换指定索引的 block
-- `blocks[{id}]` - 按 ID 替换 block
-- `blocks-{id}` - 按 ID 删除 block
+- `blocks` - 替换所有 blocks（使用 `set`），或添加/删除 block（使用 `add`/`remove`）
+- `blocks.0` - 操作第一个 block
+- `blocks.0.props.fields` - 操作第一个 block 的字段数组（`add` 在末尾添加字段，`remove` 删除指定字段）
+- `blocks-{id}` - **仅用于 remove 操作**：按 ID 删除 block（不推荐，建议使用 `remove` + 匹配 `value.id`）
 
 **Actions 路径**:
-- `actions` - 替换所有 actions
-- `actions+` - 在末尾添加 actions
-- `actions-{index}` - 替换指定索引的 action
-- `actions[{id}]` - 按 ID 替换 action
-- `actions-{id}` - 按 ID 删除 action
+- `actions` - 替换所有 actions（使用 `set`），或添加/删除 action（使用 `add`/`remove`）
+- `actions-{id}` - **仅用于 remove 操作**：按 ID 删除 action（不推荐，建议使用 `remove` + 匹配 `value.id`）
+
+**重要说明**:
+- ❌ **不要使用** `blocks/-` 或 `actions/-` 格式（这是无效的）
+- ✅ 使用 `blocks` 或 `actions` 进行 `add` 操作
+- ✅ 使用 `blocks` 或 `actions` 配合完整的 `value` 进行 `remove` 操作（工具会按 `id` 或内容匹配）
+
+#### ID 唯一性约束
+
+⚠️ **重要**：`add` 操作要求 ID/Key 必须唯一，否则会返回错误
+
+| 元素类型 | 唯一性字段 | 错误示例 |
+|---------|-----------|---------|
+| Block | `id` | `Block with ID 'new_block' already exists` |
+| Action | `id` | `Action with ID 'submit' already exists` |
+| Field | `key` | `Field with key 'username' already exists in block block_1` |
+
+#### 替换已存在的元素
+
+如果需要替换已存在的 block/action/field，使用 `set` 操作配合索引路径：
+
+```python
+# 替换指定索引的 block
+{
+    "instance_id": "demo",
+    "patches": [
+        {
+            "op": "set",
+            "path": "blocks.0",
+            "value": {
+                "id": "my_block",
+                "type": "form",
+                "bind": "state.params",
+                "props": {
+                    "fields": [...]
+                }
+            }
+        }
+    ]
+}
+
+# 替换指定索引的 action
+{
+    "instance_id": "demo",
+    "patches": [
+        {
+            "op": "set",
+            "path": "actions.0",
+            "value": {
+                "id": "submit",
+                "label": "提交",
+                "action_type": "submit",
+                ...
+            }
+        }
+    ]
+}
+
+# 替换 block 中的字段
+{
+    "instance_id": "demo",
+    "patches": [
+        {
+            "op": "set",
+            "path": "blocks.0.props.fields.0",
+            "value": {
+                "key": "username",
+                "label": "用户名",
+                "type": "text"
+            }
+        }
+    ]
+}
+```
 
 #### 返回值
 
@@ -160,8 +229,8 @@ interface PatchResponse {
 | 创建新实例 | `instance_id="__CREATE__"`, `new_instance_id="new"`, `patches=[...]` |
 | 删除实例 | `instance_id="__DELETE__"`, `target_instance_id="old"` |
 | 更新状态值 | `instance_id="counter"`, `patches=[{"op":"set","path":"state.params.count","value":42}]` |
-| 添加 block | `instance_id="demo"`, `patches=[{"op":"add","path":"blocks+","value":{...}}]` |
-| 删除 action | `instance_id="form"`, `patches=[{"op":"remove","path":"actions-'old_action'"}]` |
+| 添加 block | `instance_id="demo"`, `patches=[{"op":"add","path":"blocks","value":{...}}]` |
+| 删除 action | `instance_id="form"`, `patches=[{"op":"remove","path":"actions","value":{"id":"old_action"}}]` |
 | 快捷更新字段 | `instance_id="form"`, `field_key="email"`, `updates={"label":"新标签"}` |
 | 快捷删除字段 | `instance_id="form"`, `field_key="email"`, `remove_field=true` |
 

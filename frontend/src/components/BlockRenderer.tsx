@@ -20,7 +20,7 @@ export interface BlockRenderer {
 // 块渲染器注册表
 const blockRenderers: Record<string, BlockRenderer> = {
   form: ({ block, schema, disabled, highlightField }) => (
-    <div key={block.id} style={{ marginBottom: '20px' }}>
+    <div key={block.id} id={`block-${block.id}`} style={{ marginBottom: '20px' }}>
       {block.props?.fields?.map((field) => (
         <GenericFieldRenderer
           key={field.key}
@@ -33,18 +33,18 @@ const blockRenderers: Record<string, BlockRenderer> = {
       ))}
     </div>
   ),
-  
+
   display: ({ block, schema }) => {
     // 获取绑定路径的值
     const getValue = (path: string) => {
       const keys = path.split('.');
       return keys.reduce((obj: any, key: string) => obj?.[key], schema);
     };
-    
+
     const value = getValue(block.bind);
-    
+
     return (
-      <div key={block.id} style={{ marginBottom: '20px' }}>
+      <div key={block.id} id={`block-${block.id}`} style={{ marginBottom: '20px' }}>
         <div style={{
           padding: '12px',
           border: '1px solid #ddd',
@@ -78,11 +78,11 @@ export const getRegisteredBlockTypes = (): string[] => {
  */
 export default function BlockRenderer({ block, schema, disabled, highlightField }: BlockRendererProps) {
   const renderer = blockRenderers[block.type];
-  
+
   if (!renderer) {
     console.warn(`[BlockRenderer] Unknown block type: ${block.type}`);
     return null;
   }
-  
+
   return renderer({ block, schema, disabled, highlightField });
 }

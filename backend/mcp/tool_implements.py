@@ -37,13 +37,39 @@ async def apply_patch_to_fastapi(
             response = await client.post(url, json=payload, timeout=10.0)
 
             if response.status_code == 200:
-                return response.json()
+                result = response.json()
+                # 检查返回结果中的 status 字段
+                if result.get("status") == "error":
+                    print(f"[MCP] FastAPI 返回业务错误: {result.get('error')}")
+                    if result.get("error_type") == "validation_error":
+                        # 验证错误（如重复 ID）
+                        return {
+                            "status": "error",
+                            "error": result.get("error"),
+                            "error_type": "validation_error",
+                            "hint": result.get("error", "").split(". Use 'set'")[0] if "Use 'set'" in result.get("error", "") else ""
+                        }
+                    else:
+                        # 其他错误
+                        return result
+                else:
+                    return result
             else:
                 return {
                     "status": "error",
                     "error": f"FastAPI returned status {response.status_code}",
                     "detail": response.text
                 }
+    except httpx.TimeoutException:
+        return {
+            "status": "error",
+            "error": "FastAPI request timeout"
+        }
+    except httpx.ConnectError:
+        return {
+            "status": "error",
+            "error": "Failed to connect to FastAPI backend. Make sure the backend is running."
+        }
     except Exception as e:
         return {
             "status": "error",

@@ -76,16 +76,9 @@ export function useWebSocket(onPatch: (patch: Record<string, any>) => void, onSw
           console.log('[WS] 应用 Patch:', message.patch);
           onPatchRef.current(message.patch);
         } else if (message.type === 'schema_update' && message.schema) {
-          console.log('[WS] 应用完整 Schema 更新:', message.schema);
-          // 直接设置整个schema，适用于add操作后的更新
+          // 直接设置整个schema，适用于add/remove操作后的更新
           if (onSwitchInstanceRef.current) {
             onSwitchInstanceRef.current(instanceIdRef.current, message.schema);
-          }
-          
-          // 检查是否有跳转链接
-          if (message.redirect_url) {
-            console.log('[WS] 跳转到:', message.redirect_url);
-            window.location.href = message.redirect_url;
           }
         } else if (message.type === 'switch_instance' && message.instance_id) {
           console.log('[WS] 切换实例到:', message.instance_id);
@@ -94,13 +87,12 @@ export function useWebSocket(onPatch: (patch: Record<string, any>) => void, onSw
           }
         } else if (message.type === 'access_instance' && message.instance_id) {
           console.log('[WS] 访问实例:', message.instance_id, '高亮字段:', message.highlight);
-          // 构建带有高亮参数的URL
-          const url = new URL(window.location.href);
-          url.searchParams.set('instanceId', message.instance_id);
-          if (message.highlight) {
-            url.searchParams.set('highlight', message.highlight);
+          // 不使用页面跳转，而是通过回调切换实例
+          if (onSwitchInstanceRef.current && message.instance_id !== instanceIdRef.current) {
+            // 如果切换到不同实例，则切换实例
+            onSwitchInstanceRef.current(message.instance_id);
           }
-          window.location.href = url.toString();
+          // TODO: 处理高亮字段的逻辑（如果需要）
         }
       } catch (err) {
         console.error('[WS] 解析消息失败:', err);

@@ -9,6 +9,7 @@ export { default as BlockRenderer } from './BlockRenderer';
 export { default as ActionButton } from './ActionButton';
 export { default as PatchHistory } from './PatchHistory';
 export { default as DebugInfo } from './DebugInfo';
+export { default as Sidebar } from './Sidebar';
 
 // 新架构组件
 export { default as GenericFieldRenderer } from './GenericFieldRenderer';

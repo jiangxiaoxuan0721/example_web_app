@@ -45,6 +45,11 @@ async def patch_ui_state(
         Dict with status ("success"/"error"), optional message/error, instance_id,
         and operation details like patch, auto_refresh status, or navigate_to target.
 
+    Important Path Format Notes:
+        - For 'add' operations on arrays: Use the array path directly (e.g., "blocks", "actions", "blocks.0.props.fields")
+        - For 'remove' operations on arrays: Use the array path and provide full object to match by ID or content
+        - Do NOT use formats like "blocks/-" or "actions/-" - these are invalid
+
     Examples:
         Update state value:
             {
@@ -62,6 +67,44 @@ async def patch_ui_state(
                     {"op": "add", "path": "blocks.0.props.fields", "value": {
                         "label": "Telephone", "key": "telephone", "type": "text"
                     }}
+                ]
+            }
+
+        Add new block:
+            {
+                "instance_id": "demo",
+                "patches": [
+                    {"op": "add", "path": "blocks", "value": {
+                        "id": "new_block", "type": "form", "bind": "state.params",
+                        "props": {"fields": [{"label": "Name", "key": "name", "type": "text"}]}
+                    }}
+                ]
+            }
+
+        Add new action:
+            {
+                "instance_id": "form",
+                "patches": [
+                    {"op": "add", "path": "actions", "value": {
+                        "id": "new_action", "label": "Submit", "style": "primary",
+                        "handler_type": "set", "patches": {"state.runtime.status": "submitted"}
+                    }}
+                ]
+            }
+
+        Remove block by ID:
+            {
+                "instance_id": "form",
+                "patches": [
+                    {"op": "remove", "path": "blocks", "value": {"id": "old_block"}}
+                ]
+            }
+
+        Remove action by ID:
+            {
+                "instance_id": "form",
+                "patches": [
+                    {"op": "remove", "path": "actions", "value": {"id": "old_action"}}
                 ]
             }
 
