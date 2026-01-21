@@ -64,13 +64,13 @@
 
 ## 工具索引
 
-| 工具名 | 功能 | 使用场景 |
-|--------|------|----------|
-| `patch_ui_state` | 应用结构化补丁修改 UI | 创建实例、修改结构、更新状态、删除实例 |
-| `get_schema` | 获取实例的完整 Schema | 检查当前状态、分析结构、验证修改 |
-| `list_instances` | 列出所有可用实例 | 浏览实例、发现资源 |
-| `validate_completion` | 验证完成标准 | 评估进度、确定下一步、质量检查 |
-| `access_instance` | 访问并激活实例 | 切换上下文、标记活动实例 |
+|| 工具名 | 功能 | 使用场景 |
+||--------|------|----------|
+|| `patch_ui_state` | 应用结构化补丁修改 UI | 创建实例、修改结构、更新状态、删除实例 |
+|| `get_schema` | 获取实例的完整 Schema | 检查当前状态、分析结构、验证修改 |
+|| `list_instances` | 列出所有可用实例 | 浏览实例、发现资源 |
+|| `validate_completion` | 验证完成标准 | 评估进度、确定下一步、质量检查 |
+|| `access_instance` | 访问并激活实例 | 切换上下文、标记活动实例 |
 
 ---
 
@@ -97,26 +97,24 @@ async def patch_ui_state(
 
 #### 参数详解
 
-| 参数名 | 类型 | 必需 | 默认值 | 说明 |
-|--------|------|------|--------|------|
-| `instance_id` | string | ✅ | - | 目标实例 ID。<br>• `"__CREATE__"` - 创建新实例<br>• `"__DELETE__"` - 删除实例<br>• 其他 - 修改现有实例 |
-| `patches` | array | ❌ | `[]` | 补丁操作数组（见下方[操作类型](#操作类型)） |
-| `new_instance_id` | string | 条件必需 | `null` | 创建实例时必须提供新实例 ID |
-| `target_instance_id` | string | 条件必需 | `null` | 删除实例时必须提供目标实例 ID |
-| `field_key` | string | ❌ | `null` | 字段操作快捷方式：指定要更新/删除的字段键 |
-| `updates` | object | ❌ | `null` | 字段操作快捷方式：要更新的字段属性 |
-| `remove_field` | boolean | ❌ | `false` | 字段操作快捷方式：如果为 `true` 则删除指定字段 |
-| `block_index` | integer | ❌ | `0` | 指定要操作的 form block 索引（默认第一个） |
+|| 参数名 | 类型 | 必需 | 默认值 | 说明 |
+||--------|------|------|--------|------|
+|| `instance_id` | string | ✅ | - | 目标实例 ID。<br>• `"__CREATE__"` - 创建新实例<br>• `"__DELETE__"` - 删除实例<br>• 其他 - 修改现有实例 |
+|| `patches` | array | ❌ | `[]` | 补丁操作数组（见下方[操作类型](#操作类型）） |
+|| `new_instance_id` | string | 条件必需 | `null` | 创建实例时必须提供新实例 ID |
+|| `target_instance_id` | string | 条件必需 | `null` | 删除实例时必须提供目标实例 ID |
+|| `field_key` | string | ❌ | `null` | 字段操作快捷方式：指定要更新/删除的字段键 |
+|| `updates` | object | ❌ | `null` | 字段操作快捷方式：要更新的字段属性 |
+|| `remove_field` | boolean | ❌ | `false` | 字段操作快捷方式：如果为 `true` 则删除指定字段 |
+|| `block_index` | integer | ❌ | `0` | 指定要操作的 form block 索引（默认第一个） |
 
 #### 操作类型
 
-| Op 类型 | 行为 | 允许的路径格式 | 必需字段 |
-|---------|------|----------------|----------|
-| `set` | 设置路径值（如缺失则创建） | 任意路径（如 `state.params.count`） | `path`, `value` |
-| `add` | 在数组末尾添加元素 | **数组路径**（如 `blocks`, `actions`, `blocks.0.props.fields`） | `path`, `value` |
-| `replace` | 替换整个数组或特定路径的值 | 任意路径 | `path`, `value` |
-| `remove` | 从数组中删除元素（按值匹配） | **数组路径**（如 `blocks`, `actions`, `blocks.0.props.fields`） | `path`, `value` |
-| `clear` | 清空/重置为默认 | `state.params`, `state.runtime` | `path` |
+|| Op 类型 | 行为 | 允许的路径格式 | 必需字段 |
+||---------|------|----------------|----------|
+|| `set` | 设置路径值（如缺失则创建） | 任意路径（如 `state.params.count`） | `path`, `value` |
+|| `add` | 在数组末尾添加元素 | **数组路径**（如 `blocks`, `actions`, `blocks.0.props.fields`） | `path`, `value` |
+|| `remove` | 从数组中删除元素（按值匹配） | **数组路径**（如 `blocks`, `actions`, `blocks.0.props.fields`） | `path`, `value` |
 
 #### 支持的路径模式
 
@@ -128,11 +126,11 @@ async def patch_ui_state(
 - `blocks` - 替换所有 blocks（使用 `set`），或添加/删除 block（使用 `add`/`remove`）
 - `blocks.0` - 操作第一个 block
 - `blocks.0.props.fields` - 操作第一个 block 的字段数组（`add` 在末尾添加字段，`remove` 删除指定字段）
-- `blocks-{id}` - **仅用于 remove 操作**：按 ID 删除 block（不推荐，建议使用 `remove` + 匹配 `value.id`）
+- `blocks.0.props.fields.0` - 替换第一个字段的所有属性
+- `blocks.0.props.fields.0.label` - 修改第一个字段的 label 属性
 
 **Actions 路径**:
 - `actions` - 替换所有 actions（使用 `set`），或添加/删除 action（使用 `add`/`remove`）
-- `actions-{id}` - **仅用于 remove 操作**：按 ID 删除 action（不推荐，建议使用 `remove` + 匹配 `value.id`）
 
 **重要说明**:
 - ❌ **不要使用** `blocks/-` 或 `actions/-` 格式（这是无效的）
@@ -147,198 +145,11 @@ interface PatchResponse {
   message?: string;
   error?: string;
   instance_id?: string;
-  patch?: Record<string, any>;
-  auto_refreshed?: boolean;           // 字段操作后的自动刷新状态
-  auto_refresh_error?: string;          // 自动刷新失败时的错误信息
-  navigate_to?: string;                // navigate 类型的 action 目标实例
-}
-```
-
-#### 使用场景
-
-| 场景 | 参数配置示例 |
-|------|-------------|
-| 创建新实例 | `instance_id="__CREATE__"`, `new_instance_id="new"`, `patches=[...]` |
-| 删除实例 | `instance_id="__DELETE__"`, `target_instance_id="old"` |
-| 更新状态值 | `instance_id="counter"`, `patches=[{"op":"set","path":"state.params.count","value":42}]` |
-| 添加 block | `instance_id="demo"`, `patches=[{"op":"add","path":"blocks","value":{...}}]` |
-| 删除 action | `instance_id="form"`, `patches=[{"op":"remove","path":"actions","value":{"id":"old_action"}}]` |
-| 快捷更新字段 | `instance_id="form"`, `field_key="email"`, `updates={"label":"新标签"}` |
-| 快捷删除字段 | `instance_id="form"`, `field_key="email"`, `remove_field=true` |
-
-#### 自动刷新机制
-
-当使用字段快捷方式（`field_key` + `updates/remove_field`）时：
-1. 工具内部会自动刷新实例状态
-2. 返回结果包含 `auto_refreshed: true`
-3. 如果刷新失败，`auto_refresh_error` 包含错误信息
-
----
-
-### 2. get_schema
-
-**功能**: 获取指定实例的当前 UI Schema。
-
-#### 函数签名
-
-```python
-async def get_schema(instance_id: Optional[str] = None) -> Dict[str, Any]
-```
-
-#### 参数详解
-
-| 参数名 | 类型 | 必需 | 默认值 | 说明 |
-|--------|------|------|--------|------|
-| `instance_id` | string | ❌ | `"demo"` | 实例 ID。未提供时返回默认实例 |
-
-#### 返回值
-
-```typescript
-interface SchemaResponse {
-  status: "success" | "error";
-  error?: string;
-  instance_id: string;
-  schema: UISchema;
-}
-
-interface UISchema {
-  meta: MetaInfo;
-  state: StateInfo;
-  layout: LayoutInfo;
-  blocks: Block[];
-  actions: ActionConfig[];
-}
-```
-
----
-
-### 3. list_instances
-
-**功能**: 列出所有可用的 UI Schema 实例。
-
-#### 函数签名
-
-```python
-async def list_instances() -> Dict[str, Any]
-```
-
-#### 返回值
-
-```typescript
-interface InstancesResponse {
-  status: "success" | "error";
-  error?: string;
-  instances: Array<{
-    instance_id: string;
-    page_key: string;
-    status: string;
-    blocks_count: number;
-    actions_count: number;
+  patches_applied?: Array<patch>;      // 实际应用的补丁列表
+  skipped_patches?: Array<{              // 被跳过的补丁及原因
+    patch: patch;
+    reason: string;
   }>;
-  total: number;
-}
-```
-
----
-
-### 4. validate_completion
-
-**功能**: 验证 UI 实例是否满足特定的完成标准，返回客观评估数据供 Agent 自主决策。
-
-#### 函数签名
-
-```python
-async def validate_completion(
-    instance_id: str,
-    intent: str,
-    completion_criteria: List[Dict[str, Any]]
-) -> Dict[str, Any]
-```
-
-#### 参数详解
-
-| 参数名 | 类型 | 必需 | 说明 |
-|--------|------|------|------|
-| `instance_id` | string | ✅ | 要验证的实例 ID |
-| `intent` | string | ✅ | UI 应实现的高级描述（用于上下文） |
-| `completion_criteria` | array | ✅ | 验证标准列表（每项结构见下方） |
-
-#### Completion Criteria 结构
-
-```typescript
-interface CompletionCriterion {
-  type: "field_exists" | "field_value" | "block_count" | "action_exists" | "custom";
-  path?: string;        // 字段路径
-  value?: any;          // 期望值（用于 field_value）
-  count?: number;        // 期望数量（用于 block_count）
-  condition?: string;    // 自定义条件（用于 custom）
-  description: string;  // 人类可读的描述
-}
-```
-
-#### 支持的验证类型
-
-| 类型 | 说明 | 必需参数 |
-|------|------|----------|
-| `field_exists` | 检查字段是否存在 | `path`, `description` |
-| `field_value` | 检查字段值 | `path`, `value`, `description` |
-| `block_count` | 检查块数量 | `count`, `description` |
-| `action_exists` | 检查 action 是否存在 | `path`, `description` |
-| `custom` | 自定义验证条件 | `condition`, `description` |
-
-#### 返回值
-
-```typescript
-interface ValidationResponse {
-  status: "success" | "error";
-  error?: string;
-  evaluation: {
-    passed_criteria: number;           // 通过的条件数量
-    total_criteria: number;            // 总条件数量
-    completion_ratio: number;           // 完成比例 (0.0 - 1.0)
-    detailed_results: Array<{
-      type: string;
-      description: string;
-      passed: boolean;
-      error?: string;                 // 验证错误（如果有）
-    }>;
-  };
-  summary: string;                     // 高级评估总结
-  recommendations: string[];           // 建议的下一步
-}
-```
-
-**重要说明**: 
-- 工具**只返回评估数据**，不提供 `is_complete` 布尔值
-- Agent 根据 `completion_ratio` 等**自主决策**是否完成
-- 这是一个**数据驱动**而非判断驱动的工具
-
----
-
-### 5. access_instance
-
-**功能**: 访问特定的 UI 实例并将其标记为活动状态。
-
-#### 函数签名
-
-```python
-async def access_instance(instance_id: str) -> Dict[str, Any]
-```
-
-#### 参数详解
-
-| 参数名 | 类型 | 必需 | 说明 |
-|--------|------|------|------|
-| `instance_id` | string | ✅ | 要访问的实例 ID |
-
-#### 返回值
-
-```typescript
-interface AccessResponse {
-  status: "success" | "error";
-  error?: string;
-  instance_id: string;
-  schema: UISchema;
 }
 ```
 
@@ -395,7 +206,8 @@ interface FieldConfig {
   description?: string;        // 可选: 字段描述
   options?: Array<{ label: string; value: string }>;  // select/radio 必需
   editable?: boolean;           // 可选: 是否可编辑
-  // 图片字段属性
+  content_type?: string;       // 可选: 内容类型 (如 "json")
+  // 图片字段专用属性
   showFullscreen?: boolean;
   showDownload?: boolean;
   imageHeight?: string;
@@ -406,20 +218,46 @@ interface FieldConfig {
 }
 ```
 
+**字段类型（type 属性支持的值）**:
+
+| Type | 描述 | 特殊要求 |
+|------|------|----------|
+| `text` | 单行文本输入 | - |
+| `number` | 数字输入 | - |
+| `textarea` | 多行文本区域 | - |
+| `checkbox` | 布尔切换 | - |
+| `select` | 下拉选择 | 需要 `options` 数组 |
+| `radio` | 单选按钮组 | 需要 `options` 数组 |
+| `json` | JSON 编辑器，带验证 | - |
+| `image` | 图片显示，带控制功能 | 支持图片专用属性 |
+| `html` | 只读 HTML 内容 | - |
+
+**图片专用属性**（仅当 `type="image"` 时有效）:
+
+| 属性 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `showFullscreen` | boolean | `true` | 是否显示全屏按钮 |
+| `showDownload` | boolean | `true` | 是否显示下载按钮 |
+| `imageHeight` | string | `"auto"` | 图片高度（如 "200px"） |
+| `imageFit` | string | `"contain"` | 适应方式：`contain`/`cover`/`fill` |
+| `lazy` | boolean | - | 是否懒加载 |
+| `fallback` | string | - | 加载失败时的回退内容 |
+| `subtitle` | string | - | 可选副标题 |
+
 ---
 
 ## Action Handler 详解
 
 ### Handler 类型总览
 
-| Handler | 说明 | 配置结构 | 使用场景 |
-|---------|------|-----------|----------|
-| `set` | 直接设置值 | `{"路径": "值"}` | 清空表单、设置固定状态 |
-| `increment` | 数值增加 | `{"路径": 增量}` | 计数器增加、步进器 |
-| `decrement` | 数值减少 | `{"路径": 减量}` | 计数器减少、步退器 |
-| `toggle` | 布尔值切换 | `{"路径": true}` | 开关、复选框 |
-| `template` | 模板渲染 | `{"路径": "模板字符串"}` | 动态消息、状态提示 |
-| `external` | 调用外部 API | 见下方 | 获取数据、提交表单、远程操作 |
+|| Handler | 说明 | patches 格式 | 使用场景 |
+||---------|------|--------------|----------|
+|| `set` | 直接设置值 | `{"路径": "值"}` | 清空表单、设置固定状态 |
+|| `increment` | 数值增加 | `{"路径": 增量}` | 计数器增加、步进器 |
+|| `decrement` | 数值减少 | `{"路径": 减量}` | 计数器减少、步退器 |
+|| `toggle` | 布尔值切换 | `{"路径": true}` | 开关、复选框 |
+|| `template` | 模板渲染 | `{"路径": "模板字符串"}` | 动态消息、状态提示 |
+|| `external` | 调用外部 API | 配置对象 | 获取数据、提交表单、远程操作 |
 
 ### 1. set 处理器
 
@@ -516,16 +354,16 @@ interface FieldConfig {
 
 #### 配置结构
 
-| 字段 | 类型 | 必需 | 说明 |
-|------|------|------|------|
-| `url` | string | ✅ | API 端点 URL（支持模板变量） |
-| `method` | string | ❌ | HTTP 方法，默认 "POST" |
-| `headers` | dict | ❌ | 请求头（支持模板变量） |
-| `body_template` | dict | ❌ | 请求体模板（支持模板变量） |
-| `body_template_type` | string | ❌ | 请求体类型：`json`（默认）或 `form` |
-| `timeout` | number | ❌ | 超时时间（秒），默认 30 |
-| `response_mappings` | dict | ❌ | 成功响应映射 |
-| `error_mapping` | dict | ❌ | 错误响应映射 |
+|| 字段 | 类型 | 必需 | 说明 |
+||------|------|------|------|
+|| `url` | string | ✅ | API 端点 URL（支持模板变量） |
+|| `method` | string | ❌ | HTTP 方法，默认 "POST" |
+|| `headers` | dict | ❌ | 请求头（支持模板变量） |
+|| `body_template` | dict | ❌ | 请求体模板（支持模板变量） |
+|| `body_template_type` | string | ❌ | 请求体类型：`json`（默认）或 `form` |
+|| `timeout` | number | ❌ | 超时时间（秒），默认 30 |
+|| `response_mappings` | dict | ❌ | 成功响应映射 |
+|| `error_mapping` | dict | ❌ | 错误响应映射 |
 
 #### 支持的 HTTP 方法
 
@@ -609,121 +447,26 @@ interface FieldConfig {
 
 ### 通用错误代码
 
-| 错误代码 | HTTP 状态 | 描述 | 解决方案 |
-|-----------|-----------|------|----------|
-| `INVALID_INSTANCE` | 404 | 实例不存在 | 检查 `instance_id` |
-| `INVALID_OP` | 400 | 未知的操作类型 | 使用有效的 op: set, add, remove, clear, replace |
-| `INVALID_PATH` | 400 | 路径语法错误 | 使用有效的路径模式 |
-| `PATH_NOT_FOUND` | 404 | 无法解析路径 | 确保路径存在或可创建 |
-| `SCHEMA_MUTATION` | 403 | 不可变字段修改 | 检查允许的字段 |
-| `MISSING_VALUE` | 400 | 缺少必需的值 | 提供 `value` 字段 |
-| `DUPLICATE_ID` | 409 | ID 已存在 | 使用唯一的 ID |
-| `INSTANCE_EXISTS` | 409 | 实例 ID 冲突 | 使用不同的 `instance_id` |
-| `INVALID_STRUCTURE` | 400 | 无效的 block/action 结构 | 验证 UISchema 格式 |
+|| 错误代码 | HTTP 状态 | 描述 | 解决方案 |
+||-----------|-----------|------|----------|
+|| `INVALID_INSTANCE` | 404 | 实例不存在 | 检查 `instance_id` |
+|| `INVALID_OP` | 400 | 未知的操作类型 | 使用有效的 op: set, add, remove |
+|| `INVALID_PATH` | 400 | 路径语法错误 | 使用有效的路径模式 |
+|| `PATH_NOT_FOUND` | 404 | 无法解析路径 | 确保路径存在或可创建 |
+|| `SCHEMA_MUTATION` | 403 | 不可变字段修改 | 检查允许的字段 |
+|| `MISSING_VALUE` | 400 | 缺少必需的值 | 提供 `value` 字段 |
+|| `DUPLICATE_ID` | 409 | ID 已存在 | 使用唯一的 ID |
+|| `INSTANCE_EXISTS` | 409 | 实例 ID 冲突 | 使用不同的 `instance_id` |
+|| `INVALID_STRUCTURE` | 400 | 无效的 block/action 结构 | 验证 UISchema 格式 |
 
 ### 验证错误代码
 
-| 错误类型 | 描述 |
-|----------|------|
-| `FIELD_NOT_FOUND` | 指定的字段路径不存在 |
-| `INVALID_CRITERION_TYPE` | 不支持的验证类型 |
-| `INVALID_CONDITION` | 自定义条件语法错误 |
-| `INVALID_JSON_PATH` | JSONPath 解析失败 |
-
----
-
-## 内部实现细节
-
-### 代码组织
-
-```
-backend/
-├── fastapi/
-│   ├── services/
-│   │   ├── instance_service.py    # 实例管理、Action 处理
-│   │   └── patch.py                # Patch 应用逻辑
-│   └── models.py                  # Pydantic 数据模型
-└── mcp/
-    ├── tool_definitions.py        # 工具定义（装饰器）
-    ├── tool_implements.py        # 工具实现（业务逻辑）
-    └── tools.py                # MCP 服务器入口
-```
-
-### 关键实现
-
-#### InstanceService.handle_action
-
-处理用户 action 点击，执行对应的 handler。
-
-```python
-def handle_action(
-    self,
-    instance_id: str,
-    action_id: str,
-    params: Dict[str, Any]
-) -> Dict[str, Any]:
-    # 1. 获取 schema
-    schema = self.schema_manager.get(instance_id)
-    
-    # 2. 同步前端 params
-    if params:
-        params_patch = {f"state.params.{k}": v for k, v in params.items()}
-        apply_patch_to_schema(schema, params_patch)
-    
-    # 3. 查找 action 配置
-    action_config = next((a for a in schema.actions if a.id == action_id), None)
-    
-    # 4. 执行 handler
-    if action_config.handler_type:
-        patch = self._execute_action_handler(schema, action_config)
-        apply_patch_to_schema(schema, patch)
-    
-    return {"status": "success", "patch": patch}
-```
-
-#### External Handler 实现
-
-```python
-def _handle_external_api(self, schema, config) -> Dict[str, Any]:
-    # 1. 准备请求（模板渲染）
-    url = self._render_template(schema, config["url"])
-    headers = {k: self._render_template(schema, v) for k, v in config.get("headers", {}).items()}
-    
-    # 2. 发起 HTTP 请求
-    with httpx.Client(timeout=config.get("timeout", 30)) as client:
-        response = client.request(method, url, headers=headers, ...)
-    
-    # 3. 处理响应
-    if 200 <= response.status_code < 300:
-        response_data = response.json()
-        # 应用 response_mappings
-        for target_path, json_path in config.get("response_mappings", {}).items():
-            value = self._get_json_path_value(response_data, json_path)
-            patch[target_path] = value
-    else:
-        # 应用 error_mapping
-        ...
-    
-    return patch
-```
-
-### WebSocket 推送机制
-
-修改完成后，通过 WebSocket 推送 patch 到前端：
-
-```python
-# 在 patch_ui_state 实现中
-async def patch_ui_state_impl(...):
-    # 应用 patch
-    apply_patch_to_schema(schema, patch)
-    
-    # 推送到前端
-    await websocket_manager.broadcast({
-        "type": "patch",
-        "instance_id": instance_id,
-        "patch": patch
-    })
-```
+|| 错误类型 | 描述 |
+||----------|------|
+|| `FIELD_NOT_FOUND` | 指定的字段路径不存在 |
+|| `INVALID_CRITERION_TYPE` | 不支持的验证类型 |
+|| `INVALID_CONDITION` | 自定义条件语法错误 |
+|| `INVALID_JSON_PATH` | JSONPath 解析失败 |
 
 ---
 
@@ -740,9 +483,10 @@ patch_ui_state → 后端应用 → WebSocket 推送 → 前端更新
 
 ### 最小修改原则
 
-- ✅ 使用精准路径（如 `blocks.0.fields.1.label`）
+- ✅ 使用精准路径（如 `blocks.0.props.fields.1.label`）
 - ❌ 避免覆盖整个结构（如 `blocks`）
-- ✅ 使用 `add` 操作而非 `replace`
+- ✅ 使用 `add` 操作添加元素
+- ✅ 使用 `set` 操作修改属性
 
 ### 验证驱动
 
@@ -755,5 +499,3 @@ patch_ui_state → 后端应用 → WebSocket 推送 → 前端更新
 ## 相关文档
 
 - [MCP_Quick_Examples.md](./MCP_Quick_Examples.md) - 快速示例文档（初学者）
-- [PATCH_SPEC.md](../../PATCH_SPEC.md) - Patch 规范
-- [MINIMAL_PROTOTYPE.md](../../MINIMAL_PROTOTYPE.md) - 系统架构
