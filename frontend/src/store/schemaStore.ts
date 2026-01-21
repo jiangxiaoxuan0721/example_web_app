@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
 import type { UISchema } from '../types/schema';
 
 interface SchemaStore {
@@ -18,48 +19,41 @@ interface SchemaStore {
 }
 
 export const useSchemaStore = create<SchemaStore>()(
-  subscribeWithSelector((set) => ({
-    schema: null,
-    instanceId: null,
-    
-    setSchema: (schema) => set({ schema }),
-    setInstanceId: (instanceId) => set({ instanceId }),
-    
-    applyPatch: (patch) => set((state) => {
-      if (!state.schema) return state;
-      
-      const newSchema = applyPatchToSchema(state.schema, patch);
-      return { schema: newSchema };
-    }),
-    
-    reset: () => set({ schema: null, instanceId: null })
-  }))
+  subscribeWithSelector(
+    immer((set) => ({
+      schema: null,
+      instanceId: null,
+
+      setSchema: (schema) => set({ schema }),
+
+      setInstanceId: (instanceId) => set({ instanceId }),
+
+      applyPatch: (patch) => set((state) => {
+        if (!state.schema) return;
+
+        // Apply patch using immer for efficient immutable updates
+        for (const [path, value] of Object.entries(patch)) {
+          const keys = path.split('.');
+          let current: any = state.schema;
+
+          for (let i = 0; i < keys.length - 1; i++) {
+            if (!current[keys[i]]) {
+              current[keys[i]] = {};
+            }
+            current = current[keys[i]];
+          }
+
+          current[keys[keys.length - 1]] = value;
+        }
+      }),
+
+      reset: () => set({ schema: null, instanceId: null })
+    }))
+  )
 );
 
-// Helper function to apply patch to schema
-function applyPatchToSchema<T extends Record<string, any>>(
-  schema: T,
-  patch: Record<string, any>
-): T {
-  const newSchema = { ...schema };
-
-  // Apply patch (simple dot path implementation)
-  for (const [path, value] of Object.entries(patch)) {
-    const keys = path.split('.');
-    let current: any = newSchema;
-
-    for (let i = 0; i < keys.length - 1; i++) {
-      if (!current[keys[i]]) {
-        current[keys[i]] = {};
-      }
-      current = current[keys[i]];
-    }
-
-    current[keys[keys.length - 1]] = value;
-  }
-
-  return newSchema;
-}
+// Removed applyPatchToSchema function - now using immer middleware
+// Immer handles deep cloning and immutable updates automatically
 
 // Selector for getting bound value
 export const useBoundValue = (bindPath: string) => {
@@ -75,14 +69,14 @@ export const useBoundValue = (bindPath: string) => {
 export const useFieldValue = (bindPath: string, fieldKey: string) => {
   return useSchemaStore((state) => {
     if (!state.schema) return undefined;
-    
+
     // 1. Resolve block.bind path
     let baseObj: any = state.schema;
     if (bindPath) {
       const bindPathKeys = bindPath.split('.');
       baseObj = bindPathKeys.reduce((obj: any, key: string) => obj?.[key], state.schema);
     }
-    
+
     // 2. Read field.key
     const fieldKeys = fieldKey.split('.');
     return fieldKeys.reduce((obj: any, key: string) => obj?.[key], baseObj);

@@ -379,7 +379,7 @@ export default function GenericFieldRenderer({
   const [localValue, setLocalValue] = useState(storedValue);
   const fieldPatch = useFieldPatch();
   const { emitFieldChange } = useEventEmitter();
-  
+
   // 当 Store 中的值变化时，同步到本地状态
   useEffect(() => {
     setLocalValue(storedValue);
