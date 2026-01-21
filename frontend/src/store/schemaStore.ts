@@ -27,39 +27,8 @@ export const useSchemaStore = create<SchemaStore>()(
     
     applyPatch: (patch) => set((state) => {
       if (!state.schema) return state;
-
-      // 使用浅拷贝 + 深度路径更新，避免创建全新的 schema 对象
-      // 这样可以减少不必要的组件重新渲染
-      const newSchema = { ...state.schema };
-
-      // Apply patch (simple dot path implementation)
-      for (const [path, value] of Object.entries(patch)) {
-        const keys = path.split('.');
-        let current: any = newSchema;
-
-        // 导航到父级对象
-        for (let i = 0; i < keys.length - 1; i++) {
-          if (!current[keys[i]]) {
-            current[keys[i]] = {};
-          }
-          // 如果是数组索引，需要拷贝数组以触发响应式更新
-          if (typeof keys[i] === 'string' && /^\d+$/.test(keys[i])) {
-            const index = parseInt(keys[i]);
-            if (Array.isArray(current)) {
-              current[index] = { ...current[index] };
-            } else if (Array.isArray(current[keys[i]])) {
-              current[keys[i]] = [...current[keys[i]]];
-            }
-          } else {
-            current[keys[i]] = { ...current[keys[i]] };
-          }
-          current = current[keys[i]];
-        }
-
-        // 更新最终值
-        current[keys[keys.length - 1]] = value;
-      }
-
+      
+      const newSchema = applyPatchToSchema(state.schema, patch);
       return { schema: newSchema };
     }),
     

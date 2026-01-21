@@ -14,7 +14,7 @@ from ..models import (
 def handle_remove_operation(schema: UISchema, path: str, value: Any):
     """
     Handle remove operation for arrays and objects in the schema
-    
+
     Args:
         schema: The UI schema to modify
         path: Dot-separated path to the target property (e.g., "blocks.0.props.fields")
@@ -24,6 +24,111 @@ def handle_remove_operation(schema: UISchema, path: str, value: Any):
     # Navigate to the target container
     keys = path.split(".")
     try:
+        # Special handling for removing block by id (path: "blocks")
+        if len(keys) == 1 and keys[0] == "blocks":
+            # This is removing a block by id
+            block_id = value.get("id") if isinstance(value, dict) else value
+
+            # Find and remove the block with matching id
+            for i, block in enumerate(schema.blocks):
+                if hasattr(block, "id") and getattr(block, "id") == block_id:
+                    # Get the block's bind path to clean up related state (BEFORE removing)
+                    bind_path = getattr(block, "bind", None) if hasattr(block, "bind") else None
+                    print(f"[PatchRoutes] Found block to remove: {block.id}")
+                    print(f"[PatchRoutes] Block has bind attribute: {hasattr(block, 'bind')}")
+                    print(f"[PatchRoutes] Block bind value: {getattr(block, 'bind', 'NOT_SET')}")
+                    print(f"[PatchRoutes] Block bind_path: {bind_path}")
+                    print(f"[PatchRoutes] Full block object: {block}")
+
+                    # Clean up related state FIRST, then remove the block
+                    # Check if block has props with fields (form block)
+                    if hasattr(block, "props") and block.props and hasattr(block.props, "fields") and block.props.fields:
+                        # For form blocks, delete state keys for each field
+                        print(f"[PatchRoutes] Form block detected, will clean up state for all fields")
+                        for field in block.props.fields:
+                            field_key = getattr(field, "key", None) if hasattr(field, "key") else field.get("key")
+                            if field_key:
+                                # Try to delete from params and runtime
+                                try:
+                                    if field_key in schema.state.params:
+                                        del schema.state.params[field_key]
+                                        print(f"[PatchRoutes] ✓ Deleted state.params.{field_key}")
+                                    if field_key in schema.state.runtime:
+                                        del schema.state.runtime[field_key]
+                                        print(f"[PatchRoutes] ✓ Deleted state.runtime.{field_key}")
+                                except (KeyError, AttributeError) as e:
+                                    print(f"[PatchRoutes] Warning: Failed to delete state.{field_key}: {e}")
+                    elif bind_path and bind_path.startswith("state."):
+                        # For non-form blocks, use the bind path to delete specific state
+                        # Extract the state key (e.g., "state.params.counter" -> "params.counter")
+                        state_keys = bind_path.split(".", 1)[1].split(".")
+                        print(f"[PatchRoutes] Cleaning up state - bind_path: {bind_path}, state_keys: {state_keys}")
+
+                        # Check if block binds to top-level state (params or runtime directly)
+                        # In this case, don't delete anything
+                        if len(state_keys) == 1 and state_keys[0] in ["params", "runtime"]:
+                            print(f"[PatchRoutes] Block binds to top-level state ({state_keys[0]}), skipping state cleanup")
+                        else:
+                            # Navigate to the state dictionary
+                            try:
+                                # Start from schema.state
+                                current = schema.state
+                                print(f"[PatchRoutes] Initial current type: {type(current)}")
+                                print(f"[PatchRoutes] StateInfo params: {schema.state.params}")
+                                print(f"[PatchRoutes] StateInfo runtime: {schema.state.runtime}")
+
+                                # Navigate through the nested dictionaries
+                                for j, key in enumerate(state_keys[:-1]):
+                                    print(f"[PatchRoutes] Navigating to key: {key}, current type: {type(current)}")
+                                    if key == "params":
+                                        current = current.params
+                                    elif key == "runtime":
+                                        current = current.runtime
+                                    elif isinstance(current, dict) and key in current:
+                                        current = current[key]
+                                    else:
+                                        current = None
+                                        break
+
+                                # Remove the final key
+                                if current is not None and isinstance(current, dict):
+                                    final_key = state_keys[-1]
+                                    print(f"[PatchRoutes] Attempting to delete key '{final_key}' from dict with keys: {list(current.keys())}")
+                                    if final_key in current:
+                                        del current[final_key]
+                                        print(f"[PatchRoutes] ✓ Cleaned up state for removed block: {bind_path} (removed key: {final_key})")
+                                        print(f"[PatchRoutes] State after cleanup - params: {schema.state.params}, runtime: {schema.state.runtime}")
+                                    else:
+                                        print(f"[PatchRoutes] Warning: Final key '{final_key}' not found in state for: {bind_path}")
+                            except (KeyError, AttributeError) as e:
+                                print(f"[PatchRoutes] Warning: Failed to clean up state for {bind_path}: {e}")
+                                import traceback
+                                print(f"[PatchRoutes] Traceback:\n{traceback.format_exc()}")
+
+                    # Remove the block AFTER state cleanup
+                    removed_block = schema.blocks.pop(i)
+                    print(f"[PatchRoutes] Removed block: {removed_block.id}")
+
+                    return
+
+            print(f"[PatchRoutes] Block with id '{block_id}' not found")
+            return
+
+        # Special handling for removing action by id (path: "actions")
+        if len(keys) == 1 and keys[0] == "actions":
+            # This is removing an action by id
+            action_id = value.get("id") if isinstance(value, dict) else value
+
+            # Find and remove the action with matching id
+            for i, action in enumerate(schema.actions):
+                if hasattr(action, "id") and getattr(action, "id") == action_id:
+                    removed_action = schema.actions.pop(i)
+                    print(f"[PatchRoutes] Removed action: {removed_action.id}")
+                    return
+
+            print(f"[PatchRoutes] Action with id '{action_id}' not found")
+            return
+
         # Special handling for blocks.X.props.fields path
         if len(keys) == 4 and keys[0] == "blocks" and keys[2] == "props" and keys[3] == "fields":
             # This is removing a field from a form block
@@ -42,58 +147,6 @@ def handle_remove_operation(schema: UISchema, path: str, value: Any):
                             print(f"[PatchRoutes] Removed field from form block: {field_key}")
                             return
 
-        # Special handling for removing block from blocks array
-        if len(keys) == 1 and keys[0] == "blocks":
-            # This is removing a block from the blocks array
-            block_id = value.get("id") if isinstance(value, dict) else value
-
-            for i, block in enumerate(schema.blocks):
-                block_id_check = getattr(block, "id") if hasattr(block, "id") else block.get("id")
-                if block_id_check == block_id:
-                    # 删除与块相关的 state 数据
-                    block = schema.blocks[i]
-                    bind_path = getattr(block, "bind", "state.params")
-                    print(f"[PatchRoutes] Removing state for block {block_id}, bind_path={bind_path}")
-
-                    # 解析绑定路径并删除对应的 state 数据
-                    state_parts = bind_path.split(".")
-                    if len(state_parts) >= 2 and state_parts[0] == "state":
-                        # state_parts[1] 应该是 "params" 或 "runtime"
-                        state_dict_name = state_parts[1]
-
-                        if state_dict_name == "params":
-                            # 删除 state.params 中与块相关的数据
-                            # 使用块 ID 作为键
-                            if hasattr(schema.state, state_dict_name):
-                                state_dict = getattr(schema.state, state_dict_name)
-                                if block_id in state_dict:
-                                    del state_dict[block_id]
-                                    print(f"[PatchRoutes] Removed state.{state_dict_name}.{block_id}")
-                        elif state_dict_name == "runtime":
-                            # 删除 state.runtime 中与块相关的数据
-                            if hasattr(schema.state, state_dict_name):
-                                state_dict = getattr(schema.state, state_dict_name)
-                                if block_id in state_dict:
-                                    del state_dict[block_id]
-                                    print(f"[PatchRoutes] Removed state.{state_dict_name}.{block_id}")
-
-                    # 删除块
-                    schema.blocks.pop(i)
-                    print(f"[PatchRoutes] Removed block: {block_id}")
-                    return
-
-        # Special handling for removing action from actions array
-        if len(keys) == 1 and keys[0] == "actions":
-            # This is removing an action from the actions array
-            action_id = value.get("id") if isinstance(value, dict) else value
-
-            for i, action in enumerate(schema.actions):
-                action_id_check = getattr(action, "id") if hasattr(action, "id") else action.get("id")
-                if action_id_check == action_id:
-                    schema.actions.pop(i)
-                    print(f"[PatchRoutes] Removed action: {action_id}")
-                    return
-        
         # General navigation for other paths
         current: Any = schema
         for key in keys[:-1]:
@@ -105,11 +158,11 @@ def handle_remove_operation(schema: UISchema, path: str, value: Any):
                     return
             else:
                 current = getattr(current, key)
-        
+
         # Get the final container
         final_key = keys[-1]
         container = getattr(current, final_key)
-        
+
         # Remove the value from the container
         if isinstance(container, list):
             # For lists, remove by matching value
@@ -121,7 +174,7 @@ def handle_remove_operation(schema: UISchema, path: str, value: Any):
                 elif hasattr(item, "key") and getattr(item, "key") == value.get("key"):
                     item_to_remove = item
                     break
-            
+
             if item_to_remove is not None:
                 container.remove(item_to_remove)
         elif hasattr(container, "fields"):
@@ -135,12 +188,12 @@ def handle_remove_operation(schema: UISchema, path: str, value: Any):
                     elif hasattr(item, "key") and getattr(item, "key") == value.get("key"):
                         item_to_remove = item
                         break
-                
+
                 if item_to_remove is not None:
                     container.fields.remove(item_to_remove)
-        
+
         print(f"[PatchRoutes] Remove operation applied: path={path}, value={value}")
-        
+
     except (AttributeError, IndexError, ValueError) as e:
         print(f"[PatchRoutes] Error applying remove operation: {e}")
         print(f"[PatchRoutes] Path: {path}, Keys: {keys}")
@@ -148,7 +201,7 @@ def handle_remove_operation(schema: UISchema, path: str, value: Any):
         # This way we can continue with other patches
 
 
-def handle_add_operation(schema: UISchema, path: str, value: Any) -> bool:
+def handle_add_operation(schema: UISchema, path: str, value: Any):
     """
     Handle add operation for arrays and objects in the schema
 
@@ -156,9 +209,6 @@ def handle_add_operation(schema: UISchema, path: str, value: Any) -> bool:
         schema: The UI schema to modify
         path: Dot-separated path to the target property (e.g., "blocks", "actions", "blocks.0.props.fields")
         value: The value to add
-
-    Returns:
-        bool: True if operation was applied successfully, False if skipped (e.g., duplicate ID)
     """
     print(f"[PatchRoutes] Handling add operation: path={path}, value={value}")
     # Navigate to the target container
@@ -169,21 +219,77 @@ def handle_add_operation(schema: UISchema, path: str, value: Any) -> bool:
         if len(keys) == 1 and keys[0] == "blocks":
             # This is adding a new block to the blocks array
             if isinstance(value, dict):
+                # Check if block with same id already exists
+                new_block_id = value.get("id")
+                if new_block_id:
+                    for existing_block in schema.blocks:
+                        if hasattr(existing_block, "id") and getattr(existing_block, "id") == new_block_id:
+                            print(f"[PatchRoutes] Block with id '{new_block_id}' already exists, skipping add")
+                            return
+
                 # Convert dict to Block object
                 block = Block(**value)
             else:
+                # Check if block with same id already exists
+                new_block_id = getattr(value, "id", None)
+                if new_block_id:
+                    for existing_block in schema.blocks:
+                        if hasattr(existing_block, "id") and getattr(existing_block, "id") == new_block_id:
+                            print(f"[PatchRoutes] Block with id '{new_block_id}' already exists, skipping add")
+                            return
                 block = value
 
-            # Check if block with same ID already exists
-            existing_block = next((b for b in schema.blocks if b.id == block.id), None)
-            if existing_block:
-                error_msg = f"Block with ID '{block.id}' already exists. Use 'set' operation with path 'blocks.{schema.blocks.index(existing_block)}' to replace it."
-                print(f"[PatchRoutes] Warning: {error_msg}")
-                return False  # 返回 False 表示操作被跳过
-
+            # Add block to schema
             schema.blocks.append(block)
             print(f"[PatchRoutes] Added new block: {block.id}")
-            return True  # 返回 True 表示操作成功
+
+            # Initialize state for the block if it has a bind path
+            bind_path = getattr(block, "bind", None) if hasattr(block, "bind") else None
+            if bind_path and bind_path.startswith("state."):
+                # Extract the state key path (e.g., "state.params.counter" -> "params.counter")
+                state_keys = bind_path.split(".", 1)[1].split(".")
+                print(f"[PatchRoutes] Initializing state for new block - bind_path: {bind_path}, state_keys: {state_keys}")
+
+                # Only initialize if there's a specific key (not just "params" or "runtime")
+                if len(state_keys) == 1 and state_keys[0] in ["params", "runtime"]:
+                    # Block binds to state.params or state.runtime directly - don't create anything
+                    print(f"[PatchRoutes] Block binds to top-level state ({state_keys[0]}), skipping initialization")
+                else:
+                    try:
+                        # Navigate to the state dictionary
+                        current = schema.state
+
+                        # Navigate through nested dictionaries, creating missing ones
+                        for j, key in enumerate(state_keys[:-1]):
+                            print(f"[PatchRoutes] Navigating to key: {key}, current type: {type(current)}")
+                            if key == "params" and hasattr(current, "params"):
+                                current = current.params
+                            elif key == "runtime" and hasattr(current, "runtime"):
+                                current = current.runtime
+                            elif isinstance(current, dict):
+                                if key not in current:
+                                    # Create missing nested dictionaries
+                                    current[key] = {}
+                                    print(f"[PatchRoutes] Created missing nested dict for key: {key}")
+                                current = current[key]
+                            else:
+                                current = None
+                                break
+
+                        # Initialize the final key if it doesn't exist
+                        if current is not None and isinstance(current, dict):
+                            final_key = state_keys[-1]
+                            if final_key not in current:
+                                current[final_key] = {}
+                                print(f"[PatchRoutes] ✓ Initialized state for new block: {bind_path} (created key: {final_key})")
+                            else:
+                                print(f"[PatchRoutes] State key '{final_key}' already exists for: {bind_path}")
+                    except (KeyError, AttributeError) as e:
+                        print(f"[PatchRoutes] Warning: Failed to initialize state for {bind_path}: {e}")
+                        import traceback
+                        print(f"[PatchRoutes] Traceback:\n{traceback.format_exc()}")
+
+            return
 
         # Special handling for adding new action to actions array
         if len(keys) == 1 and keys[0] == "actions":
@@ -194,16 +300,9 @@ def handle_add_operation(schema: UISchema, path: str, value: Any) -> bool:
             else:
                 action = value
 
-            # Check if action with same ID already exists
-            existing_action = next((a for a in schema.actions if a.id == action.id), None)
-            if existing_action:
-                error_msg = f"Action with ID '{action.id}' already exists. Use 'set' operation with path 'actions.{schema.actions.index(existing_action)}' to replace it."
-                print(f"[PatchRoutes] Warning: {error_msg}")
-                return False  # 返回 False 表示操作被跳过
-
             schema.actions.append(action)
             print(f"[PatchRoutes] Added new action: {action.id}")
-            return True  # 返回 True 表示操作成功
+            return
 
         # Special handling for blocks.X.props.fields path
         if len(keys) == 4 and keys[0] == "blocks" and keys[2] == "props" and keys[3] == "fields":
@@ -225,20 +324,13 @@ def handle_add_operation(schema: UISchema, path: str, value: Any) -> bool:
                         field_config = value
 
                     # Add the new field
-                    # Check if field with same key already exists
-                    existing_field = next((f for f in current_fields if f.key == field_config.key), None)
-                    if existing_field:
-                        error_msg = f"Field with key '{field_config.key}' already exists in block {block.id}. Use 'set' operation with path 'blocks.{block_index}.props.fields.{current_fields.index(existing_field)}' to replace it."
-                        print(f"[PatchRoutes] Warning: {error_msg}")
-                        return False  # 返回 False 表示操作被跳过
-
                     current_fields.append(field_config)
 
                     # Update the fields property
                     setattr(block.props, "fields", current_fields)
 
-                    print(f"[PatchRoutes] Added field to form block: {field_config.key}")
-                    return True  # 返回 True 表示操作成功
+                    print(f"[PatchRoutes] Added field to form block: {value.get('key')}")
+                    return
 
         # General navigation for other paths
         current: Any = schema
@@ -451,8 +543,7 @@ def register_patch_routes(
             # Process patches
             add_patches = []  # Track add operations separately
             remove_patches = []  # Track remove operations separately
-            skipped_patches = []  # Track skipped operations (e.g., duplicate IDs)
-
+            
             for patch in patches:
                 op = patch.get("op")
                 path = patch.get("path")
@@ -463,12 +554,9 @@ def register_patch_routes(
                     patch_dict[path] = value
                 elif op == "add":
                     # Handle add operation for arrays and objects
-                    applied = handle_add_operation(schema, path, value)
-                    # Only track add operations if they were actually applied
-                    if applied:
-                        add_patches.append(patch)
-                    else:
-                        skipped_patches.append(patch)
+                    handle_add_operation(schema, path, value)
+                    # Track add operations for WebSocket notification
+                    add_patches.append(patch)
                 elif op == "remove":
                     # Handle remove operation for arrays and objects
                     handle_remove_operation(schema, path, value)
@@ -481,9 +569,6 @@ def register_patch_routes(
 
             # If we have any patches (set, add, or remove), save to history and notify frontend
             if patch_dict or add_patches or remove_patches:
-                # For set operations, use the patch_dict
-                # For add/remove operations, we need to create a special representation
-                all_patches = patch_dict.copy()
                 # For set operations, use the patch_dict
                 # For add/remove operations, we need to create a special representation
                 all_patches = patch_dict.copy()
@@ -523,9 +608,9 @@ def register_patch_routes(
                     "instance_id": instance_id
                 }
 
-                # For add operations, we need to send the entire schema since it was modified directly
+                # For add/remove operations, we need to send the entire schema since it was modified directly
                 # For set operations, we can send just the patches
-                if add_patches:
+                if add_patches or remove_patches:
                     # Send the entire updated schema after add operations
                     # This ensures the frontend receives the complete updated state
                     print(f"[PatchRoutes] Sending schema_update for instance: {instance_id}")
@@ -588,61 +673,17 @@ def register_patch_routes(
                         "schema": schema_patch
                     }
                     await ws_manager._dispatcher.send_to_instance(instance_id, message)
-
-                    # 发送访问实例的消息以触发前端刷新
-                    await ws_manager._dispatcher.send_to_instance(instance_id, access_instance_message)
                 else:
                     # Send only the patches for set operations
                     await ws_manager.send_patch(instance_id, patch_dict, None)
-                    # 发送访问实例的消息以触发前端刷新
-                    await ws_manager._dispatcher.send_to_instance(instance_id, access_instance_message)
 
                 print(f"[PatchRoutes] Patch 应用成功: {all_patches}")
-
-                # 构建返回消息
-                response = {
+                
+                return {
                     "status": "success",
                     "message": "Patch applied successfully",
                     "instance_id": instance_id,
-                    "patches_applied": add_patches + [{"op": "set", "path": k, "value": v} for k, v in patch_dict.items()],
-                    "patches_skipped": skipped_patches
-                }
-
-                # 如果有跳过的操作，添加警告信息
-                if skipped_patches:
-                    skipped_ids = []
-                    for sp in skipped_patches:
-                        if sp.get("path") == "blocks" and "id" in sp.get("value", {}):
-                            skipped_ids.append(f"block {sp['value']['id']}")
-                        elif sp.get("path") == "actions" and "id" in sp.get("value", {}):
-                            skipped_ids.append(f"action {sp['value']['id']}")
-                        elif "fields" in sp.get("path", "") and "key" in sp.get("value", {}):
-                            skipped_ids.append(f"field {sp['value']['key']}")
-
-                    if skipped_ids:
-                        response["message"] = f"Patch applied successfully (skipped: {', '.join(skipped_ids)})"
-                        response["warning"] = f"Some operations were skipped due to duplicate IDs/keys: {', '.join(skipped_ids)}. Use 'set' operation to replace existing elements."
-
-                return response
-
-            # Handle case where all patches were skipped
-            if skipped_patches:
-                skipped_ids = []
-                for sp in skipped_patches:
-                    if sp.get("path") == "blocks" and "id" in sp.get("value", {}):
-                        skipped_ids.append(f"block {sp['value']['id']}")
-                    elif sp.get("path") == "actions" and "id" in sp.get("value", {}):
-                        skipped_ids.append(f"action {sp['value']['id']}")
-                    elif "fields" in sp.get("path", "") and "key" in sp.get("value", {}):
-                        skipped_ids.append(f"field {sp['value']['key']}")
-
-                return {
-                    "status": "success",
-                    "message": f"All operations were skipped due to duplicate IDs/keys: {', '.join(skipped_ids)}. Use 'set' operation to replace existing elements.",
-                    "instance_id": instance_id,
-                    "patches_applied": [],
-                    "patches_skipped": skipped_patches,
-                    "warning": f"All operations were skipped due to duplicate IDs/keys: {', '.join(skipped_ids)}"
+                    "patches_applied": patches
                 }
 
             return {
@@ -651,26 +692,13 @@ def register_patch_routes(
                 "instance_id": instance_id
             }
 
-        except ValueError as e:
-            # 处理业务逻辑错误（如重复 ID）
-            import traceback
-            print(f"[PatchRoutes] [ERROR] /ui/patch 业务错误: {e}")
-            print(f"[PatchRoutes] Traceback:\n{traceback.format_exc()}")
-            return {
-                "status": "error",
-                "error": str(e),
-                "error_type": "validation_error"
-            }
-
         except Exception as e:
-            # 处理其他未预期的错误
             import traceback
             print(f"[PatchRoutes] [ERROR] /ui/patch 错误: {e}")
             print(f"[PatchRoutes] Traceback:\n{traceback.format_exc()}")
             return {
                 "status": "error",
                 "error": str(e),
-                "error_type": "internal_error",
                 "detail": traceback.format_exc()
             }
 

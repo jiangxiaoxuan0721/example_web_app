@@ -78,11 +78,11 @@ export const getRegisteredBlockTypes = (): string[] => {
  */
 export default function BlockRenderer({ block, schema, disabled, highlightField }: BlockRendererProps) {
   const renderer = blockRenderers[block.type];
-
+  
   if (!renderer) {
     console.warn(`[BlockRenderer] Unknown block type: ${block.type}`);
     return null;
   }
-
+  
   return renderer({ block, schema, disabled, highlightField });
 }

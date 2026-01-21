@@ -12,7 +12,7 @@
  * - Generic Renderer: 通用组件模板，支持动态扩展
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import { useSchemaStore } from './store/schemaStore';
 import { useSchema } from './hooks/useSchema';
 import { usePatchHistory } from './hooks/usePatchHistory';
@@ -36,38 +36,34 @@ export default function App() {
   const { currentInstanceId, schema, loading, error, loadingText } = useSchema();
   const { setSchema, applyPatch, setInstanceId } = useSchemaStore();
   const { emitInstanceSwitch } = useEventEmitter();
-
+  
   // 获取localStorage中的高亮字段
   const highlightField = getHighlightFromUrl(); // 使用这个函数会自动从URL迁移到localStorage
-
+  
   // ============ Patch 历史管理 ============
   const { patches, loadPatches, replayPatch } = usePatchHistory(applyPatch);
-
+  
   // 当 schema 从后端加载时更新 Store
   useEffect(() => {
     if (schema) {
       setSchema(schema);
     }
   }, [schema, setSchema]);
-
+  
   // 当实例ID变化时更新 Store
   useEffect(() => {
     if (currentInstanceId) {
       setInstanceId(currentInstanceId);
     }
   }, [currentInstanceId, setInstanceId]);
-
+  
   // 初始化时加载 Patch 历史
   useEffect(() => {
     if (currentInstanceId) {
       loadPatches();
     }
   }, [currentInstanceId, loadPatches]);
-
-  // 使用 useMemo 缓存 blocks 和 actions，避免因 schema 引用变化导致不必要的重渲染
-  const blocks = useMemo(() => schema?.blocks || [], [schema?.blocks]);
-  const actions = useMemo(() => schema?.actions || [], [schema?.actions]);
-
+  
   // WebSocket 接收实时 Patch 和实例切换消息
   const { connected: wsConnected } = useWebSocket(
     // 处理 Patch
@@ -78,14 +74,14 @@ export default function App() {
       loadPatches();
     },
     // 处理实例切换和 schema 更新
-    (instanceId, newSchema) => {
+    (instanceId, schema) => {
       console.log('[App] 通过 WebSocket 处理 schema 更新:', instanceId);
-      if (newSchema) {
-        console.log('[App] Schema blocks 数量:', newSchema?.blocks?.length || 0);
-        console.log('[App] Schema actions 数量:', newSchema?.actions?.length || 0);
+      if (schema) {
+        console.log('[App] Schema blocks 数量:', schema?.blocks?.length || 0);
+        console.log('[App] Schema actions 数量:', schema?.actions?.length || 0);
         // 如果提供了 schema，直接使用它
         // schema 来自 WebSocket，类型为 Record<string, any>，在这里做类型断言以满足 setSchema 的 UISchema 参数
-        setSchema(newSchema as any);
+        setSchema(schema as any);
         console.log('[App] Schema 已更新到 store');
       }
 
@@ -95,26 +91,26 @@ export default function App() {
       }
     }
   );
-
+  
   // 处理实例切换
   const handleInstanceSwitch = (newInstanceId: string) => {
     emitInstanceSwitch(newInstanceId);
   };
-
+  
   // 加载中
   if (loading) {
     return <Loading text={loadingText} />;
   }
-
+  
   // 错误状态
   if (error) {
     return <ErrorState error={error} />;
   }
-
+  
   // ============ 主渲染 ============
     return (
     <div className="pta-layout">
-      {schema && <Sidebar schema={schema} />}
+      <Sidebar schema={schema!} />
 
       <div className="pta-container">
         {/* 顶部固定区域 - 实例选择器 */}
@@ -130,7 +126,7 @@ export default function App() {
           {/* Schema 渲染容器 */}
           <div className="pta-schema-container">
             {/* 渲染 Blocks */}
-            {blocks.map((block) => (
+            {schema?.blocks?.map((block) => (
               <BlockRenderer
                 key={block.id}
                 block={block}
@@ -141,7 +137,7 @@ export default function App() {
 
             {/* 渲染 Actions */}
             <div className="pta-actions-container">
-              {actions.map((action) => (
+              {schema?.actions?.map((action) => (
                 <ActionButton
                   key={action.id}
                   action={action}

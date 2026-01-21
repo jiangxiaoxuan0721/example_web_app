@@ -8,7 +8,7 @@
  * - 支持折叠/展开
  */
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { UISchema } from '../types/schema';
 
 interface SidebarProps {
@@ -36,18 +36,16 @@ export default function Sidebar({ schema }: SidebarProps) {
     localStorage.setItem('pta-sidebar-collapsed', String(isCollapsed));
   }, [isCollapsed]);
 
-  // 生成导航项列表（使用 useMemo 优化）
-  const navItems: NavigationItem[] = useMemo(() => {
-    return schema.blocks
-      ?.map(block => {
-        // 尝试从 block 中获取标题，优先级：meta.title > block.id
-        const title = (block as any).meta?.title || (block as any).props?.title || block.id;
-        return {
-          id: block.id,
-          title: title
-        };
-      }) || [];
-  }, [schema.blocks]);
+  // 生成导航项列表
+  const navItems: NavigationItem[] = schema.blocks
+    ?.map(block => {
+      // 尝试从 block 中获取标题，优先级：meta.title > block.id
+      const title = (block as any).meta?.title || (block as any).props?.title || block.id;
+      return {
+        id: block.id,
+        title: title
+      };
+    }) || [];
 
   // 使用 IntersectionObserver 自动高亮当前可见的 block
   useEffect(() => {
