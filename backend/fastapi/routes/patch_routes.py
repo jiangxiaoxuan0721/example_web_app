@@ -19,6 +19,9 @@ def handle_remove_operation(schema: UISchema, path: str, value: Any):
         schema: The UI schema to modify
         path: Dot-separated path to the target property (e.g., "blocks.0.props.fields")
         value: The value to remove (identifies the item to remove)
+
+    Returns:
+        dict: Result with 'success' (bool) and 'reason' (str, optional) for failed operations
     """
     print(f"[PatchRoutes] Handling remove operation: path={path}, value={value}")
     # Navigate to the target container
@@ -109,10 +112,10 @@ def handle_remove_operation(schema: UISchema, path: str, value: Any):
                     removed_block = schema.blocks.pop(i)
                     print(f"[PatchRoutes] Removed block: {removed_block.id}")
 
-                    return
+                    return {"success": True}
 
             print(f"[PatchRoutes] Block with id '{block_id}' not found")
-            return
+            return {"success": False, "reason": f"Block with id '{block_id}' not found"}
 
         # Special handling for removing action by id (path: "actions")
         if len(keys) == 1 and keys[0] == "actions":
@@ -124,10 +127,10 @@ def handle_remove_operation(schema: UISchema, path: str, value: Any):
                 if hasattr(action, "id") and getattr(action, "id") == action_id:
                     removed_action = schema.actions.pop(i)
                     print(f"[PatchRoutes] Removed action: {removed_action.id}")
-                    return
+                    return {"success": True}
 
             print(f"[PatchRoutes] Action with id '{action_id}' not found")
-            return
+            return {"success": False, "reason": f"Action with id '{action_id}' not found"}
 
         # Special handling for blocks.X.props.fields path
         if len(keys) == 4 and keys[0] == "blocks" and keys[2] == "props" and keys[3] == "fields":
@@ -209,6 +212,9 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
         schema: The UI schema to modify
         path: Dot-separated path to the target property (e.g., "blocks", "actions", "blocks.0.props.fields")
         value: The value to add
+
+    Returns:
+        dict: Result with 'success' (bool) and 'reason' (str, optional) for skipped operations
     """
     print(f"[PatchRoutes] Handling add operation: path={path}, value={value}")
     # Navigate to the target container
@@ -225,7 +231,7 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
                     for existing_block in schema.blocks:
                         if hasattr(existing_block, "id") and getattr(existing_block, "id") == new_block_id:
                             print(f"[PatchRoutes] Block with id '{new_block_id}' already exists, skipping add")
-                            return
+                            return {"success": False, "reason": f"Block with id '{new_block_id}' already exists"}
 
                 # Convert dict to Block object
                 block = Block(**value)
@@ -236,7 +242,7 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
                     for existing_block in schema.blocks:
                         if hasattr(existing_block, "id") and getattr(existing_block, "id") == new_block_id:
                             print(f"[PatchRoutes] Block with id '{new_block_id}' already exists, skipping add")
-                            return
+                            return {"success": False, "reason": f"Block with id '{new_block_id}' already exists"}
                 block = value
 
             # Add block to schema
@@ -302,7 +308,7 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
                             import traceback
                             print(f"[PatchRoutes] Traceback:\n{traceback.format_exc()}")
 
-            return
+            return {"success": True}
 
         # Special handling for adding new action to actions array
         if len(keys) == 1 and keys[0] == "actions":
@@ -556,6 +562,8 @@ def register_patch_routes(
             # Process patches
             add_patches = []  # Track add operations separately
             remove_patches = []  # Track remove operations separately
+            applied_patches = []  # Track successfully applied patches
+            skipped_patches = []  # Track skipped patches with reasons
             
             for patch in patches:
                 op = patch.get("op")
@@ -565,16 +573,37 @@ def register_patch_routes(
                 # Convert structured patch operations to dict format
                 if op == "set":
                     patch_dict[path] = value
+                    applied_patches.append(patch)
                 elif op == "add":
                     # Handle add operation for arrays and objects
-                    handle_add_operation(schema, path, value)
+                    original_blocks_count = len(schema.blocks)
+                    result = handle_add_operation(schema, path, value)
                     # Track add operations for WebSocket notification
                     add_patches.append(patch)
+                    # Check result and add to applied or skipped
+                    if result and result.get("success", True):
+                        applied_patches.append(patch)
+                    else:
+                        reason = result.get("reason", "Unknown reason") if result else "Unknown reason"
+                        skipped_patches.append({
+                            "patch": patch,
+                            "reason": reason
+                        })
                 elif op == "remove":
                     # Handle remove operation for arrays and objects
-                    handle_remove_operation(schema, path, value)
+                    original_blocks_count = len(schema.blocks)
+                    result = handle_remove_operation(schema, path, value)
                     # Track remove operations for WebSocket notification
                     remove_patches.append(patch)
+                    # Check result and add to applied or skipped
+                    if result and result.get("success", True):
+                        applied_patches.append(patch)
+                    else:
+                        reason = result.get("reason", "Unknown reason") if result else "Unknown reason"
+                        skipped_patches.append({
+                            "patch": patch,
+                            "reason": reason
+                        })
 
             # Apply set patches to schema
             if patch_dict:
@@ -691,13 +720,30 @@ def register_patch_routes(
                     await ws_manager.send_patch(instance_id, patch_dict, None)
 
                 print(f"[PatchRoutes] Patch 应用成功: {all_patches}")
+                print(f"[PatchRoutes] 实际应用的 patches: {applied_patches}")
+                print(f"[PatchRoutes] 跳过的 patches: {skipped_patches}")
                 
-                return {
+                if not applied_patches:
+                    return {
+                        "status": "success",
+                        "message": "No patches were applied (all operations were skipped)",
+                        "instance_id": instance_id,
+                        "patches_applied": [],
+                        "skipped_patches": skipped_patches
+                    }
+                
+                result = {
                     "status": "success",
                     "message": "Patch applied successfully",
                     "instance_id": instance_id,
-                    "patches_applied": patches
+                    "patches_applied": applied_patches
                 }
+                
+                # Add skipped_patches to result if there are any skipped patches
+                if skipped_patches:
+                    result["skipped_patches"] = skipped_patches
+                
+                return result
 
             return {
                 "status": "success",
