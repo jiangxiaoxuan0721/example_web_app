@@ -106,6 +106,9 @@ class ActionConfig(BaseModel):
     style: str = Field(default="secondary", description="操作样式")
     action_type: Optional[str] = Field(default="api", description="操作类型：api（默认）/ navigate")
     target_instance: Optional[str] = Field(None, description="目标实例ID（当action_type=navigate时使用）")
+    # 通用动作处理器配置
+    handler_type: Optional[str] = Field(None, description="处理器类型：set/increment/decrement/toggle/custom")
+    patches: Optional[Dict[str, Any]] = Field(None, description="要应用的 patch 映射（key为路径，value为值或操作配置）")
 
 
 class UISchema(BaseModel):

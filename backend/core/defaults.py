@@ -1,5 +1,6 @@
 """默认 Schema 实例"""
 
+from typing import Dict, Any
 from ..fastapi.models import UISchema, MetaInfo, StateInfo, LayoutInfo, Block, ActionConfig, StepInfo, BlockProps, FieldConfig
 
 
@@ -134,11 +135,23 @@ def _create_counter_schema() -> UISchema:
             )
         ],
         actions=[
-            ActionConfig(id="increment", label="+1", style="primary"), # type: ignore
-            ActionConfig(id="decrement", label="-1", style="secondary"), # type: ignore
             ActionConfig(
-                id="to_form", 
-                label="跳转到表单", 
+                id="increment",
+                label="+1",
+                style="primary",
+                handler_type="increment",
+                patches={"state.params.count": 1}
+            ),
+            ActionConfig(
+                id="decrement",
+                label="-1",
+                style="secondary",
+                handler_type="decrement",
+                patches={"state.params.count": 1}
+            ),
+            ActionConfig(
+                id="to_form",
+                label="跳转到表单",
                 style="secondary",
                 action_type="navigate",
                 target_instance="form"
@@ -189,18 +202,38 @@ def _create_form_schema() -> UISchema:
             )
         ],
         actions=[
-            ActionConfig(id="submit", label="提交", style="primary"), # type: ignore
-            ActionConfig(id="clear", label="清空", style="danger"), # type: ignore
             ActionConfig(
-                id="to_counter", 
-                label="跳转到计数器", 
+                id="submit",
+                label="提交",
+                style="primary",
+                handler_type="template",
+                patches={
+                    "state.runtime.status": "submitted",
+                    "state.runtime.message": "表单已提交！姓名: ${state.params.name}, 邮箱: ${state.params.email}"
+                }
+            ),
+            ActionConfig(
+                id="clear",
+                label="清空",
+                style="danger",
+                handler_type="set",
+                patches={
+                    "state.params.name": "",
+                    "state.params.email": "",
+                    "state.runtime.status": "idle",
+                    "state.runtime.message": ""
+                }
+            ),
+            ActionConfig(
+                id="to_counter",
+                label="跳转到计数器",
                 style="secondary",
                 action_type="navigate",
                 target_instance="counter"
             ),
             ActionConfig(
-                id="to_demo", 
-                label="跳转到主页", 
+                id="to_demo",
+                label="跳转到主页",
                 style="secondary",
                 action_type="navigate",
                 target_instance="demo"
@@ -262,12 +295,51 @@ def _create_json_viewer_schema() -> UISchema:
             )
         ],
         actions=[
-            ActionConfig(id="format", label="格式化", style="secondary"), # type: ignore
-            ActionConfig(id="validate", label="验证JSON", style="primary"), # type: ignore
-            ActionConfig(id="clear", label="清空", style="danger"), # type: ignore
             ActionConfig(
-                id="to_demo", 
-                label="返回主页", 
+                id="validate",
+                label="验证JSON",
+                style="primary",
+                handler_type="set",
+                patches={"state.runtime.message": "JSON 格式验证通过！"}
+            ),
+            ActionConfig(
+                id="format",
+                label="格式化",
+                style="secondary",
+                handler_type="set",
+                patches={"state.runtime.message": "JSON 已格式化"}
+            ),
+            ActionConfig(
+                id="clear",
+                label="清空",
+                style="danger",
+                handler_type="set",
+                patches={
+                    "state.params.json_data": {},
+                    "state.runtime.message": ""
+                }
+            ),
+            ActionConfig(
+                id="fetch_example",
+                label="获取示例数据",
+                style="primary",
+                handler_type="external",
+                patches={
+                    "url": "https://jsonplaceholder.typicode.com/users/1",
+                    "method": "GET",
+                    "response_mappings": {
+                        "state.params.json_data": "",  # 整个响应
+                        "state.runtime.message": "成功获取示例数据"
+                    },
+                    "error_mapping": {
+                        "state.runtime.error": "error.message",
+                        "state.runtime.status": "error"
+                    }
+                }
+            ),
+            ActionConfig(
+                id="to_demo",
+                label="返回主页",
                 style="secondary",
                 action_type="navigate",
                 target_instance="demo"

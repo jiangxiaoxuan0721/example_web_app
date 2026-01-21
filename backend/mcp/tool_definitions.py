@@ -32,7 +32,8 @@ async def patch_ui_state(
         instance_id: Target instance (e.g., "demo", "counter", "form").
                     Use "__CREATE__" to create new instance.
                     Use "__DELETE__" to delete instance.
-        patches: Array of patch operations (optional if using field shortcuts).
+        patches: Array of patch operations. Support op types: set, add, replace, remove, clear.
+                 Optional when using field shortcuts.
         new_instance_id: Required when instance_id == "__CREATE__".
         target_instance_id: Required when instance_id == "__DELETE__".
         field_key: Key of field to update/remove (for shortcut operations).
@@ -41,10 +42,11 @@ async def patch_ui_state(
         block_index: Index of form block (default: 0, first block).
 
     Returns:
-        Dict containing operation status and details.
+        Dict with status ("success"/"error"), optional message/error, instance_id,
+        and operation details like patch, auto_refresh status, or navigate_to target.
 
     Examples:
-        Update state:
+        Update state value:
             {
                 "instance_id": "counter",
                 "patches": [
@@ -52,14 +54,22 @@ async def patch_ui_state(
                 ]
             }
 
+        Add new field to form:
+            {
+                "instance_id": "form",
+                "patches": [
+                    {"op": "set", "path": "state.params.telephone", "value": ""},
+                    {"op": "add", "path": "blocks.0.props.fields", "value": {
+                        "label": "Telephone", "key": "telephone", "type": "text"
+                    }}
+                ]
+            }
+
         Update field (shortcut):
             {
                 "instance_id": "form",
                 "field_key": "email",
-                "updates": {
-                    "label": "Email Address",
-                    "type": "email"
-                }
+                "updates": {"label": "Email Address", "type": "email"}
             }
 
         Remove field (shortcut):
@@ -80,6 +90,12 @@ async def patch_ui_state(
                     {"op": "set", "path": "actions", "value": []}
                 ]
             }
+
+        Delete instance:
+            {
+                "instance_id": "__DELETE__",
+                "target_instance_id": "old_instance"
+            }
     """
     # 实现在tool_implements.py中
     from backend.mcp.tool_implements import patch_ui_state_impl
@@ -99,7 +115,8 @@ async def get_schema(instance_id: Optional[str] = None) -> Dict[str, Any]:
                     If not provided, returns default instance ("demo").
 
     Returns:
-        Dict containing UI Schema.
+        Dict with status ("success"/"error"), error (if any), instance_id,
+        and the complete UISchema object (meta, state, layout, blocks, actions).
     """
     # 实现在tool_implements.py中
     from backend.mcp.tool_implements import get_schema_impl
@@ -112,7 +129,8 @@ async def list_instances() -> Dict[str, Any]:
     List all available UI Schema instances.
 
     Returns:
-        Dict containing list of available instances and their metadata.
+        Dict with status ("success"/"error"), error (if any), instances array
+        (with instance_id, page_key, status, blocks_count, actions_count), and total count.
     """
     # 实现在tool_implements.py中
     from backend.mcp.tool_implements import list_instances_impl
@@ -128,7 +146,8 @@ async def access_instance(instance_id: str) -> Dict[str, Any]:
         instance_id: Instance ID to access (e.g., "demo", "counter", "form").
 
     Returns:
-        Dict containing operation status and instance schema.
+        Dict with status ("success"/"error"), error (if any), instance_id,
+        and the UISchema object (same structure as get_schema).
     """
     # 实现在tool_implements.py中
     from backend.mcp.tool_implements import access_instance_impl
@@ -143,28 +162,28 @@ async def validate_completion(
 ) -> Dict[str, Any]:
     """
     Validate if UI instance meets specific completion criteria.
-    This tool enables Agent to determine when to stop modifications.
+    This tool returns objective evaluation data for Agent to make decisions.
 
     Args:
         instance_id: Instance ID to validate (e.g., "demo", "counter", "form").
-        intent: High-level description of what the UI should accomplish.
+        intent: High-level description of what UI should accomplish.
         completion_criteria: List of criteria to check against. Each criterion should have:
             - type: "field_exists", "field_value", "block_count", "action_exists", "custom"
             - path: Field path (for field-related criteria)
             - value: Expected value (for field_value criteria)
             - count: Expected count (for block_count criteria)
             - condition: Custom validation expression (for custom criteria)
-            - description: Human-readable description of the criterion
+            - description: Human-readable description of criterion
 
     Returns:
-        Dict containing:
-        - evaluation: Object containing evaluation metrics (NOT a completion decision)
-            * passed_criteria: Number of criteria that passed
-            * total_criteria: Total number of criteria evaluated
-            * completion_ratio: Ratio of passed to total criteria (0.0 to 1.0)
-            * detailed_results: Array of individual criterion results
-        - summary: High-level assessment of current state
-        - recommendations: Suggested next steps (Agent decides whether to follow)
+        Dict with status ("success"/"error"), error (if any), and evaluation object
+        (passed_criteria, total_criteria, completion_ratio, detailed_results),
+        plus summary and recommendations for next steps.
+
+    Important Notes:
+        - Tool only returns evaluation data, does NOT provide "is_complete" boolean
+        - Agent should autonomously decide based on completion_ratio (e.g., >=1.0 = done)
+        - This is a data-driven tool, not a judgment-driven tool
 
     Examples:
         Check if counter UI has required elements:
@@ -172,34 +191,24 @@ async def validate_completion(
                 "instance_id": "counter",
                 "intent": "Create a counter with display and increment button",
                 "completion_criteria": [
-                    {
-                        "type": "field_exists",
-                        "path": "state.params.count",
-                        "description": "Counter value field exists"
-                    },
-                    {
-                        "type": "action_exists",
-                        "path": "increment",
-                        "description": "Increment button exists"
-                    }
+                    {"type": "field_exists", "path": "state.params.count",
+                     "description": "Counter value field exists"},
+                    {"type": "action_exists", "path": "increment",
+                     "description": "Increment button exists"}
                 ]
             }
-        
+
         Check if form has specific field values:
             {
                 "instance_id": "form",
                 "intent": "Form should have email field with validation",
                 "completion_criteria": [
-                    {
-                        "type": "field_exists",
-                        "path": "state.params.email",
-                        "description": "Email field exists"
-                    },
-                    {
-                        "type": "block_count",
-                        "count": 1,
-                        "description": "Exactly one form block exists"
-                    }
+                    {"type": "field_exists", "path": "state.params.email",
+                     "description": "Email field exists"},
+                    {"type": "field_value", "path": "state.params.email",
+                     "value": "", "description": "Email field is empty"},
+                    {"type": "block_count", "count": 1,
+                     "description": "Exactly one form block exists"}
                 ]
             }
     """
@@ -212,11 +221,15 @@ async def validate_completion(
 if __name__ == "__main__":
     print("🚀 Starting MCP Server for UI Patch Tool...")
     print("📝 Available tools:")
-    print("  - patch_ui_state: Apply structured patches to modify UI (with field operation shortcuts)")
-    print("  - get_schema: Get current UI Schema")
-    print("  - list_instances: List all available instances")
+    print("  - patch_ui_state: Apply structured patches to modify UI (set/add/replace/remove/clear)")
+    print("  - get_schema: Get current UI Schema with meta, state, blocks, and actions")
+    print("  - list_instances: List all available instances with metadata")
     print("  - access_instance: Access a specific UI instance and mark it as active")
-    print("  - validate_completion: Check if UI meets completion criteria (semantic control)")
+    print("  - validate_completion: Check if UI meets completion criteria (returns evaluation data)")
+    print()
+    print("📚 Documentation:")
+    print("  - Developer Reference: backend/mcp/MCP_Tool_Reference_Manual.md")
+    print("  - Quick Examples: backend/mcp/MCP_Quick_Examples.md")
     print()
     mcp.run(
         transport="streamable-http",
