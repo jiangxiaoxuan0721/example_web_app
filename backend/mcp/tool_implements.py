@@ -159,12 +159,14 @@ async def patch_ui_state_impl(
     print(f"[MCP] 调用 FastAPI patch: instance_id={instance_id}, patches={patches}")
     print(f"[MCP] FastAPI 响应: {result}")
 
-    # 如果操作成功且是字段操作（更新或删除），自动刷新实例
+    # 如果操作成功且是字段操作（更新或删除），标记自动刷新
+    # 注意：FastAPI 的 patch 接口内部已经通过 WebSocket 推送更新到前端
+    # 这里的自动刷新是指调用 access_instance 接口，确保实例为用户可见状态
     if result.get("status") == "success" and (field_key is not None):
         print(f"[MCP] 自动刷新实例: {instance_id}")
         access_result = await access_instance_from_fastapi(instance_id)
         print(f"[MCP] 刷新实例结果: {access_result}")
-        
+
         # 在返回结果中添加刷新状态
         result["auto_refreshed"] = True
         if access_result.get("status") != "success":

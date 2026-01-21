@@ -140,7 +140,7 @@ async def list_instances() -> Dict[str, Any]:
 @mcp.tool()
 async def access_instance(instance_id: str) -> Dict[str, Any]:
     """
-    Access a specific UI instance and mark it as active.
+    Access a specific UI instance and mark it as active.(bring it to user view)
 
     Args:
         instance_id: Instance ID to access (e.g., "demo", "counter", "form").
@@ -220,13 +220,6 @@ async def validate_completion(
 # 启动MCP服务器的代码
 if __name__ == "__main__":
     print("🚀 Starting MCP Server for UI Patch Tool...")
-    print("📝 Available tools:")
-    print("  - patch_ui_state: Apply structured patches to modify UI (set/add/replace/remove/clear)")
-    print("  - get_schema: Get current UI Schema with meta, state, blocks, and actions")
-    print("  - list_instances: List all available instances with metadata")
-    print("  - access_instance: Access a specific UI instance and mark it as active")
-    print("  - validate_completion: Check if UI meets completion criteria (returns evaluation data)")
-    print()
     print("📚 Documentation:")
     print("  - Developer Reference: backend/mcp/MCP_Tool_Reference_Manual.md")
     print("  - Quick Examples: backend/mcp/MCP_Quick_Examples.md")
