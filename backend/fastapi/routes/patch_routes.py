@@ -313,15 +313,28 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
         # Special handling for adding new action to actions array
         if len(keys) == 1 and keys[0] == "actions":
             # This is adding a new action to the actions array
+            # Check if action with same id already exists
             if isinstance(value, dict):
+                new_action_id = value.get("id")
+                if new_action_id:
+                    for existing_action in schema.actions:
+                        if hasattr(existing_action, "id") and getattr(existing_action, "id") == new_action_id:
+                            print(f"[PatchRoutes] Action with id '{new_action_id}' already exists, skipping add")
+                            return {"success": False, "reason": f"Action with id '{new_action_id}' already exists"}
                 # Convert dict to ActionConfig object
                 action = ActionConfig(**value)
             else:
+                new_action_id = getattr(value, "id", None)
+                if new_action_id:
+                    for existing_action in schema.actions:
+                        if hasattr(existing_action, "id") and getattr(existing_action, "id") == new_action_id:
+                            print(f"[PatchRoutes] Action with id '{new_action_id}' already exists, skipping add")
+                            return {"success": False, "reason": f"Action with id '{new_action_id}' already exists"}
                 action = value
 
             schema.actions.append(action)
             print(f"[PatchRoutes] Added new action: {action.id}")
-            return
+            return {"success": True}
 
         # Special handling for blocks.X.props.fields path
         if len(keys) == 4 and keys[0] == "blocks" and keys[2] == "props" and keys[3] == "fields":
