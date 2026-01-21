@@ -1,6 +1,6 @@
 /** 通用字段渲染器 - 基于类型注册表的可扩展渲染 */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import type { FieldConfig } from '../types/schema';
 import type { UISchema } from '../types/schema';
 import { useFieldValue, useFieldPatch } from '../store/schemaStore';
@@ -373,8 +373,32 @@ export default function GenericFieldRenderer({
   disabled?: boolean;
   highlighted?: boolean;
 }) {
-  // 从 Store 获取值
-  const storedValue = useFieldValue(bindPath, field.key);
+  console.log('[GenericFieldRenderer] 初始化 - field:', field.label, 'bindPath:', bindPath, 'field.key:', field.key);
+
+  // 从传入的 schema 中提取值
+  const storedValue = useMemo(() => {
+    // 1. Resolve block.bind path
+    let baseObj: any = schema;
+    let actualPath = 'schema';
+
+    console.log('[GenericFieldRenderer] useMemo - bindPath:', bindPath, 'field.key:', field.key);
+
+    if (bindPath) {
+      const bindPathKeys = bindPath.split('.');
+      baseObj = bindPathKeys.reduce((obj: any, key: string) => obj?.[key], schema);
+      actualPath = `schema.${bindPath}`;
+      console.log('[GenericFieldRenderer] bindPath 分解:', bindPathKeys, 'baseObj:', baseObj);
+    }
+
+    // 2. Read field.key
+    const fieldKeys = field.key.split('.');
+    const finalValue = fieldKeys.reduce((obj: any, key: string) => obj?.[key], baseObj);
+    actualPath += `.${field.key}`;
+
+    console.log('[GenericFieldRenderer] 字段:', field.label, '最终路径:', actualPath, '值:', finalValue);
+    return finalValue;
+  }, [schema, bindPath, field.key, field.label]);
+
   // 本地状态用于乐观更新
   const [localValue, setLocalValue] = useState(storedValue);
   const fieldPatch = useFieldPatch();
@@ -382,6 +406,7 @@ export default function GenericFieldRenderer({
 
   // 当 Store 中的值变化时，同步到本地状态
   useEffect(() => {
+    console.log('[GenericFieldRenderer] 值变化:', { field: field.label, old: localValue, new: storedValue });
     setLocalValue(storedValue);
   }, [storedValue]);
   

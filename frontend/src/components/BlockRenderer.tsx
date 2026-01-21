@@ -1,11 +1,11 @@
 /** Block 渲染器 V2 - 使用通用渲染模板 */
 
 import type { Block, UISchema } from '../types/schema';
+import { useSchemaStore } from '../store/schemaStore';
 import GenericFieldRenderer from './GenericFieldRenderer';
 
 interface BlockRendererProps {
   block: Block;
-  schema: UISchema;
   disabled?: boolean;
   highlightField?: string | null;
 }
@@ -13,8 +13,12 @@ interface BlockRendererProps {
 /**
  * 块渲染器注册表接口
  */
+interface BlockRendererInternalProps extends BlockRendererProps {
+  schema: UISchema;
+}
+
 export interface BlockRenderer {
-  (props: BlockRendererProps): JSX.Element;
+  (props: BlockRendererInternalProps): JSX.Element;
 }
 
 // 块渲染器注册表
@@ -76,13 +80,19 @@ export const getRegisteredBlockTypes = (): string[] => {
 /**
  * 通用块渲染器组件
  */
-export default function BlockRenderer({ block, schema, disabled, highlightField }: BlockRendererProps) {
+export default function BlockRenderer({ block, disabled, highlightField }: BlockRendererProps) {
+  const schema = useSchemaStore((state) => state.schema);
   const renderer = blockRenderers[block.type];
-  
+
+  if (!schema) {
+    console.warn('[BlockRenderer] Schema not available in store');
+    return null;
+  }
+
   if (!renderer) {
     console.warn(`[BlockRenderer] Unknown block type: ${block.type}`);
     return null;
   }
-  
+
   return renderer({ block, schema, disabled, highlightField });
 }

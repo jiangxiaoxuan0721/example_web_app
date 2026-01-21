@@ -1,17 +1,21 @@
 /** 调试信息组件 */
 
-import type { UISchema } from '../types/schema';
+import { useSchemaStore } from '../store/schemaStore';
 
 interface DebugInfoProps {
-  schema: UISchema;
   instanceId: string;
   wsConnected?: boolean;
 }
 
-export default function DebugInfo({ schema, instanceId, wsConnected }: DebugInfoProps) {
+export default function DebugInfo({ instanceId, wsConnected }: DebugInfoProps) {
+  const schema = useSchemaStore((state) => state.schema);
   const isDev = (import.meta as any).env?.DEV ?? false;
 
   if (!isDev) {
+    return null;
+  }
+
+  if (!schema) {
     return null;
   }
 

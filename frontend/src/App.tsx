@@ -33,22 +33,24 @@ import "./index.css";
 
 
 export default function App() {
-  const { currentInstanceId, schema, loading, error, loadingText } = useSchema();
-  const { setSchema, applyPatch, setInstanceId } = useSchemaStore();
+  const { currentInstanceId, schema: initialSchema, loading, error, loadingText } = useSchema();
+  const { schema: storeSchema, setSchema, applyPatch, setInstanceId } = useSchemaStore();
   const { emitInstanceSwitch } = useEventEmitter();
-  
+
   // 获取localStorage中的高亮字段
   const highlightField = getHighlightFromUrl(); // 使用这个函数会自动从URL迁移到localStorage
-  
+
   // ============ Patch 历史管理 ============
   const { patches, loadPatches, replayPatch } = usePatchHistory(applyPatch);
-  
+
   // 当 schema 从后端加载时更新 Store
   useEffect(() => {
-    if (schema) {
-      setSchema(schema);
+    if (initialSchema) {
+      console.log('[App] 从后端加载的 Schema:', initialSchema);
+      console.log('[App] Schema.state:', initialSchema.state);
+      setSchema(initialSchema);
     }
-  }, [schema, setSchema]);
+  }, [initialSchema, setSchema]);
   
   // 当实例ID变化时更新 Store
   useEffect(() => {
@@ -69,7 +71,15 @@ export default function App() {
     // 处理 Patch
     (patch) => {
       console.log('[App] 通过 WebSocket 收到 Patch:', patch);
+      console.log('[App] Patch 路径:', Object.keys(patch));
+
+      const currentSchema = useSchemaStore.getState().schema;
+      console.log('[App] 当前 Schema 的 state.params:', currentSchema?.state?.params);
+
       applyPatch(patch);
+
+      const newSchema = useSchemaStore.getState().schema;
+      console.log('[App] Apply Patch 后的 state.params:', newSchema?.state?.params);
       // 刷新 Patch 历史记录
       loadPatches();
     },
@@ -110,7 +120,7 @@ export default function App() {
   // ============ 主渲染 ============
     return (
     <div className="pta-layout">
-      <Sidebar schema={schema!} />
+      <Sidebar />
 
       <div className="pta-container">
         {/* 顶部固定区域 - 实例选择器 */}
@@ -126,18 +136,17 @@ export default function App() {
           {/* Schema 渲染容器 */}
           <div className="pta-schema-container">
             {/* 渲染 Blocks */}
-            {schema?.blocks?.map((block) => (
+            {storeSchema?.blocks?.map((block) => (
               <BlockRenderer
                 key={block.id}
                 block={block}
-                schema={schema!}
                 highlightField={highlightField}
               />
             ))}
 
             {/* 渲染 Actions */}
             <div className="pta-actions-container">
-              {schema?.actions?.map((action) => (
+              {storeSchema?.actions?.map((action) => (
                 <ActionButton
                   key={action.id}
                   action={action}
@@ -148,16 +157,14 @@ export default function App() {
             </div>
 
             {/* 调试信息 - 默认展开 */}
-            {schema && (
-              <details className="pta-details" open>
-                <summary className="pta-details__summary">
-                  调试信息
-                </summary>
-                <div className="pta-details__content">
-                  <DebugInfo schema={schema} instanceId={currentInstanceId} wsConnected={wsConnected} />
-                </div>
-              </details>
-            )}
+            <details className="pta-details" open>
+              <summary className="pta-details__summary">
+                调试信息
+              </summary>
+              <div className="pta-details__content">
+                <DebugInfo instanceId={currentInstanceId} wsConnected={wsConnected} />
+              </div>
+            </details>
 
             {/* Patch 历史记录 - 折叠式 */}
             <details className="pta-details">

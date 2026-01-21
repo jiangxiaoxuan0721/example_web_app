@@ -9,10 +9,10 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import type { UISchema } from '../types/schema';
+import { useSchemaStore } from '../store/schemaStore';
 
 interface SidebarProps {
-  schema: UISchema;
+  // 无需 props，直接从 store 获取 schema
 }
 
 interface NavigationItem {
@@ -20,7 +20,12 @@ interface NavigationItem {
   title: string;
 }
 
-export default function Sidebar({ schema }: SidebarProps) {
+export default function Sidebar({ }: SidebarProps) {
+  const schema = useSchemaStore((state) => state.schema);
+
+  if (!schema) {
+    return null;
+  }
   const [activeId, setActiveId] = useState<string>('');
 
   // 从 localStorage 读取初始折叠状态
