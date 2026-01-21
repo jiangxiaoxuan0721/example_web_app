@@ -148,7 +148,22 @@ def handle_remove_operation(schema: UISchema, path: str, value: Any):
                             # Remove the field
                             getattr(block.props, "fields").pop(i)
                             print(f"[PatchRoutes] Removed field from form block: {field_key}")
-                            return
+
+                            # Clean up state for the removed field
+                            if field_key in schema.state.params:
+                                del schema.state.params[field_key]
+                                print(f"[PatchRoutes] ✓ Deleted state.params.{field_key}")
+                            if field_key in schema.state.runtime:
+                                del schema.state.runtime[field_key]
+                                print(f"[PatchRoutes] ✓ Deleted state.runtime.{field_key}")
+
+                            return {"success": True}
+
+                    print(f"[PatchRoutes] Field with key '{field_key}' not found")
+                    return {"success": False, "reason": f"Field with key '{field_key}' not found"}
+
+            print(f"[PatchRoutes] Block index {block_index} out of range or no fields found")
+            return {"success": False, "reason": f"Block index {block_index} invalid or has no fields"}
 
         # General navigation for other paths
         current: Any = schema
@@ -343,6 +358,24 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
             if block_index < len(schema.blocks):
                 block = schema.blocks[block_index]
                 if hasattr(block.props, "fields"):
+                    # Check if field with same key already exists
+                    new_field_key = value.get("key") if isinstance(value, dict) else getattr(value, "key", None)
+                    if new_field_key:
+                        current_fields = getattr(block.props, "fields")
+                        if isinstance(current_fields, list):
+                            for existing_field in current_fields:
+                                field_key_check = getattr(existing_field, "key") if hasattr(existing_field, "key") else existing_field.get("key")
+                                if field_key_check == new_field_key:
+                                    print(f"[PatchRoutes] Field with key '{new_field_key}' already exists, skipping add")
+                                    return {"success": False, "reason": f"Field with key '{new_field_key}' already exists"}
+                        else:
+                            # fields is a dict
+                            for existing_field in current_fields.values():
+                                field_key_check = getattr(existing_field, "key") if hasattr(existing_field, "key") else existing_field.get("key")
+                                if field_key_check == new_field_key:
+                                    print(f"[PatchRoutes] Field with key '{new_field_key}' already exists, skipping add")
+                                    return {"success": False, "reason": f"Field with key '{new_field_key}' already exists"}
+
                     # Convert current fields to a list if it's not already
                     if not isinstance(getattr(block.props, "fields"), list):
                         current_fields = list(getattr(block.props, "fields").values())
@@ -362,7 +395,16 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
                     setattr(block.props, "fields", current_fields)
 
                     print(f"[PatchRoutes] Added field to form block: {value.get('key')}")
-                    return
+
+                    # Initialize state for the new field in params only
+                    if new_field_key and new_field_key not in schema.state.params:
+                        schema.state.params[new_field_key] = ""
+                        print(f"[PatchRoutes] ✓ Initialized state.params.{new_field_key} = ''")
+
+                    return {"success": True}
+
+            print(f"[PatchRoutes] Block index {block_index} out of range or no props found")
+            return {"success": False, "reason": f"Block index {block_index} invalid or has no props"}
 
         # General navigation for other paths
         current: Any = schema
