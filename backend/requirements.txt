@@ -1,5 +1,5 @@
-fastapi==0.104.1
-uvicorn==0.24.0
-pydantic==2.5.2
-pydantic-settings==2.1.0
-websockets==12.0
+fastapi==0.128.0
+uvicorn==0.40.0
+pydantic==2.10.1
+pydantic-settings==2.10.1
+websockets==16.0
