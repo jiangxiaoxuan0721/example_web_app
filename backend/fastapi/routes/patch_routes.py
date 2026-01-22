@@ -714,6 +714,37 @@ def register_patch_routes(
                     print(f"[PatchRoutes] Current schema blocks count: {len(schema.blocks)}")
                     print(f"[PatchRoutes] Current schema actions count: {len(schema.actions)}")
 
+                    # Determine what to highlight based on add patches
+                    highlight_info = None
+                    for add_patch in add_patches:
+                        path = add_patch.get("path")
+                        value = add_patch.get("value")
+
+                        # Check if adding a field to a block
+                        if "blocks" in path and "props" in path and "fields" in path:
+                            if isinstance(value, dict):
+                                highlight_info = {
+                                    "type": "field",
+                                    "key": value.get("key")
+                                }
+                                break
+                        # Check if adding a block
+                        elif path == "blocks":
+                            if isinstance(value, dict):
+                                highlight_info = {
+                                    "type": "block",
+                                    "id": value.get("id")
+                                }
+                                break
+                        # Check if adding an action
+                        elif path == "actions":
+                            if isinstance(value, dict):
+                                highlight_info = {
+                                    "type": "action",
+                                    "id": value.get("id")
+                                }
+                                break
+
                     schema_patch = {}
                     for key, value in schema.__dict__.items():
                         if hasattr(value, '__dict__'):
@@ -767,7 +798,8 @@ def register_patch_routes(
                     message = {
                         "type": "schema_update",
                         "instance_id": instance_id,
-                        "schema": schema_patch
+                        "schema": schema_patch,
+                        "highlight": highlight_info
                     }
                     await ws_manager._dispatcher.send_to_instance(instance_id, message)
                 else:

@@ -3,16 +3,16 @@
 import { useState, useCallback } from 'react';
 import type { PatchRecord } from '../types/schema';
 import { loadPatchHistory, replayPatch as replayPatchApi } from '../utils/api';
-import { getInstanceIdFromUrl } from '../utils/url';
+import { getInstanceIdFromStorage } from '../utils/url';
 
 export function usePatchHistory(onPatchApplied: (patch: Record<string, any>) => void) {
   const [patches, setPatches] = useState<PatchRecord[]>([]);
 
   // 加载 Patch 历史记录
-  const loadPatches = useCallback(async () => {
+  const loadPatches = useCallback(async (instanceId?: string) => {
     try {
-      const currentInstanceId = getInstanceIdFromUrl();
-      const patches = await loadPatchHistory(currentInstanceId);
+      const targetInstanceId = instanceId || getInstanceIdFromStorage();
+      const patches = await loadPatchHistory(targetInstanceId);
       setPatches(patches);
       console.log('[前端] Patch 历史加载成功:', patches);
     } catch (err) {
@@ -23,7 +23,7 @@ export function usePatchHistory(onPatchApplied: (patch: Record<string, any>) => 
   // 重放 Patch
   const replayPatch = useCallback(async (patchId: number) => {
     try {
-      const currentInstanceId = getInstanceIdFromUrl();
+      const currentInstanceId = getInstanceIdFromStorage();
       console.log(`[前端] 重放 Patch: ${patchId} (instanceId: ${currentInstanceId})`);
 
       const data = await replayPatchApi(patchId, currentInstanceId);

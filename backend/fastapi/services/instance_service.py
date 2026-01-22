@@ -107,8 +107,11 @@ class InstanceService:
 
         返回: Patch 数据字典
         """
+        print(f"[InstanceService] handle_action 被调用: instance_id={instance_id}, action_id={action_id}, params={params}")
+
         schema = self.schema_manager.get(instance_id)
         if not schema:
+            print(f"[InstanceService] 实例 '{instance_id}' 不存在")
             return {
                 "status": "error",
                 "error": f"Instance '{instance_id}' not found"
@@ -117,6 +120,7 @@ class InstanceService:
         # 先同步前端传来的 params
         if params and isinstance(params, dict):
             params_patch = {f"state.params.{k}": v for k, v in params.items()}
+            print(f"[InstanceService] 同步前端 params: {params_patch}")
             apply_patch_to_schema(schema, params_patch)
 
         # 查找对应的 action 配置
@@ -127,13 +131,17 @@ class InstanceService:
                 break
 
         if not action_config:
+            print(f"[InstanceService] Action '{action_id}' 不存在，可用的 actions: {[a.id for a in schema.actions]}")
             return {
                 "status": "success",
                 "patch": {}
             }
 
+        print(f"[InstanceService] 找到 action: {action_config.id}, handler_type={getattr(action_config, 'handler_type', None)}")
+
         # 处理 navigate 类型的 action
         if action_config.action_type == "navigate":
+            print(f"[InstanceService] Action 是 navigate 类型，跳转到 {action_config.target_instance}")
             return {
                 "status": "success",
                 "patch": {},
@@ -141,11 +149,16 @@ class InstanceService:
             }
 
         # 通用 action 处理
+        print(f"[InstanceService] 开始执行 action handler")
         patch = self._execute_action_handler(schema, action_config)
+        print(f"[InstanceService] Action handler 返回的 patch: {patch}")
 
         # 应用 patch 到 schema
         if patch:
             apply_patch_to_schema(schema, patch)
+            print(f"[InstanceService] Patch 已应用到 schema")
+        else:
+            print(f"[InstanceService] Patch 为空，不应用")
 
         return {
             "status": "success",
@@ -170,6 +183,10 @@ class InstanceService:
         handler_type = getattr(action_config, "handler_type", None)
         patches_config = getattr(action_config, "patches", {})
 
+        print(f"[InstanceService] _execute_action_handler: action_id={getattr(action_config, 'id', None)}, handler_type={handler_type}")
+        print(f"[InstanceService] patches_config = {patches_config}")
+        print(f"[InstanceService] action_config.patches = {getattr(action_config, 'patches', 'NOT_FOUND')}")
+
         if not patches_config:
             return {}
 
@@ -178,7 +195,19 @@ class InstanceService:
         if handler_type == "set":
             # 直接设置值
             for path, value in patches_config.items():
-                patch[path] = value
+                # 如果值为 special:*，执行特殊操作
+                if isinstance(value, str) and value.startswith("special:"):
+                    special_op = value[8:]  # 去掉 "special:" 前缀
+                    if special_op == "clear_all_params":
+                        # 清空所有 params 字段
+                        params = self._get_nested_value(schema, "state.params", {})
+                        for key in params.keys():
+                            patch[f"state.params.{key}"] = ""
+                    elif special_op == "get_all_params":
+                        # 获取所有 params（用于其他 handler）
+                        pass
+                else:
+                    patch[path] = value
 
         elif handler_type == "increment":
             # 数值增加
@@ -212,6 +241,22 @@ class InstanceService:
                 else:
                     patch[path] = template
 
+        elif handler_type == "template:all":
+            # 通用模板：动态包含所有 params 字段
+            for path, template in patches_config.items():
+                if isinstance(template, str):
+                    # 如果模板中包含 ${all}，替换为所有 params 的键值对
+                    if "${all}" in template:
+                        params = self._get_nested_value(schema, "state.params", {})
+                        param_strings = []
+                        for key, value in sorted(params.items()):
+                            param_strings.append(f"{key}: {value}")
+                        all_str = ", ".join(param_strings) if param_strings else ""
+                        template = template.replace("${all}", all_str)
+                    patch[path] = self._render_template(schema, template)
+                else:
+                    patch[path] = template
+
         elif handler_type == "external":
             # 调用外部 API
             external_patch = self._handle_external_api(schema, patches_config)
@@ -239,16 +284,26 @@ class InstanceService:
         parts = path.split(".")
         obj = schema
 
+        print(f"[InstanceService] _get_nested_value: path='{path}', parts={parts}")
+
         try:
-            for part in parts:
+            for i, part in enumerate(parts):
+                print(f"[InstanceService]  获取第 {i} 层: part='{part}', 当前obj类型={type(obj).__name__}")
+
                 if isinstance(obj, dict):
                     obj = obj.get(part)
                 else:
                     obj = getattr(obj, part)
+
+                print(f"[InstanceService]    获取结果: obj='{obj}'")
+
                 if obj is None:
+                    print(f"[InstanceService]    obj is None，返回默认值: default='{default}'")
                     return default
+            print(f"[InstanceService] 最终返回: obj='{obj}'")
             return obj
-        except (AttributeError, KeyError):
+        except (AttributeError, KeyError) as e:
+            print(f"[InstanceService] 异常: {e}，返回默认值: default='{default}'")
             return default
 
     def _render_template(
@@ -271,16 +326,20 @@ class InstanceService:
         import re
 
         result = template
+        print(f"[InstanceService] _render_template 开始: template='{template}'")
 
         # 匹配 ${path} 格式的占位符
         pattern = r'\$\{([^}]+)\}'
 
         def replace_match(match):
             path = match.group(1)
+            print(f"[InstanceService] 替换占位符: path='{path}'")
             value = self._get_nested_value(schema, path, "")
+            print(f"[InstanceService] 获取到的值: value='{value}'")
             return str(value)
 
         result = re.sub(pattern, replace_match, result)
+        print(f"[InstanceService] _render_template 完成: result='{result}'")
         return result
 
     def _handle_external_api(

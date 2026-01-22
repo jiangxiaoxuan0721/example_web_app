@@ -120,16 +120,25 @@ const handleActionClick = async (
   schema: UISchema
 ): Promise<void> => {
   const { actionId, params } = payload;
-  
+
+  console.log('[EventEmitter] handleActionClick 被调用');
+  console.log('[EventEmitter] 完整 schema:', schema);
+  console.log('[EventEmitter] schema.state:', schema.state);
+  console.log('[EventEmitter] schema.state.params:', schema.state?.params);
+  console.log('[EventEmitter] params 参数:', params);
+
   try {
     // 发送事件到后端，携带当前所有params
     const currentParams = schema.state?.params || {};
-    
+
+    console.log('[EventEmitter] 将发送的 currentParams:', currentParams);
+    console.log('[EventEmitter] currentParams 的键:', Object.keys(currentParams));
+
     await emitEvent('action:click', instanceId, {
       actionId,
       params: params || currentParams
     });
-    
+
     console.log(`[EventEmitter] Action click sent: ${actionId}`);
   } catch (err) {
     console.error('[EventEmitter] Failed to send action click:', err);

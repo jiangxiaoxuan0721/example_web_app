@@ -8,6 +8,7 @@ interface BlockRendererProps {
   block: Block;
   disabled?: boolean;
   highlightField?: string | null;
+  highlightBlockId?: string | null;
 }
 
 /**
@@ -23,22 +24,38 @@ export interface BlockRenderer {
 
 // 块渲染器注册表
 const blockRenderers: Record<string, BlockRenderer> = {
-  form: ({ block, schema, disabled, highlightField }) => (
-    <div key={block.id} id={`block-${block.id}`} style={{ marginBottom: '20px' }}>
-      {block.props?.fields?.map((field) => (
-        <GenericFieldRenderer
-          key={field.key}
-          field={field}
-          schema={schema}
-          bindPath={block.bind}
-          disabled={disabled}
-          highlighted={field.key === highlightField}
-        />
-      ))}
-    </div>
-  ),
+  form: ({ block, schema, disabled, highlightField, highlightBlockId }) => {
+    const isHighlighted = highlightBlockId === block.id;
+    return (
+      <div
+        key={block.id}
+        id={`block-${block.id}`}
+        style={{
+          marginBottom: '20px',
+          transition: 'background-color 0.3s ease, box-shadow 0.3s ease',
+          ...(isHighlighted ? {
+            backgroundColor: '#fff3cd',
+            borderRadius: '8px',
+            padding: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          } : {})
+        }}
+      >
+        {block.props?.fields?.map((field) => (
+          <GenericFieldRenderer
+            key={field.key}
+            field={field}
+            schema={schema}
+            bindPath={block.bind}
+            disabled={disabled}
+            highlighted={field.key === highlightField}
+          />
+        ))}
+      </div>
+    );
+  },
 
-  display: ({ block, schema }) => {
+  display: ({ block, schema, highlightBlockId }) => {
     // 获取绑定路径的值
     const getValue = (path: string) => {
       const keys = path.split('.');
@@ -46,9 +63,23 @@ const blockRenderers: Record<string, BlockRenderer> = {
     };
 
     const value = getValue(block.bind);
+    const isHighlighted = highlightBlockId === block.id;
 
     return (
-      <div key={block.id} id={`block-${block.id}`} style={{ marginBottom: '20px' }}>
+      <div
+        key={block.id}
+        id={`block-${block.id}`}
+        style={{
+          marginBottom: '20px',
+          transition: 'background-color 0.3s ease, box-shadow 0.3s ease',
+          ...(isHighlighted ? {
+            backgroundColor: '#fff3cd',
+            borderRadius: '8px',
+            padding: '12px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+          } : {})
+        }}
+      >
         <div style={{
           padding: '12px',
           border: '1px solid #ddd',
@@ -80,7 +111,7 @@ export const getRegisteredBlockTypes = (): string[] => {
 /**
  * 通用块渲染器组件
  */
-export default function BlockRenderer({ block, disabled, highlightField }: BlockRendererProps) {
+export default function BlockRenderer({ block, disabled, highlightField, highlightBlockId }: BlockRendererProps) {
   const schema = useSchemaStore((state) => state.schema);
   const renderer = blockRenderers[block.type];
 
@@ -94,5 +125,5 @@ export default function BlockRenderer({ block, disabled, highlightField }: Block
     return null;
   }
 
-  return renderer({ block, schema, disabled, highlightField });
+  return renderer({ block, schema, disabled, highlightField, highlightBlockId });
 }

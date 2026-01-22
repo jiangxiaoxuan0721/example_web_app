@@ -750,11 +750,6 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
 }
 
-.pta-block--highlighted {
-  border: 2px solid #007bff !important;
-  box-shadow: 0 0 5px rgba(0, 123, 255, 0.3) !important;
-}
-
 .pta-block__title {
   font-size: 18px !important;
   font-weight: bold !important;
@@ -799,11 +794,6 @@
   outline: none !important;
   border-color: #007bff !important;
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1) !important;
-}
-
-.pta-field__input--highlighted {
-  border: 2px solid #007bff !important;
-  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5) !important;
 }
 
 .pta-field__input:disabled {

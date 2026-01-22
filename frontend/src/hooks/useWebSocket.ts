@@ -8,13 +8,13 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useSchema } from './useSchema';
 
 interface WSMessage {
+  highlight: any;
   type: 'patch' | 'switch_instance' | 'schema_update' | 'access_instance';
   instance_id: string;
   patch_id?: number;
   patch?: Record<string, any>;
-  schema?: Record<string, any>;
+  schema?: Record<string, any> & { highlight?: any };
   redirect_url?: string;
-  highlight?: string;
 }
 
 export function useWebSocket(onPatch: (patch: Record<string, any>) => void, onSwitchInstance?: (instanceId: string, schema?: Record<string, any>) => void) {
@@ -78,9 +78,11 @@ export function useWebSocket(onPatch: (patch: Record<string, any>) => void, onSw
         } else if (message.type === 'schema_update' && message.schema) {
           // 直接设置整个schema，适用于add操作后的更新
           if (onSwitchInstanceRef.current) {
-            onSwitchInstanceRef.current(instanceIdRef.current, message.schema);
+            // 将 highlight 信息附加到 schema 对象上，以便 App.tsx 可以访问
+            const schemaWithHighlight = { ...message.schema, highlight: message.highlight };
+            onSwitchInstanceRef.current(instanceIdRef.current, schemaWithHighlight);
           }
-          
+
           // 检查是否有跳转链接
           if (message.redirect_url) {
             console.log('[WS] 跳转到:', message.redirect_url);
@@ -92,13 +94,10 @@ export function useWebSocket(onPatch: (patch: Record<string, any>) => void, onSw
             onSwitchInstanceRef.current(message.instance_id, message.schema);
           }
         } else if (message.type === 'access_instance' && message.instance_id) {
-          console.log('[WS] 访问实例:', message.instance_id, '高亮字段:', message.highlight);
-          // 构建带有高亮参数的URL
+          console.log('[WS] 访问实例:', message.instance_id);
+          // 构建URL
           const url = new URL(window.location.href);
           url.searchParams.set('instanceId', message.instance_id);
-          if (message.highlight) {
-            url.searchParams.set('highlight', message.highlight);
-          }
           window.location.href = url.toString();
         }
       } catch (err) {

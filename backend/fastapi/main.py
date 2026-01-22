@@ -27,13 +27,11 @@ app.add_middleware(
 # 初始化服务
 from backend.core.defaults import get_default_instances
 from .services.instance_service import InstanceService
-from .services.event_handler import EventHandler
 
 
 # 创建服务实例
 schema_manager = SchemaManager()
 instance_service = InstanceService(schema_manager)
-event_handler = EventHandler()
 patch_history = PatchHistoryManager()
 ws_manager = WebSocketManager()
 default_instance_id = "demo"
@@ -51,7 +49,7 @@ from .routes.patch_routes import register_patch_routes
 from .routes.schema_routes import register_schema_routes
 from .routes.websocket_routes import register_websocket_routes
 
-register_event_routes(app, schema_manager, event_handler, patch_history, ws_manager, default_instance_id)
+register_event_routes(app, schema_manager, instance_service, patch_history, ws_manager, default_instance_id)
 register_patch_routes(app, schema_manager, patch_history, ws_manager)
 register_schema_routes(app, schema_manager, default_instance_id, ws_manager)
 register_websocket_routes(app, ws_manager, schema_manager)

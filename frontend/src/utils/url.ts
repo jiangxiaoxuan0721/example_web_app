@@ -27,24 +27,6 @@ export function setInstanceIdToStorage(instanceId: string): void {
 }
 
 /**
- * 获取本地存储中的高亮字段
- */
-export function getHighlightFromStorage(): string | null {
-  return localStorage.getItem('highlight');
-}
-
-/**
- * 设置本地存储中的高亮字段
- */
-export function setHighlightToStorage(highlight: string | null): void {
-  if (highlight) {
-    localStorage.setItem('highlight', highlight);
-  } else {
-    localStorage.removeItem('highlight');
-  }
-}
-
-/**
  * 从 URL 参数获取 instanceId（已弃用，保留用于向后兼容）
  * @deprecated 请使用 getInstanceIdFromStorage
  */
@@ -81,25 +63,4 @@ export function buildUrlWithInstanceId(instanceId: string): string {
   // 不再构建URL，而是直接设置localStorage
   setInstanceIdToStorage(instanceId);
   return window.location.href;
-}
-
-/**
- * 从 URL 参数获取高亮字段（已弃用，保留用于向后兼容）
- * @deprecated 请使用 getHighlightFromStorage
- */
-export function getHighlightFromUrl(): string | null {
-  const params = new URLSearchParams(window.location.search);
-  const urlHighlight = params.get('highlight');
-  
-  // 如果URL中有highlight，迁移到localStorage并清理URL
-  if (urlHighlight) {
-    setHighlightToStorage(urlHighlight);
-    // 清理URL参数
-    const url = new URL(window.location.href);
-    url.searchParams.delete('highlight');
-    window.history.replaceState({}, '', url.toString());
-    return urlHighlight;
-  }
-  
-  return getHighlightFromStorage();
 }

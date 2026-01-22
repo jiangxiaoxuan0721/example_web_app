@@ -80,22 +80,33 @@ class EventHandler:
     def _handle_form_actions(self, action_id: str, schema: UISchema) -> Dict[str, Any]:
         """处理 form 实例的操作"""
         if action_id == "submit":
-            # 提交表单：获取当前值
-            current_name = schema.state.params.get("name", "")
-            current_email = schema.state.params.get("email", "")
-
+            # 提交表单：动态获取所有 params 字段
+            params = schema.state.params or {}
+            
+            # 构建提交消息，包含所有字段
+            param_strings = []
+            for key, value in sorted(params.items()):
+                param_strings.append(f"{key}: {value}")
+            
+            message = f"表单已提交！{', '.join(param_strings)}" if param_strings else "表单已提交！"
+            
             # 更新 runtime 状态显示成功消息
             return {
                 "state.runtime.status": "submitted",
-                "state.runtime.message": f"表单已提交！姓名: {current_name}, 邮箱: {current_email}"
+                "state.runtime.message": message
             }
 
         elif action_id == "clear":
-            return {
-                "state.params.name": "",
-                "state.params.email": "",
+            # 清空表单：清空所有 params 字段
+            params_patch = {}
+            params = schema.state.params or {}
+            for key in params.keys():
+                params_patch[f"state.params.{key}"] = ""
+            
+            params_patch.update({
                 "state.runtime.status": "idle",
                 "state.runtime.message": ""
-            }
+            })
+            return params_patch
 
         return {}

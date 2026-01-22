@@ -11,11 +11,59 @@ def apply_patch_to_schema(schema: UISchema, patch: Dict[str, Any]) -> None:
         schema: 目标 Schema
         patch: Patch 数据字典，格式为 {"path": value}
     """
+    print(f"[PatchService] apply_patch_to_schema 被调用，patch keys: {list(patch.keys())}")
+    
     for path, value in patch.items():
         keys = path.split('.')
+        print(f"[PatchService] 处理路径: {path}, keys: {keys}")
+
+        # 路径格式：actions.X.patches - 更新 action 的 patches（必须先匹配，因为比 actions.X 更具体）
+        if len(keys) >= 3 and keys[0] == 'actions' and keys[2] == 'patches':
+            print(f"[PatchService] 匹配到 actions.X.patches 路径")
+            try:
+                action_index = int(keys[1])
+
+                if action_index < len(schema.actions):
+                    action = schema.actions[action_index]
+
+                    # 更新 patches 属性
+                    if hasattr(action, '__dict__'):
+                        setattr(action, 'patches', value)
+                    else:
+                        action['patches'] = value
+
+                    print(f"[PatchService] Updated patches for action at actions[{action_index}]: {getattr(action, 'id', 'unknown')}")
+                else:
+                    print(f"[PatchService] Action index {action_index} out of range (total: {len(schema.actions)})")
+            except (ValueError, AttributeError, IndexError) as e:
+                print(f"[PatchService] Error applying set operation for path '{path}': {e}")
+
+        # 路径格式：actions.X - 替换整个 action
+        elif len(keys) >= 2 and keys[0] == 'actions':
+            print(f"[PatchService] 匹配到 actions.X 路径")
+            try:
+                action_index = int(keys[1])
+
+                if action_index < len(schema.actions):
+                    from ..models import ActionConfig
+
+                    # 如果是 dict，转换为 ActionConfig 对象
+                    if isinstance(value, dict):
+                        new_action = ActionConfig(**value)
+                    else:
+                        new_action = value
+
+                    # 替换 action
+                    schema.actions[action_index] = new_action
+
+                    print(f"[PatchService] Replaced action at actions[{action_index}]: {getattr(new_action, 'id', 'unknown')}")
+                else:
+                    print(f"[PatchService] Action index {action_index} out of range (total: {len(schema.actions)})")
+            except (ValueError, AttributeError, IndexError) as e:
+                print(f"[PatchService] Error applying set operation for path '{path}': {e}")
 
         # 路径格式：state.params.key 或 state.runtime.key
-        if len(keys) >= 3 and keys[0] == 'state':
+        elif len(keys) >= 3 and keys[0] == 'state':
             target_section = keys[1]  # 'params' 或 'runtime'
             target_key = keys[2]         # 具体键名
 

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import type { FieldConfig } from '../types/schema';
 import type { UISchema } from '../types/schema';
-import { useFieldValue, useFieldPatch } from '../store/schemaStore';
+import { useFieldPatch } from '../store/schemaStore';
 import { useEventEmitter } from '../utils/eventEmitter';
 import ImageRenderer from './ImageRenderer';
 
@@ -109,18 +109,18 @@ const defaultRenderers: FieldRendererRegistry = {
         style={{
           width: '100%',
           padding: '12px',
-          border: highlighted ? '2px solid #007bff' : '1px solid #ddd',
+          border: highlighted ? '3px solid #007bff' : '1px solid #ddd',
           borderRadius: '4px',
           background: '#fff',
           fontSize: '16px',
           boxSizing: 'border-box',
-          boxShadow: highlighted ? '0 0 5px rgba(0, 123, 255, 0.5)' : 'none',
+          boxShadow: highlighted ? '0 0 8px rgba(0, 123, 255, 0.6)' : 'none',
           transition: 'all 0.3s ease'
         }}
       />
     </div>
   ),
-  
+
   number: ({ field, value, onChange, disabled, highlighted }) => (
     <div style={{ marginBottom: '16px' }}>
       <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
@@ -135,12 +135,12 @@ const defaultRenderers: FieldRendererRegistry = {
         style={{
           width: '100%',
           padding: '12px',
-          border: highlighted ? '2px solid #007bff' : '1px solid #ddd',
+          border: highlighted ? '3px solid #007bff' : '1px solid #ddd',
           borderRadius: '4px',
           background: '#fff',
           fontSize: '16px',
           boxSizing: 'border-box',
-          boxShadow: highlighted ? '0 0 5px rgba(0, 123, 255, 0.5)' : 'none',
+          boxShadow: highlighted ? '0 0 8px rgba(0, 123, 255, 0.6)' : 'none',
           transition: 'all 0.3s ease'
         }}
       />
@@ -204,12 +204,12 @@ const defaultRenderers: FieldRendererRegistry = {
         style={{
           width: '100%',
           padding: '12px',
-          border: highlighted ? '2px solid #007bff' : '1px solid #ddd',
+          border: highlighted ? '3px solid #007bff' : '1px solid #ddd',
           borderRadius: '4px',
           background: '#fff',
           fontSize: '16px',
           boxSizing: 'border-box',
-          boxShadow: highlighted ? '0 0 5px rgba(0, 123, 255, 0.5)' : 'none',
+          boxShadow: highlighted ? '0 0 8px rgba(0, 123, 255, 0.6)' : 'none',
           transition: 'all 0.3s ease'
         }}
       >
@@ -409,21 +409,21 @@ export default function GenericFieldRenderer({
     console.log('[GenericFieldRenderer] 值变化:', { field: field.label, old: localValue, new: storedValue });
     setLocalValue(storedValue);
   }, [storedValue]);
-  
+
   // 处理值变更
   const handleChange = useCallback((newValue: any) => {
     // 立即更新本地状态（乐观更新）
     setLocalValue(newValue);
-    
+
     // 应用本地补丁（立即更新 Schema Store）
     fieldPatch(bindPath, field.key, newValue);
-    
+
     // 同时发送事件到后端（防抖处理）
     emitFieldChange(field.key, newValue, bindPath);
   }, [field.key, bindPath, emitFieldChange, fieldPatch]);
-  
+
   const renderer = fieldRenderers[field.type] || fieldRenderers.text;
-  
+
   return renderer({
     field,
     schema,

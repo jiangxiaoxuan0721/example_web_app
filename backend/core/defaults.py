@@ -206,10 +206,10 @@ def _create_form_schema() -> UISchema:
                 id="submit",
                 label="提交",
                 style="primary",
-                handler_type="template",
+                handler_type="template:all",
                 patches={
                     "state.runtime.status": "submitted",
-                    "state.runtime.message": "表单已提交！姓名: ${state.params.name}, 邮箱: ${state.params.email}"
+                    "state.runtime.message": "表单已提交！${all}"
                 }
             ),
             ActionConfig(
@@ -218,8 +218,7 @@ def _create_form_schema() -> UISchema:
                 style="danger",
                 handler_type="set",
                 patches={
-                    "state.params.name": "",
-                    "state.params.email": "",
+                    "state.params": "special:clear_all_params",
                     "state.runtime.status": "idle",
                     "state.runtime.message": ""
                 }

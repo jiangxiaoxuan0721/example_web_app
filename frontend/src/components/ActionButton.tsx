@@ -4,11 +4,12 @@ import { ActionConfig } from '../types/schema';
 
 interface ActionButtonProps {
   action: ActionConfig;
+  highlighted?: boolean;
   onApiClick: () => void;  // API 操作回调
   onNavigate?: (targetInstance: string) => void;  // 导航操作回调（可选）
 }
 
-export default function ActionButton({ action, onApiClick, onNavigate }: ActionButtonProps) {
+export default function ActionButton({ action, highlighted = false, onApiClick, onNavigate }: ActionButtonProps) {
   const getBackgroundColor = (hover: boolean = false) => {
     if (action.style === 'primary') {
       return hover ? '#0056b3' : '#007bff';
@@ -37,11 +38,12 @@ export default function ActionButton({ action, onApiClick, onNavigate }: ActionB
         padding: '12px 24px',
         fontSize: '16px',
         borderRadius: '4px',
-        border: 'none',
+        border: highlighted ? '3px solid #007bff' : 'none',
         cursor: 'pointer',
         background: getBackgroundColor(false),
         color: 'white',
-        transition: 'background 0.2s'
+        transition: 'background 0.2s, box-shadow 0.3s ease, border 0.3s ease',
+        boxShadow: highlighted ? '0 0 8px rgba(0, 123, 255, 0.6)' : 'none'
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.background = getBackgroundColor(true);

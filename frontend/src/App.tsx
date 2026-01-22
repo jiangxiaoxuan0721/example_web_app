@@ -18,7 +18,6 @@ import { useSchema } from './hooks/useSchema';
 import { usePatchHistory } from './hooks/usePatchHistory';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useEventEmitter } from './utils/eventEmitter';
-import { getHighlightFromUrl } from './utils/url';
 import {
   Loading,
   ErrorState,
@@ -34,11 +33,8 @@ import "./index.css";
 
 export default function App() {
   const { currentInstanceId, schema: initialSchema, loading, error, loadingText } = useSchema();
-  const { schema: storeSchema, setSchema, applyPatch, setInstanceId } = useSchemaStore();
+  const { schema: storeSchema, setSchema, applyPatch, setInstanceId, highlightBlockId, highlightFieldKey, highlightActionId } = useSchemaStore();
   const { emitInstanceSwitch } = useEventEmitter();
-
-  // 获取localStorage中的高亮字段
-  const highlightField = getHighlightFromUrl(); // 使用这个函数会自动从URL迁移到localStorage
 
   // ============ Patch 历史管理 ============
   const { patches, loadPatches, replayPatch } = usePatchHistory(applyPatch);
@@ -76,12 +72,12 @@ export default function App() {
       const currentSchema = useSchemaStore.getState().schema;
       console.log('[App] 当前 Schema 的 state.params:', currentSchema?.state?.params);
 
-      applyPatch(patch);
+      applyPatch(patch, true);
 
       const newSchema = useSchemaStore.getState().schema;
       console.log('[App] Apply Patch 后的 state.params:', newSchema?.state?.params);
       // 刷新 Patch 历史记录
-      loadPatches();
+      loadPatches(currentInstanceId);
     },
     // 处理实例切换和 schema 更新
     (instanceId, schema) => {
@@ -91,13 +87,16 @@ export default function App() {
         console.log('[App] Schema actions 数量:', schema?.actions?.length || 0);
         // 如果提供了 schema，直接使用它
         // schema 来自 WebSocket，类型为 Record<string, any>，在这里做类型断言以满足 setSchema 的 UISchema 参数
-        setSchema(schema as any);
+        setSchema(schema as any, (schema as any).highlight);
         console.log('[App] Schema 已更新到 store');
       }
 
       if (instanceId && instanceId !== currentInstanceId) {
         // 切换到新实例
         handleInstanceSwitch(instanceId);
+      } else if (instanceId) {
+        // schema 更新时也加载 patch 历史
+        loadPatches(instanceId);
       }
     }
   );
@@ -140,7 +139,8 @@ export default function App() {
               <BlockRenderer
                 key={block.id}
                 block={block}
-                highlightField={highlightField}
+                highlightField={highlightFieldKey}
+                highlightBlockId={highlightBlockId}
               />
             ))}
 
@@ -150,6 +150,7 @@ export default function App() {
                 <ActionButton
                   key={action.id}
                   action={action}
+                  highlighted={action.id === highlightActionId}
                   onApiClick={() => useEventEmitter().emitActionClick(action.id)}
                   onNavigate={handleInstanceSwitch}
                 />
