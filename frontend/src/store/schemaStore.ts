@@ -2,7 +2,6 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { shallow } from 'zustand/shallow';
 import type { UISchema } from '../types/schema';
 
 interface SchemaStore {

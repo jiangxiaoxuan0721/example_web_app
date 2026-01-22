@@ -125,3 +125,4 @@ def apply_patch_to_schema(schema: UISchema, patch: Dict[str, Any]) -> None:
                             print(f"[PatchService] Updated field attribute: blocks[{block_index}].props.fields[{field_index}].{field_attr} = {value}")
             except (ValueError, AttributeError, IndexError) as e:
                 print(f"[PatchService] Error applying set operation for path '{path}': {e}")
+     
