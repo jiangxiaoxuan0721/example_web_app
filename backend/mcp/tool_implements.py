@@ -82,6 +82,26 @@ async def add_field_impl(
     initial_value: Any | None = None
 ) -> dict[str, Any]:
     """add_field工具的实现"""
+
+    # 对于table类型字段，验证数据源是否存在
+    if field.get("type") == "table":
+        schema_result = await get_schema_from_fastapi(instance_id)
+        if schema_result.get("status") == "error":
+            return {
+                "status": "error",
+                "error": f"Failed to get schema for validation: {schema_result.get('error')}"
+            }
+
+        schema = schema_result.get("schema", {})
+        state_params = schema.get("state", {}).get("params", {})
+        field_key = field.get("key")
+
+        if field_key and field_key not in state_params:
+            return {
+                "status": "error",
+                "error": f"Table field key '{field_key}' does not exist in state.params. Available data sources: {list(state_params.keys())}"
+            }
+
     patches = []
 
     # 如果提供了state_path和initial_value，先初始化状态
@@ -159,8 +179,8 @@ async def update_field_impl(
 
             fields = block["props"]["fields"]
             for j, field in enumerate(fields):
-                field_obj = field if isinstance(field, dict) else field.__dict__
-                if field_obj.get("key") == field_key:
+                field_obj = field if isinstance(field, dict) else (field.__dict__ if hasattr(field, '__dict__') else {})
+                if isinstance(field_obj, dict) and field_obj.get("key") == field_key:
                     updated_field = field_obj.copy()
                     updated_field.update(updates)
                     patches.append({
@@ -189,8 +209,8 @@ async def update_field_impl(
         field_index = -1
 
         for i, field in enumerate(fields):
-            field_obj = field if isinstance(field, dict) else field.__dict__
-            if field_obj.get("key") == field_key:
+            field_obj = field if isinstance(field, dict) else (field.__dict__ if hasattr(field, '__dict__') else {})
+            if isinstance(field_obj, dict) and field_obj.get("key") == field_key:
                 field_index = i
                 break
 
@@ -249,7 +269,8 @@ async def remove_field_impl(
 
             fields = block["props"]["fields"]
             has_field = any(
-                (field if isinstance(field, dict) else field.__dict__).get("key") == field_key
+                isinstance(field if isinstance(field, dict) else (field.__dict__ if hasattr(field, '__dict__') else {}), dict)
+                and (field if isinstance(field, dict) else (field.__dict__ if hasattr(field, '__dict__') else {})).get("key") == field_key
                 for field in fields
             )
 
@@ -278,7 +299,8 @@ async def remove_field_impl(
         # 查找字段
         fields = block["props"]["fields"]
         has_field = any(
-            (field if isinstance(field, dict) else field.__dict__).get("key") == field_key
+            isinstance(field if isinstance(field, dict) else (field.__dict__ if hasattr(field, '__dict__') else {}), dict)
+            and (field if isinstance(field, dict) else (field.__dict__ if hasattr(field, '__dict__') else {})).get("key") == field_key
             for field in fields
         )
 

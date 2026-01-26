@@ -591,6 +591,7 @@ const defaultRenderers: FieldRendererRegistry = {
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
     const [imageModalOpen, setImageModalOpen] = useState(false);
     const [currentImage, setCurrentImage] = useState<{ url: string; title?: string; alt?: string } | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
 
     const columns = field.columns || [];
     const data = Array.isArray(value) ? value : [];
@@ -602,6 +603,8 @@ const defaultRenderers: FieldRendererRegistry = {
     const showHeader = field.showHeader !== false;
     const compact = field.compact || false;
     const maxHeight = field.maxHeight;
+    const showPagination = field.showPagination !== false;
+    const pageSize = field.pageSize || 10;
 
     // 排序处理
     const handleSort = (columnKey: string) => {
@@ -636,6 +639,17 @@ const defaultRenderers: FieldRendererRegistry = {
         return sortConfig.direction === 'desc' ? -comparison : comparison;
       });
     }, [data, sortConfig]);
+
+    // 分页逻辑
+    const totalPages = Math.ceil(sortedData.length / pageSize);
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const paginatedData = sortedData.slice(startIndex, endIndex);
+
+    // 当排序或数据变化时，重置到第一页
+    useMemo(() => {
+      setCurrentPage(1);
+    }, [data.length]);
 
     // 简单的表达式求值器
     const evaluateExpression = (expr: string, val: any): any => {
@@ -842,14 +856,40 @@ const defaultRenderers: FieldRendererRegistry = {
                         large: { padding: '8px 20px', fontSize: '16px' }
                       };
 
+                      // 使用事件发射器处理按钮点击
+                      const handleButtonClick = () => {
+                        const { emitTableButtonClick } = useEventEmitter();
+
+                        // 支持确认对话框
+                        if (comp.confirmMessage) {
+                          if (window.confirm(comp.confirmMessage)) {
+                            emitTableButtonClick(
+                              comp.id || `btn_${index}`,
+                              comp.actionId,
+                              record,
+                              index,
+                              comp.params,
+                              undefined,
+                              field.key
+                            );
+                          }
+                        } else {
+                          emitTableButtonClick(
+                            comp.id || `btn_${index}`,
+                            comp.actionId,
+                            record,
+                            index,
+                            comp.params,
+                            undefined,
+                            field.key
+                          );
+                        }
+                      };
+
                       return (
                         <button
                           key={compIndex}
-                          onClick={() => {
-                            console.log(`[Table Button] Clicked on row ${index}, action: ${comp.actionType}`, comp.actionData);
-                            // 可以通过事件发送到后端
-                            // emitFieldChange 可以用于发送操作事件
-                          }}
+                          onClick={handleButtonClick}
                           style={{
                             padding: '6px 16px',
                             borderRadius: '4px',
@@ -866,6 +906,7 @@ const defaultRenderers: FieldRendererRegistry = {
                           onMouseLeave={(e) => {
                             e.currentTarget.style.opacity = '1';
                           }}
+                          title={comp.tooltip || comp.buttonLabel}
                         >
                           {comp.buttonLabel || '操作'}
                         </button>
@@ -1131,8 +1172,9 @@ const defaultRenderers: FieldRendererRegistry = {
               </thead>
             )}
             <tbody>
-              {sortedData.map((record: any, index: number) => {
+              {paginatedData.map((record: any, index: number) => {
                 const rowKeyVal = record[rowKey] || index;
+                const actualIndex = startIndex + index;
 
                 return (
                   <tr
@@ -1140,7 +1182,7 @@ const defaultRenderers: FieldRendererRegistry = {
                     style={{
                       borderBottom: bordered ? '1px solid #dee2e6' : 'none',
                       transition: 'background 0.2s',
-                      ...(striped && index % 2 === 0 && { background: '#f8f9fa' })
+                      ...(striped && actualIndex % 2 === 0 && { background: '#f8f9fa' })
                     }}
                     onMouseEnter={(e) => {
                       if (hover) {
@@ -1164,7 +1206,7 @@ const defaultRenderers: FieldRendererRegistry = {
                             borderBottom: bordered ? '1px solid #dee2e6' : 'none'
                           }}
                         >
-                          {renderCell(column, val, record, index)}
+                          {renderCell(column, val, record, actualIndex)}
                         </td>
                       );
                     })}
@@ -1174,7 +1216,7 @@ const defaultRenderers: FieldRendererRegistry = {
             </tbody>
           </table>
         </div>
-        {field.showPagination && data.length > 0 && (
+        {showPagination && sortedData.length > 0 && (
           <div style={{
             marginTop: '12px',
             padding: '12px',
@@ -1185,37 +1227,126 @@ const defaultRenderers: FieldRendererRegistry = {
             borderRadius: '4px'
           }}>
             <span style={{ fontSize: '14px', color: '#666' }}>
-              共 {data.length} 条记录
+              共 {sortedData.length} 条记录，第 {currentPage} / {totalPages} 页
             </span>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               <button
-                disabled
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
                 style={{
                   padding: '6px 12px',
                   border: '1px solid #dee2e6',
                   background: '#fff',
                   borderRadius: '4px',
-                  cursor: 'not-allowed',
-                  color: '#999'
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  color: currentPage === 1 ? '#999' : '#212529',
+                  fontSize: '14px'
+                }}
+              >
+                首页
+              </button>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                style={{
+                  padding: '6px 12px',
+                  border: '1px solid #dee2e6',
+                  background: '#fff',
+                  borderRadius: '4px',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  color: currentPage === 1 ? '#999' : '#212529',
+                  fontSize: '14px'
                 }}
               >
                 上一页
               </button>
-              <span style={{ padding: '6px 12px' }}>
-                1
-              </span>
+
+              {/* 页码显示 */}
+              {(() => {
+                const getPageNumbers = () => {
+                  const pages: (number | string)[] = [];
+                  const maxVisiblePages = 5;
+
+                  if (totalPages <= maxVisiblePages) {
+                    for (let i = 1; i <= totalPages; i++) {
+                      pages.push(i);
+                    }
+                  } else {
+                    if (currentPage <= 3) {
+                      for (let i = 1; i <= 4; i++) {
+                        pages.push(i);
+                      }
+                      pages.push('...');
+                      pages.push(totalPages);
+                    } else if (currentPage >= totalPages - 2) {
+                      pages.push(1);
+                      pages.push('...');
+                      for (let i = totalPages - 3; i <= totalPages; i++) {
+                        pages.push(i);
+                      }
+                    } else {
+                      pages.push(1);
+                      pages.push('...');
+                      for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+                        pages.push(i);
+                      }
+                      pages.push('...');
+                      pages.push(totalPages);
+                    }
+                  }
+                  return pages;
+                };
+
+                return getPageNumbers().map((page, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => typeof page === 'number' && setCurrentPage(page)}
+                    disabled={page === '...'}
+                    style={{
+                      padding: '6px 12px',
+                      border: '1px solid #dee2e6',
+                      background: currentPage === page ? '#007bff' : '#fff',
+                      color: currentPage === page ? '#fff' : '#212529',
+                      borderRadius: '4px',
+                      cursor: page === '...' ? 'default' : 'pointer',
+                      fontSize: '14px',
+                      fontWeight: currentPage === page ? '600' : 'normal'
+                    }}
+                  >
+                    {page}
+                  </button>
+                ));
+              })()}
+
               <button
-                disabled
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
                 style={{
                   padding: '6px 12px',
                   border: '1px solid #dee2e6',
                   background: '#fff',
                   borderRadius: '4px',
-                  cursor: 'not-allowed',
-                  color: '#999'
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                  color: currentPage === totalPages ? '#999' : '#212529',
+                  fontSize: '14px'
                 }}
               >
                 下一页
+              </button>
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                style={{
+                  padding: '6px 12px',
+                  border: '1px solid #dee2e6',
+                  background: '#fff',
+                  borderRadius: '4px',
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                  color: currentPage === totalPages ? '#999' : '#212529',
+                  fontSize: '14px'
+                }}
+              >
+                末页
               </button>
             </div>
           </div>

@@ -12,6 +12,7 @@ export enum EventType {
   FIELD_CHANGE = 'FIELD_CHANGE',
   ACTION_CLICK = 'ACTION_CLICK',
   INSTANCE_SWITCH = 'INSTANCE_SWITCH',
+  TABLE_BUTTON_CLICK = 'TABLE_BUTTON_CLICK'
 }
 
 // 事件载荷接口
@@ -33,6 +34,19 @@ export interface ActionClickEvent {
   };
 }
 
+export interface TableButtonClickEvent {
+  type: EventType.TABLE_BUTTON_CLICK;
+  payload: {
+    buttonId: string;
+    actionId?: string;
+    rowData: any;
+    rowIndex?: number;
+    params?: Record<string, unknown>;
+    blockId?: string;
+    fieldKey?: string;
+  };
+}
+
 export interface InstanceSwitchEvent {
   type: EventType.INSTANCE_SWITCH;
   payload: {
@@ -40,7 +54,7 @@ export interface InstanceSwitchEvent {
   };
 }
 
-export type UIEvent = FieldChangeEvent | ActionClickEvent | InstanceSwitchEvent;
+export type UIEvent = FieldChangeEvent | ActionClickEvent | InstanceSwitchEvent | TableButtonClickEvent;
 
 /**
  * 事件处理函数 - 统一处理所有UI事件
@@ -48,27 +62,31 @@ export type UIEvent = FieldChangeEvent | ActionClickEvent | InstanceSwitchEvent;
 export const handleUIEvent = async (event: UIEvent): Promise<void> => {
   const { schema } = useSchemaStore.getState();
   const { instanceId } = useSchemaStore.getState();
-  
+
   if (!schema || !instanceId) {
     console.warn('[EventEmitter] Schema or instanceId is missing');
     return;
   }
-  
+
   console.log('[EventEmitter] Handling event:', event);
-  
+
   switch (event.type) {
     case EventType.FIELD_CHANGE:
       await handleFieldChange(event.payload, instanceId);
       break;
-      
+
     case EventType.ACTION_CLICK:
       await handleActionClick(event.payload, instanceId, schema);
       break;
-      
+
     case EventType.INSTANCE_SWITCH:
       await handleInstanceSwitch(event.payload);
       break;
-      
+
+    case EventType.TABLE_BUTTON_CLICK:
+      await handleTableButtonClick(event.payload, instanceId);
+      break;
+
     default:
       console.warn('[EventEmitter] Unknown event type:', (event as any).type);
   }
@@ -167,14 +185,98 @@ const handleInstanceSwitch = async (
   payload: InstanceSwitchEvent['payload']
 ): Promise<void> => {
   const { instanceId } = payload;
-  
+
   // 更新localStorage而不是URL
   localStorage.setItem('instanceId', instanceId);
-  
+
   // 触发自定义事件通知useSchema钩子
   window.dispatchEvent(new CustomEvent('instanceSwitch', { detail: { instanceId } }));
-  
+
   console.log(`[EventEmitter] Instance switch to: ${instanceId}`);
+};
+
+/**
+ * 处理表格按钮点击事件
+ */
+const handleTableButtonClick = async (
+  payload: TableButtonClickEvent['payload'],
+  instanceId: string
+): Promise<void> => {
+  const { buttonId, actionId, rowData, rowIndex, params, blockId, fieldKey } = payload;
+
+  console.log('[EventEmitter] Table button clicked:', {
+    buttonId,
+    actionId,
+    rowIndex,
+    rowData,
+    params
+  });
+
+  try {
+    // 构建最终参数：包含按钮配置的参数 + 行数据 + 自定义参数
+    const finalParams = {
+      ...params,
+      rowData,           // 当前行数据
+      rowIndex,          // 行索引
+      fieldKey,          // 字段key（用于标识是哪个表格）
+      ...(actionId ? { _actionId: actionId } : {})  // 关联的action ID
+    };
+
+    // 发送事件到后端
+    const response = await emitEvent('table:button:click', instanceId, {
+      buttonId,
+      actionId,
+      params: finalParams,
+      blockId
+    });
+
+    console.log('[EventEmitter] Table button click response:', response);
+
+    // 如果响应包含 patch，应用到 schema
+    if (response.status === 'success' && response.patch) {
+      const { applyPatch } = useSchemaStore.getState();
+      applyPatch(response.patch, false, false);
+      console.log('[EventEmitter] Patch applied:', response.patch);
+    }
+
+    // 如果响应包含 message，显示通知
+    if (response.status === 'success' && response.message) {
+      alert(response.message);
+    }
+
+    // 如果响应包含 navigate_to，处理导航
+    if (response.navigate_to) {
+      const { emitInstanceSwitch } = await import('./eventEmitter');
+      emitInstanceSwitch(response.navigate_to);
+    }
+
+    // 如果响应包含确认提示
+    if (response.confirm) {
+      if (window.confirm(response.confirm)) {
+        // 用户确认后，可能需要发送第二个请求
+        if (response.confirmAction) {
+          await emitEvent(response.confirmAction, instanceId, {
+            buttonId,
+            params: finalParams,
+            confirmed: true
+          });
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[EventEmitter] Failed to send table button click:', err);
+    alert('操作失败，请重试');
+  }
+};
+
+/**
+ * 实例切换事件导出函数
+ */
+export const emitInstanceSwitch = (instanceId: string) => {
+  return handleUIEvent({
+    type: EventType.INSTANCE_SWITCH,
+    payload: { instanceId }
+  });
 };
 
 /**
@@ -189,7 +291,7 @@ export const useEventEmitter = () => {
         payload: { fieldKey, value, bindPath: bindPath || 'state.params' }
       });
     },
-    
+
     // 动作点击事件
     emitActionClick: (actionId: string, params?: Record<string, unknown>) => {
       return handleUIEvent({
@@ -205,12 +307,23 @@ export const useEventEmitter = () => {
         payload: { actionId, blockId, params }
       });
     },
-    
+
     // 实例切换事件
-    emitInstanceSwitch: (instanceId: string) => {
+    emitInstanceSwitch,
+
+    // 表格按钮点击事件（新增）
+    emitTableButtonClick: (
+      buttonId: string,
+      actionId?: string,
+      rowData?: any,
+      rowIndex?: number,
+      params?: Record<string, unknown>,
+      blockId?: string,
+      fieldKey?: string
+    ) => {
       return handleUIEvent({
-        type: EventType.INSTANCE_SWITCH,
-        payload: { instanceId }
+        type: EventType.TABLE_BUTTON_CLICK,
+        payload: { buttonId, actionId, rowData, rowIndex, params, blockId, fieldKey }
       });
     }
   };

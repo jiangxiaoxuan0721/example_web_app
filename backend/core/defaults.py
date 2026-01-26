@@ -29,7 +29,17 @@ def _create_demo_schema() -> UISchema:
                     {"id": 2, "name": "李四", "email": "lisi@example.com", "status": "inactive", "avatar": "https://picsum.photos/seed/lisi/100/100.jpg"},
                     {"id": 3, "name": "王五", "email": "wangwu@example.com", "status": "active", "avatar": "https://picsum.photos/seed/wangwu/100/100.jpg"},
                     {"id": 4, "name": "赵六", "email": "zhaoliu@example.com", "status": "pending", "avatar": "https://picsum.photos/seed/zhaoliu/100/100.jpg"},
-                    {"id": 5, "name": "钱七", "email": "qianqi@example.com", "status": "active", "avatar": "https://picsum.photos/seed/qianqi/100/100.jpg"}
+                    {"id": 5, "name": "钱七", "email": "qianqi@example.com", "status": "active", "avatar": "https://picsum.photos/seed/qianqi/100/100.jpg"},
+                    {"id": 6, "name": "孙八", "email": "sunba@example.com", "status": "inactive", "avatar": "https://picsum.photos/seed/sunba/100/100.jpg"},
+                    {"id": 7, "name": "周九", "email": "zhoujiu@example.com", "status": "active", "avatar": "https://picsum.photos/seed/zhoujiu/100/100.jpg"},
+                    {"id": 8, "name": "吴十", "email": "wushi@example.com", "status": "pending", "avatar": "https://picsum.photos/seed/wushi/100/100.jpg"},
+                    {"id": 9, "name": "郑十一", "email": "zhengshiyi@example.com", "status": "active", "avatar": "https://picsum.photos/seed/zhengshiyi/100/100.jpg"},
+                    {"id": 10, "name": "王十二", "email": "wangshier@example.com", "status": "inactive", "avatar": "https://picsum.photos/seed/wangshier/100/100.jpg"},
+                    {"id": 11, "name": "冯十三", "email": "fengshisan@example.com", "status": "active", "avatar": "https://picsum.photos/seed/fengshisan/100/100.jpg"},
+                    {"id": 12, "name": "陈十四", "email": "chenshisi@example.com", "status": "pending", "avatar": "https://picsum.photos/seed/chenshisi/100/100.jpg"},
+                    {"id": 13, "name": "楚十五", "email": "chushiwu@example.com", "status": "active", "avatar": "https://picsum.photos/seed/chushiwu/100/100.jpg"},
+                    {"id": 14, "name": "卫十六", "email": "weishiliu@example.com", "status": "inactive", "avatar": "https://picsum.photos/seed/weishiliu/100/100.jpg"},
+                    {"id": 15, "name": "蒋十七", "email": "jiangshiqi@example.com", "status": "active", "avatar": "https://picsum.photos/seed/jiangshiqi/100/100.jpg"}
                 ]
             ),
             runtime={}
@@ -60,7 +70,9 @@ def _create_demo_schema() -> UISchema:
                             rowKey="id",
                             bordered=True,
                             striped=True,
-                            hover=True
+                            hover=True,
+                            showPagination=True,
+                            pageSize=10
                         ) # type: ignore
                     ],
                     showProgress=None,
@@ -162,7 +174,7 @@ def _create_counter_schema() -> UISchema:
                 id="counter_block",
                 type="form",
                 bind="state.params",
-                props=BlockProps(
+                props=BlockProps(  # pyright: ignore[reportCallIssue]
                     fields=[
                         FieldConfig(  # pyright: ignore[reportCallIssue]
                             label="计数器",
@@ -170,38 +182,34 @@ def _create_counter_schema() -> UISchema:
                             type="text",
                         ) # type: ignore
                     ],
-                    showProgress=None,
-                    showStatus=None,
-                    showImages=None,
-                    showTable=None,
-                    showCountInput=None,
-                    showTaskId=None
-                )
+                    # Block 级别的 actions
+                    actions=[
+                        ActionConfig(  # pyright: ignore[reportCallIssue]
+                            id="increment",
+                            label="+1",
+                            style="primary",
+                            handler_type="increment",
+                            patches={"state.params.count": 1}
+                        ),
+                        ActionConfig(  # pyright: ignore[reportCallIssue]
+                            id="decrement",
+                            label="-1",
+                            style="secondary",
+                            handler_type="decrement",
+                            patches={"state.params.count": 1}
+                        ),
+                        ActionConfig(  # pyright: ignore[reportCallIssue]
+                            id="to_form",
+                            label="跳转到表单",
+                            style="secondary",
+                            action_type="navigate",
+                            target_instance="form"
+                        )
+                    ]
+                ) # type: ignore
             )
         ],
-        actions=[
-            ActionConfig(  # pyright: ignore[reportCallIssue]
-                id="increment",
-                label="+1",
-                style="primary",
-                handler_type="increment",
-                patches={"state.params.count": 1}
-            ),
-            ActionConfig(  # pyright: ignore[reportCallIssue]
-                id="decrement",
-                label="-1",
-                style="secondary",
-                handler_type="decrement",
-                patches={"state.params.count": 1}
-            ),
-            ActionConfig(  # pyright: ignore[reportCallIssue]
-                id="to_form",
-                label="跳转到表单",
-                style="secondary",
-                action_type="navigate",
-                target_instance="form"
-            )
-        ]
+        actions=[]
     )
 
 
@@ -333,17 +341,26 @@ def _create_block_actions_test_schema() -> UISchema:
             status="idle",
             schemaVersion="1.0"
         ),
-        state=StateInfo(
-            params=dict(
-                todo_list=[
-                    {"id": 1, "task": "学习 Python", "completed": False},
-                    {"id": 2, "task": "学习 FastAPI", "completed": True},
-                    {"id": 3, "task": "学习 React", "completed": False}
-                ],
-                message="欢迎使用 Block Actions 测试页面！"
+            state=StateInfo(
+                params=dict(
+                    todo_list=[
+                        {"id": 1, "task": "学习 Python", "completed": False},
+                        {"id": 2, "task": "学习 FastAPI", "completed": True},
+                        {"id": 3, "task": "学习 React", "completed": False},
+                        {"id": 4, "task": "学习 TypeScript", "completed": True},
+                        {"id": 5, "task": "学习 Vue", "completed": False},
+                        {"id": 6, "task": "学习 Node.js", "completed": True},
+                        {"id": 7, "task": "学习数据库设计", "completed": False},
+                        {"id": 8, "task": "学习前端开发", "completed": True},
+                        {"id": 9, "task": "学习后端开发", "completed": False},
+                        {"id": 10, "task": "学习运维部署", "completed": True},
+                        {"id": 11, "task": "学习测试自动化", "completed": False},
+                        {"id": 12, "task": "学习性能优化", "completed": True}
+                    ],
+                    message="欢迎使用 Block Actions 测试页面！"
+                ),
+                runtime={"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
             ),
-            runtime={"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-        ),
         layout=LayoutInfo(type="single"),
         blocks=[
             # Block 1: 带有 block 级别 actions 的待办事项列表
@@ -369,7 +386,9 @@ def _create_block_actions_test_schema() -> UISchema:
                             rowKey="id",
                             bordered=True,
                             striped=True,
-                            hover=True
+                            hover=True,
+                            showPagination=True,
+                            pageSize=10
                         ) # type: ignore
                     ],
                     # Block 级别的 actions
