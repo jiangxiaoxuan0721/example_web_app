@@ -16,7 +16,7 @@ def register_schema_routes(app, schema_manager: SchemaManager, default_instance_
     """
 
     @app.get("/ui/schema")
-    async def get_schema(instance_id: Optional[str] = Query(None, alias="instanceId")):
+    async def get_schema(instance_id: str | None = Query(None, alias="instanceId")):
         """
         获取当前 Schema
 

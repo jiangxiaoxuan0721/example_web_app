@@ -1,14 +1,14 @@
 """WebSocket 连接池 - 管理所有 WebSocket 连接"""
 
-from typing import Dict, Set
 from fastapi import WebSocket
+from typing import Any
 
 
 class ConnectionPool:
     """连接池：按 instanceId 分组存储 WebSocket 连接"""
 
     def __init__(self):
-        self._connections: Dict[str, Set[WebSocket]] = {}
+        self._connections: dict[str, set[WebSocket]] = {}
 
     def add(self, websocket: WebSocket, instance_id: str) -> None:
         """添加连接到指定实例组"""
@@ -24,7 +24,7 @@ class ConnectionPool:
             if not self._connections[instance_id]:
                 del self._connections[instance_id]
 
-    def get_all(self, instance_id: str) -> Set[WebSocket]:
+    def get_all(self, instance_id: str) -> set[WebSocket]:
         """获取指定实例的所有连接"""
         return self._connections.get(instance_id, set()).copy()
 
@@ -51,6 +51,6 @@ class ConnectionPool:
         else:
             self._connections.clear()
 
-    def get_all_instances(self) -> list:
+    def get_all_instances(self) -> list[Any]:
         """获取所有有连接的实例 ID 列表"""
         return list(self._connections.keys())

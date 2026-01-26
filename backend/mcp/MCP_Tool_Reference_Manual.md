@@ -85,14 +85,14 @@
 ```python
 async def patch_ui_state(
     instance_id: str,
-    patches: List[Dict[str, Any]] = [],
-    new_instance_id: Optional[str] = None,
-    target_instance_id: Optional[str] = None,
-    field_key: Optional[str] = None,
-    updates: Optional[Dict[str, Any]] = None,
-    remove_field: Optional[bool] = False,
-    block_index: Optional[int] = 0
-) -> Dict[str, Any]
+    patches: list[dict[str, Any]] = [],
+    new_instance_id: str | None = None,
+    target_instance_id: str | None = None,
+    field_key: str | None = None,
+    updates: dict[str, Any] | None = None,
+    remove_field: bool | None = False,
+    block_index: int | None = 0
+) -> dict[str, Any]
 ```
 
 #### 参数详解
@@ -261,7 +261,11 @@ interface FieldConfig {
 
 ### 1. set 处理器
 
-直接设置字段值，覆盖现有值。
+直接设置字段值，或执行通用操作对象。
+
+#### 1.1 直接设置值
+
+覆盖现有值。
 
 **配置示例**:
 ```json
@@ -308,6 +312,176 @@ interface FieldConfig {
   }
 }
 ```
+
+#### 1.2 操作对象
+
+`set` handler 支持 **操作对象**，用于执行复杂的动态操作。
+
+**操作对象格式**:
+```json
+{
+  "operation": "操作名称",
+  "params": {
+    "参数名": "参数值"
+  }
+}
+```
+
+**支持的操作类型**:
+
+||| Operation | 说明 | params 格式 | 使用场景 |
+|||-----------|------|-------------|----------|
+||| `append_to_list` | 向列表末尾添加元素 | `{"item": {...}}` | 添加数据项、追加记录 |
+||| `prepend_to_list` | 向列表开头添加元素 | `{"item": {...}}` | 插入数据到开头 |
+||| `remove_from_list` | 从列表删除元素 | `{"key": "字段名", "value": "值"}` | 删除特定项 |
+||| `update_list_item` | 更新列表中的元素 | `{"key": "字段名", "value": "值", "updates": {...}}` | 修改某条记录 |
+||| `clear_all_params` | 清空所有 params | `{}` | 重置表单 |
+||| `append_block` | 添加新块 | `{"block": {...}}` | 动态添加 UI 组件 |
+||| `prepend_block` | 在开头添加块 | `{"block": {...}}` | 动态插入 UI 组件 |
+||| `remove_block` | 删除块 | `{"block_id": "..."}` | 移除 UI 组件 |
+||| `update_block` | 更新块 | `{"block_id": "...", "updates": {...}}` | 修改 UI 组件 |
+||| `merge` | 合并对象 | `{"data": {...}}` | 部分更新对象 |
+
+**示例 1: 向列表添加元素**
+
+```json
+{
+  "id": "add_user",
+  "label": "添加用户",
+  "style": "primary",
+  "handler_type": "set",
+  "patches": {
+    "state.params.users": {
+      "operation": "append_to_list",
+      "params": {
+        "item": {
+          "id": 6,
+          "name": "赵六",
+          "email": "zhaoliu@example.com",
+          "status": "pending"
+        }
+      }
+    }
+  }
+}
+```
+
+**示例 2: 从列表删除元素**
+
+```json
+{
+  "id": "remove_user",
+  "label": "删除用户",
+  "style": "danger",
+  "handler_type": "set",
+  "patches": {
+    "state.params.users": {
+      "operation": "remove_from_list",
+      "params": {
+        "key": "id",
+        "value": "5"
+      }
+    }
+  }
+}
+```
+
+**示例 3: 更新列表中的元素**
+
+```json
+{
+  "id": "update_user_status",
+  "label": "激活用户",
+  "style": "secondary",
+  "handler_type": "set",
+  "patches": {
+    "state.params.users": {
+      "operation": "update_list_item",
+      "params": {
+        "key": "id",
+        "value": "5",
+        "updates": {
+          "status": "active"
+        }
+      }
+    }
+  }
+}
+```
+
+**示例 4: 添加新块（动态 UI 组件）**
+
+```json
+{
+  "id": "add_notification",
+  "label": "添加通知",
+  "style": "secondary",
+  "handler_type": "set",
+  "patches": {
+    "blocks": {
+      "operation": "append_block",
+      "params": {
+        "block": {
+          "id": "notification_block",
+          "type": "form",
+          "bind": "state.params",
+          "props": {
+            "fields": [
+              {
+                "label": "系统通知",
+                "key": "notification",
+                "type": "html",
+                "description": "这是一条动态添加的通知"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**示例 5: 删除块**
+
+```json
+{
+  "id": "remove_notification",
+  "label": "移除通知",
+  "style": "danger",
+  "handler_type": "set",
+  "patches": {
+    "blocks": {
+      "operation": "remove_block",
+      "params": {
+        "block_id": "notification_block"
+      }
+    }
+  }
+}
+```
+
+**示例 6: 清空所有 params**
+
+```json
+{
+  "id": "clear_form",
+  "label": "清空表单",
+  "style": "danger",
+  "handler_type": "set",
+  "patches": {
+    "state.params": {
+      "operation": "clear_all_params",
+      "params": {}
+    }
+  }
+}
+```
+
+**注意**:
+- 操作对象只在 `handler_type` 为 `set` 时生效
+- 所有操作都不需要后端预设，完全通过配置定义
+- MCP 工具可以通过这种方式实现任何动态操作需求
 
 ### 3. toggle 处理器
 
@@ -371,6 +545,26 @@ interface FieldConfig {
 - `POST`
 - `PUT`
 - `DELETE`
+
+#### 额外的 Handler 类型
+
+除了 `set`, `increment`, `decrement`, `toggle`, `template`, `external` 外，系统还支持：
+
+- **template:all**：对所有路径执行模板渲染（用于批量更新）
+- **template:state**：只对 state 下的路径执行模板渲染
+
+**template:all 示例**：
+```json
+{
+  "handler_type": "template:all",
+  "patches": {
+    "state.params.message": "消息: ${state.params.value}",
+    "blocks.0.props.fields.0.description": "说明: ${state.runtime.info}"
+  }
+}
+```
+
+这将同时渲染 patches 中所有包含模板变量的路径。
 
 #### 示例 1: GET 请求
 
@@ -472,6 +666,45 @@ interface FieldConfig {
 
 ## 设计原则
 
+### 高度自由化但结构化的调用
+
+MCP 工具的设计核心理念是**高度自由化但结构化**，这意味着：
+
+1. **高度自由化**：
+   - 支持动态创建任意 UI 结构（通过 blocks、fields、actions 的组合）
+   - 支持复杂的逻辑处理（通过 handler 的多样化类型）
+   - 无需为特定功能编写硬编码逻辑，所有功能都通过配置实现
+   - 支持跨实例引用和组件复用
+   - 支持 17 种字段类型和 9 种操作类型，可以组合出无限可能
+
+2. **结构化**：
+   - 所有操作都遵循预定义的数据模型
+   - 字段类型、handler 类型、操作类型都有明确的定义
+   - 路径语法有统一的规范
+   - 参数验证保证数据一致性
+   - 工具描述提供清晰的指导，确保 AI 智能体能够正确理解和使用
+
+3. **实现方式**：
+   - **Schema 驱动**：前端通过解析 schema 动态渲染，无需针对特定功能编写代码
+   - **通用处理器**：后端通过统一的 patch 应用机制处理所有操作
+   - **配置即功能**：所有功能通过配置定义，而非硬编码
+   - **模板渲染**：支持 `${state.xxx}` 语法，实现动态内容更新
+   - **自动时间戳**：引用 `state.runtime.timestamp` 时自动更新为当前时间
+
+4. **可扩展性**：
+   - 新增字段类型只需在前端添加 renderer，后端无需改动
+   - 新增 handler 类型只需在后端扩展处理逻辑
+   - 支持通过 set handler 的 operation 对象实现自定义操作
+
+5. **工具描述的重要性**：
+   为了让 AI 智能体正确理解和使用 MCP 工具，工具描述应当：
+   - 明确功能范围：清晰说明工具能做什么，不能做什么
+   - 提供使用场景：给出典型使用场景，帮助 AI 判断何时使用该工具
+   - 说明参数约束：详细说明参数的必需性、类型、默认值和取值范围
+   - 展示示例用法：提供完整、可运行的示例代码
+   - 说明返回值：详细说明返回值的结构和含义
+   - 指出注意事项：提醒常见的陷阱和最佳实践
+
 ### 单一写入路径
 
 所有修改**必须**通过 `patch_ui_state`：
@@ -493,6 +726,17 @@ patch_ui_state → 后端应用 → WebSocket 推送 → 前端更新
 - ✅ 修改前使用 `get_schema` 检查状态
 - ✅ 修改后使用 `validate_completion` 评估结果
 - ✅ Agent 根据评估数据**自主决策**
+
+### 工具描述的重要性
+
+为了让 AI 智能体正确理解和使用 MCP 工具，工具描述应当：
+
+1. **明确功能范围**：清晰说明工具能做什么，不能做什么
+2. **提供使用场景**：给出典型使用场景，帮助 AI 判断何时使用该工具
+3. **说明参数约束**：详细说明参数的必需性、类型、默认值和取值范围
+4. **展示示例用法**：提供完整、可运行的示例代码
+5. **说明返回值**：详细说明返回值的结构和含义
+6. **指出注意事项**：提醒常见的陷阱和最佳实践
 
 ---
 

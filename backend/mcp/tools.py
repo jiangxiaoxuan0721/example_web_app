@@ -13,7 +13,7 @@ if __name__ == "__main__":
     print("📝 Available tools:")
     print("  - patch_ui_state: Apply structured patches to modify UI (with field operation shortcuts)")
     print("  - get_schema: Get current UI Schema")
-    print("  - list_instances: List all available instances")
+    print("  - list_instances: list all available instances")
     print("  - access_instance: Access a specific UI instance and mark it as active")
     print("  - validate_completion: Check if UI meets completion criteria (semantic control)")
     print()

@@ -1,10 +1,10 @@
 """Patch 应用器 - 应用 Patch 到 Schema"""
 
-from typing import Dict, Any
+from typing import  Any
 from ..models import UISchema
 
 
-def apply_patch_to_schema(schema: UISchema, patch: Dict[str, Any]) -> None:
+def apply_patch_to_schema(schema: UISchema, patch: dict[str, Any]) -> None:
     """将 Patch 应用到 Schema
 
     Args:
@@ -30,7 +30,8 @@ def apply_patch_to_schema(schema: UISchema, patch: Dict[str, Any]) -> None:
                     if hasattr(action, '__dict__'):
                         setattr(action, 'patches', value)
                     else:
-                        action['patches'] = value
+                        # Pydantic 模型，使用 setattr 更新
+                        setattr(action, 'patches', value)
 
                     print(f"[PatchService] Updated patches for action at actions[{action_index}]: {getattr(action, 'id', 'unknown')}")
                 else:
@@ -104,8 +105,8 @@ def apply_patch_to_schema(schema: UISchema, patch: Dict[str, Any]) -> None:
 
                             # 获取旧字段 key，用于更新 state（如果 key 改变了）
                             old_field = current_fields[field_index]
-                            old_field_key = getattr(old_field, 'key', None) if hasattr(old_field, 'key') else old_field.get('key')
-                            new_field_key = getattr(new_field, 'key', None) if hasattr(new_field, 'key') else new_field.get('key')
+                            old_field_key = getattr(old_field, 'key', None)
+                            new_field_key = getattr(new_field, 'key', None)
 
                             # 替换字段
                             current_fields[field_index] = new_field
@@ -148,14 +149,11 @@ def apply_patch_to_schema(schema: UISchema, patch: Dict[str, Any]) -> None:
 
                             # 如果修改的是 'key' 属性，需要更新 state
                             if field_attr == 'key':
-                                old_key = getattr(field, 'key', None) if hasattr(field, 'key') else field.get('key')
+                                old_key = getattr(field, 'key', None)
                                 new_key = value
 
                                 # 更新字段属性
-                                if hasattr(field, '__dict__'):
-                                    setattr(field, field_attr, new_key)
-                                else:
-                                    field[field_attr] = new_key
+                                setattr(field, field_attr, new_key)
 
                                 # 更新 state
                                 if old_key and new_key and old_key != new_key:
@@ -165,10 +163,7 @@ def apply_patch_to_schema(schema: UISchema, patch: Dict[str, Any]) -> None:
                                         schema.state.runtime[new_key] = schema.state.runtime.pop(old_key)
                             else:
                                 # 修改其他属性
-                                if hasattr(field, '__dict__'):
-                                    setattr(field, field_attr, value)
-                                else:
-                                    field[field_attr] = value
+                                setattr(field, field_attr, value)
 
                             print(f"[PatchService] Updated field attribute: blocks[{block_index}].props.fields[{field_index}].{field_attr} = {value}")
             except (ValueError, AttributeError, IndexError) as e:

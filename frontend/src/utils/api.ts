@@ -1,5 +1,8 @@
 /** API 工具函数 */
 
+// 导入 multiInstanceStore（在模块顶层导入，避免循环依赖）
+import { useMultiInstanceStore } from '../store/multiInstanceStore';
+
 // Schema缓存，加速实例切换
 const schemaCache = new Map<string, any>();
 const CACHE_TTL = 5 * 60 * 1000; // 5分钟缓存
@@ -76,19 +79,28 @@ export async function loadSchema(instanceId: string) {
 }
 
 /**
- * 预加载所有实例的Schema
+ * 预加载所有实例的Schema并保存到多实例Store
  * @param instanceIds - 实例ID列表
  * @returns Promise
  */
 export async function preloadSchemas(instanceIds: string[]) {
   console.log(`[API] 预加载实例Schemas: ${instanceIds.join(', ')}`);
-  const promises = instanceIds.map(id => 
-    loadSchema(id).catch(error => {
+  const promises = instanceIds.map(async (id) => {
+    try {
+      const result = await loadSchema(id);
+      if (result.status === 'success' && result.schema) {
+        // 保存到 multiInstanceStore
+        const setInstance = useMultiInstanceStore.getState().setInstance;
+        setInstance(id, result.schema);
+        console.log(`[API] 预加载并保存实例: ${id}`);
+      }
+      return result;
+    } catch (error) {
       console.error(`[API] 预加载实例 ${id} 失败:`, error);
       return null;
-    })
-  );
-  
+    }
+  });
+
   try {
     await Promise.all(promises);
     console.log(`[API] 预加载完成`);

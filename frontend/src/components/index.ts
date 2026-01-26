@@ -37,6 +37,7 @@ export { default as JSONViewer } from './JSONViewer';
 export { default as Table } from './Table';
 export { default as RichContentRenderer, HTMLRenderer } from './RichContentRenderer';
 export { default as ImageRenderer } from './ImageRenderer';
+export { default as ImageModal } from './ImageModal';
 
 // 反馈组件
 export { default as Tag } from './Tag';

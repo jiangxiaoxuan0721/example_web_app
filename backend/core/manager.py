@@ -1,6 +1,5 @@
 """Schema 实例管理器 - 管理所有 UI Schema 实例"""
 
-from typing import Dict
 from ..fastapi.models import UISchema
 
 
@@ -8,7 +7,7 @@ class SchemaManager:
     """Schema 实例管理器"""
 
     def __init__(self):
-        self._instances: Dict[str, UISchema] = {}
+        self._instances: dict[str, UISchema] = {}
 
     def get(self, instance_id: str) -> UISchema | None:
         """获取指定实例的 Schema"""

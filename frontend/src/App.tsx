@@ -14,6 +14,7 @@
 
 import { useEffect } from 'react';
 import { useSchemaStore } from './store/schemaStore';
+import { useMultiInstanceStore } from './store/multiInstanceStore';
 import { useSchema } from './hooks/useSchema';
 import { usePatchHistory } from './hooks/usePatchHistory';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -34,6 +35,7 @@ import "./index.css";
 export default function App() {
   const { currentInstanceId, schema: initialSchema, loading, error, loadingText } = useSchema();
   const { schema: storeSchema, setSchema, applyPatch, setInstanceId, highlightBlockId, highlightFieldKey, highlightActionId } = useSchemaStore();
+  const { setInstance: setMultiInstance } = useMultiInstanceStore();
   const { emitInstanceSwitch } = useEventEmitter();
 
   // ============ Patch 历史管理 ============
@@ -45,8 +47,12 @@ export default function App() {
       console.log('[App] 从后端加载的 Schema:', initialSchema);
       console.log('[App] Schema.state:', initialSchema.state);
       setSchema(initialSchema);
+      // 同时保存到多实例 store，供嵌入渲染使用
+      if (currentInstanceId) {
+        setMultiInstance(currentInstanceId, initialSchema);
+      }
     }
-  }, [initialSchema, setSchema]);
+  }, [initialSchema, setSchema, currentInstanceId, setMultiInstance]);
   
   // 当实例ID变化时更新 Store
   useEffect(() => {
@@ -88,6 +94,8 @@ export default function App() {
         // 如果提供了 schema，直接使用它
         // schema 来自 WebSocket，类型为 Record<string, any>，在这里做类型断言以满足 setSchema 的 UISchema 参数
         setSchema(schema as any, (schema as any).highlight);
+        // 同时保存到多实例 store
+        setMultiInstance(instanceId, schema as any);
         console.log('[App] Schema 已更新到 store');
       }
 
@@ -144,14 +152,13 @@ export default function App() {
               />
             ))}
 
-            {/* 渲染 Actions */}
+            {/* 渲染全局 Actions（保留向后兼容） */}
             <div className="pta-actions-container">
               {storeSchema?.actions?.map((action) => (
                 <ActionButton
                   key={action.id}
                   action={action}
                   highlighted={action.id === highlightActionId}
-                  onApiClick={() => useEventEmitter().emitActionClick(action.id)}
                   onNavigate={handleInstanceSwitch}
                 />
               ))}

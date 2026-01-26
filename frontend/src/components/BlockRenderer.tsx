@@ -1,14 +1,17 @@
 /** Block 渲染器 V2 - 使用通用渲染模板 */
 
-import type { Block, UISchema } from '../types/schema';
+import type { Block, UISchema, ActionConfig } from '../types/schema';
 import { useSchemaStore } from '../store/schemaStore';
 import GenericFieldRenderer from './GenericFieldRenderer';
+import ActionButton from './ActionButton';
+import { renderTemplate } from '../utils/template';
 
 interface BlockRendererProps {
   block: Block;
   disabled?: boolean;
   highlightField?: string | null;
   highlightBlockId?: string | null;
+  actions?: ActionConfig[];  // 可选的 block 级别 actions
 }
 
 /**
@@ -24,8 +27,28 @@ export interface BlockRenderer {
 
 // 块渲染器注册表
 const blockRenderers: Record<string, BlockRenderer> = {
-  form: ({ block, schema, disabled, highlightField, highlightBlockId }) => {
+  form: ({ block, schema, disabled, highlightField, highlightBlockId, actions }) => {
     const isHighlighted = highlightBlockId === block.id;
+    // 确保 fields 始终是数组，处理各种可能的格式
+    let fields: any[] = [];
+    if (block.props?.fields) {
+      if (Array.isArray(block.props.fields)) {
+        fields = block.props.fields;
+      } else if (typeof block.props.fields === 'object') {
+        // 如果 fields 是对象，转换为数组
+        fields = Object.values(block.props.fields);
+      }
+    }
+
+    // 合并 block.props.actions 和传入的 actions
+    const blockActions = block.props?.actions || [];
+    const allActions = actions ? [...blockActions, ...actions] : blockActions;
+
+    const handleNavigate = (targetInstance: string) => {
+      // 通过 window.location 触发导航
+      window.location.hash = `#instance=${targetInstance}`;
+    };
+
     return (
       <div
         key={block.id}
@@ -41,7 +64,8 @@ const blockRenderers: Record<string, BlockRenderer> = {
           } : {})
         }}
       >
-        {block.props?.fields?.map((field) => (
+        {/* 渲染字段 */}
+        {fields.map((field) => (
           <GenericFieldRenderer
             key={field.key}
             field={field}
@@ -51,6 +75,30 @@ const blockRenderers: Record<string, BlockRenderer> = {
             highlighted={field.key === highlightField}
           />
         ))}
+
+        {/* 渲染 block 级别的 actions */}
+        {allActions.length > 0 && (
+          <div
+            style={{
+              marginTop: '16px',
+              display: 'flex',
+              gap: '12px',
+              flexWrap: 'wrap',
+              paddingTop: '16px',
+              borderTop: '1px solid #e8e8e8'
+            }}
+          >
+            {allActions.map((action) => (
+              <ActionButton
+                key={action.id}
+                action={action}
+                highlighted={false}
+                onNavigate={handleNavigate}
+                blockId={block.id}
+              />
+            ))}
+          </div>
+        )}
       </div>
     );
   },
@@ -64,6 +112,18 @@ const blockRenderers: Record<string, BlockRenderer> = {
 
     const value = getValue(block.bind);
     const isHighlighted = highlightBlockId === block.id;
+
+    // 渲染 value 中的模板变量
+    let renderedValue;
+    if (typeof value === 'object' && value !== null) {
+      // 如果是对象，转换为 JSON 字符串
+      renderedValue = JSON.stringify(value, null, 2);
+    } else if (typeof value === 'string') {
+      // 如果是字符串，渲染模板
+      renderedValue = renderTemplate(value, schema);
+    } else {
+      renderedValue = String(value ?? '');
+    }
 
     return (
       <div
@@ -87,7 +147,7 @@ const blockRenderers: Record<string, BlockRenderer> = {
           background: '#f9f9f9',
           fontSize: '16px'
         }}>
-          {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
+          {typeof renderedValue === 'object' ? JSON.stringify(renderedValue, null, 2) : String(renderedValue)}
         </div>
       </div>
     );
@@ -111,7 +171,7 @@ export const getRegisteredBlockTypes = (): string[] => {
 /**
  * 通用块渲染器组件
  */
-export default function BlockRenderer({ block, disabled, highlightField, highlightBlockId }: BlockRendererProps) {
+export default function BlockRenderer({ block, disabled, highlightField, highlightBlockId, actions }: BlockRendererProps) {
   const schema = useSchemaStore((state) => state.schema);
   const renderer = blockRenderers[block.type];
 
@@ -125,5 +185,5 @@ export default function BlockRenderer({ block, disabled, highlightField, highlig
     return null;
   }
 
-  return renderer({ block, schema, disabled, highlightField, highlightBlockId });
+  return renderer({ block, schema, disabled, highlightField, highlightBlockId, actions });
 }

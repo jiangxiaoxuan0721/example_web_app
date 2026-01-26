@@ -88,7 +88,7 @@ export function useSchema() {
     try {
       setLoading(true);
       console.log(`[前端] 加载 Schema (instanceId: ${currentInstanceId})...`);
-      
+
       // 检查 instanceId 是否有效
       if (!currentInstanceId) {
         console.error('[前端] instanceId 为空');
@@ -96,21 +96,21 @@ export function useSchema() {
         setLoading(false);
         return;
       }
-      
+
       // 如果不是第一次加载，显示更具体的加载状态
       if (initializedRef.current) {
         setLoadingText('切换实例中...');
       } else {
         setLoadingText('加载中...');
       }
-      
+
       const data = await loadSchema(currentInstanceId);
       console.log('[前端] Schema API 响应:', data);
 
       if (data.status === 'success' && data.schema) {
         setSchema(data.schema);
         console.log('[前端] Schema 加载成功:', data.schema);
-        
+
         // 如果是第一次加载，预加载其他实例
         if (!initializedRef.current) {
           initializedRef.current = true;
@@ -122,7 +122,7 @@ export function useSchema() {
               const instanceIds = instancesData.instances
                 .map((inst: any) => inst.instance_id)
                 .filter((id: string) => id !== currentInstanceId);
-              
+
               // 预加载其他实例（不等待完成）
               if (instanceIds.length > 0) {
                 console.log(`[前端] 预加载其他实例: ${instanceIds.join(', ')}`);

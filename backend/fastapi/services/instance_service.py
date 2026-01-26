@@ -1,7 +1,7 @@
 """实例服务 - 处理实例的创建、删除和操作"""
 
 import httpx
-from typing import Dict, Any, Optional
+from typing import Any
 from ..models import UISchema, MetaInfo, StateInfo, LayoutInfo, Block, ActionConfig, StepInfo, FieldConfig
 from backend.core.manager import SchemaManager
 from .patch import apply_patch_to_schema
@@ -16,8 +16,8 @@ class InstanceService:
     def create_instance(
         self,
         instance_id: str,
-        patches: list[Dict[str, Any]]
-    ) -> tuple[bool, Optional[str]]:
+        patches: list[dict[str, Any]]
+    ) -> tuple[bool, str | None]:
         """
         创建新实例
 
@@ -84,7 +84,7 @@ class InstanceService:
     def delete_instance(
         self,
         instance_id: str
-    ) -> tuple[bool, Optional[str]]:
+    ) -> tuple[bool, str | None]:
         """
         删除实例
 
@@ -100,14 +100,21 @@ class InstanceService:
         self,
         instance_id: str,
         action_id: str,
-        params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        params: dict[str, Any],
+        block_id: str | None = None
+    ) -> dict[str, Any]:
         """
         处理实例的 action 操作（通用化处理）
 
+        Args:
+            instance_id: 实例 ID
+            action_id: 操作 ID
+            params: 参数
+            block_id: Block ID（可选，用于 block 级别的 actions）
+
         返回: Patch 数据字典
         """
-        print(f"[InstanceService] handle_action 被调用: instance_id={instance_id}, action_id={action_id}, params={params}")
+        print(f"[InstanceService] handle_action 被调用: instance_id={instance_id}, action_id={action_id}, params={params}, block_id={block_id}")
 
         schema = self.schema_manager.get(instance_id)
         if not schema:
@@ -117,21 +124,44 @@ class InstanceService:
                 "error": f"Instance '{instance_id}' not found"
             }
 
-        # 先同步前端传来的 params
+        # 先同步前端传来的 params（排除 blockId 参数）
         if params and isinstance(params, dict):
-            params_patch = {f"state.params.{k}": v for k, v in params.items()}
+            # 过滤掉非 schema 状态参数（如 blockId）
+            filtered_params = {k: v for k, v in params.items() if k != "blockId"}
+            params_patch = {f"state.params.{k}": v for k, v in filtered_params.items()}
             print(f"[InstanceService] 同步前端 params: {params_patch}")
             apply_patch_to_schema(schema, params_patch)
 
         # 查找对应的 action 配置
         action_config = None
-        for action in schema.actions:
-            if action.id == action_id:
-                action_config = action
-                break
+
+        # 优先在指定的 block 中查找 action
+        if block_id:
+            for block in schema.blocks:
+                if block.id == block_id and block.props and block.props.actions:
+                    for action in block.props.actions:
+                        if action.id == action_id:
+                            action_config = action
+                            print(f"[InstanceService] 在 block '{block_id}' 中找到 action: {action_id}")
+                            break
+                if action_config:
+                    break
+
+        # 如果在 block 中没找到，从全局 actions 中查找
+        if not action_config:
+            for action in schema.actions:
+                if action.id == action_id:
+                    action_config = action
+                    print(f"[InstanceService] 在全局 actions 中找到 action: {action_id}")
+                    break
 
         if not action_config:
-            print(f"[InstanceService] Action '{action_id}' 不存在，可用的 actions: {[a.id for a in schema.actions]}")
+            available_actions = [a.id for a in schema.actions]
+            for block in schema.blocks:
+                if block.props and block.props.actions:
+                    for action in block.props.actions:
+                        available_actions.append(f"{block.id}.{action.id}")
+            print(f"[InstanceService] Action '{action_id}' 不存在，可用的 actions: {available_actions}")
             return {
                 "status": "success",
                 "patch": {}
@@ -148,7 +178,8 @@ class InstanceService:
                 "navigate_to": action_config.target_instance
             }
 
-        # 通用 action 处理
+        # 对于其他类型的 action，不主动同步 params
+        # params 应该已经在 action handler 执行前通过 field:change 事件更新过了
         print(f"[InstanceService] 开始执行 action handler")
         patch = self._execute_action_handler(schema, action_config)
         print(f"[InstanceService] Action handler 返回的 patch: {patch}")
@@ -169,9 +200,13 @@ class InstanceService:
         self,
         schema: UISchema,
         action_config: Any
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         执行 action 处理器（通用逻辑）
+
+        支持 patches 中的值可以是：
+        - 直接值：直接设置到对应路径
+        - 操作对象：{"operation": "xxx", "params": {...}}
 
         Args:
             schema: 当前 schema
@@ -185,7 +220,6 @@ class InstanceService:
 
         print(f"[InstanceService] _execute_action_handler: action_id={getattr(action_config, 'id', None)}, handler_type={handler_type}")
         print(f"[InstanceService] patches_config = {patches_config}")
-        print(f"[InstanceService] action_config.patches = {getattr(action_config, 'patches', 'NOT_FOUND')}")
 
         if not patches_config:
             return {}
@@ -193,21 +227,32 @@ class InstanceService:
         patch = {}
 
         if handler_type == "set":
-            # 直接设置值
+            # 直接设置值或执行操作对象
             for path, value in patches_config.items():
-                # 如果值为 special:*，执行特殊操作
-                if isinstance(value, str) and value.startswith("special:"):
-                    special_op = value[8:]  # 去掉 "special:" 前缀
-                    if special_op == "clear_all_params":
-                        # 清空所有 params 字段
-                        params = self._get_nested_value(schema, "state.params", {})
-                        for key in params.keys():
-                            patch[f"state.params.{key}"] = ""
-                    elif special_op == "get_all_params":
-                        # 获取所有 params（用于其他 handler）
-                        pass
+                # 如果值是操作对象，执行操作
+                if isinstance(value, dict) and "operation" in value:
+                    operation = value.get("operation")
+                    if not operation:
+                        continue
+                    params = value.get("params", {})
+                    operation_patch = self._execute_operation(schema, operation, params, path)
+                    patch.update(operation_patch)
+                elif isinstance(value, str) and value.startswith("special:"):
+                    # 兼容旧的 special: 语法
+                    special_op = value[8:]
+                    operation_patch = self._execute_operation(schema, special_op, {}, path)
+                    patch.update(operation_patch)
                 else:
-                    patch[path] = value
+                    # 直接设置值 - 如果包含模板语法，先渲染
+                    if isinstance(value, str) and "${" in value and "}" in value:
+                        # 检查是否引用了 state.runtime.timestamp
+                        if "state.runtime.timestamp" in value:
+                            # 先更新 timestamp
+                            from datetime import datetime
+                            patch["state.runtime.timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        patch[path] = self._render_template(schema, value)
+                    else:
+                        patch[path] = value
 
         elif handler_type == "increment":
             # 数值增加
@@ -237,19 +282,56 @@ class InstanceService:
             # 模板替换（支持引用当前 state 的值）
             for path, template in patches_config.items():
                 if isinstance(template, str):
+                    # 检查是否引用了 state.runtime.timestamp
+                    if "state.runtime.timestamp" in template:
+                        from datetime import datetime
+                        patch["state.runtime.timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     patch[path] = self._render_template(schema, template)
                 else:
                     patch[path] = template
 
         elif handler_type == "template:all":
-            # 通用模板：动态包含所有 params 字段
+            # 通用模板：动态包含所有 params 字段（过滤只读类型）
             for path, template in patches_config.items():
                 if isinstance(template, str):
+                    # 检查是否引用了 state.runtime.timestamp
+                    if "state.runtime.timestamp" in template:
+                        from datetime import datetime
+                        patch["state.runtime.timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     # 如果模板中包含 ${all}，替换为所有 params 的键值对
                     if "${all}" in template:
+                        # 只读展示类型字段（不包含在模板中）
+                        READ_ONLY_FIELD_TYPES = {"html", "image", "tag", "progress", "badge", "table", "modal"}
+
+                        # 获取字段类型
+                        def get_field_type(field_key: str) -> str:
+                            for block in schema.blocks:
+                                if hasattr(block, "props") and block.props and hasattr(block.props, "fields") and block.props.fields:
+                                    for field in block.props.fields:
+                                        if hasattr(field, "key") and field.key == field_key:
+                                            return getattr(field, "type", "text")
+                            return "text"
+
+                        # 过滤只读字段
                         params = self._get_nested_value(schema, "state.params", {})
+                        filtered_params = {}
+
+                        if isinstance(params, dict):
+                            for key, value in params.items():
+                                field_type = get_field_type(key)
+                                if field_type and field_type not in READ_ONLY_FIELD_TYPES:
+                                    # 对于数组类型的值，简化显示
+                                    if isinstance(value, list):
+                                        if len(value) <= 3:
+                                            filtered_params[key] = value
+                                        else:
+                                            filtered_params[key] = f"[{len(value)} items]"
+                                    else:
+                                        filtered_params[key] = value
+
+                        # 生成消息字符串
                         param_strings = []
-                        for key, value in sorted(params.items()):
+                        for key, value in sorted(filtered_params.items()):
                             param_strings.append(f"{key}: {value}")
                         all_str = ", ".join(param_strings) if param_strings else ""
                         template = template.replace("${all}", all_str)
@@ -261,6 +343,142 @@ class InstanceService:
             # 调用外部 API
             external_patch = self._handle_external_api(schema, patches_config)
             patch.update(external_patch)
+
+        return patch
+
+    def _execute_operation(
+        self,
+        schema: UISchema,
+        operation: str,
+        params: dict[str, Any],
+        target_path: str
+    ) -> dict[str, Any]:
+        """
+        执行通用操作
+
+        支持的操作：
+        - append_to_list: 向列表添加元素
+        - prepend_to_list: 向列表开头添加元素
+        - remove_from_list: 从列表中删除元素
+        - update_list_item: 更新列表中的某个元素
+        - clear_all_params: 清空所有 params
+        - append_block: 添加新块到 schema
+        - remove_block: 删除块
+        - update_block: 更新块
+        - merge: 合并对象
+
+        Args:
+            schema: 当前 schema
+            operation: 操作名称
+            params: 操作参数
+            target_path: 目标路径
+
+        Returns:
+            Patch 字典
+        """
+        print(f"[InstanceService] _execute_operation: operation={operation}, params={params}, target_path={target_path}")
+
+        patch = {}
+
+        if operation == "append_to_list":
+            # 向列表添加元素
+            current_list = self._get_nested_value(schema, target_path, [])
+            item = params.get("item", {})
+            # 如果 item 是字典，渲染其中的模板变量
+            if isinstance(item, dict):
+                item = self._render_dict_template(schema, item)
+            patch[target_path] = current_list + [item]
+
+        elif operation == "prepend_to_list":
+            # 向列表开头添加元素
+            current_list = self._get_nested_value(schema, target_path, [])
+            item = params.get("item", {})
+            # 如果 item 是字典，渲染其中的模板变量
+            if isinstance(item, dict):
+                item = self._render_dict_template(schema, item)
+            patch[target_path] = [item] + current_list
+
+        elif operation == "remove_from_list":
+            # 从列表中删除元素
+            current_list = self._get_nested_value(schema, target_path, [])
+            if isinstance(current_list, list):
+                item_key = params.get("key", "id")
+                item_value = params.get("value")
+                new_list = [item for item in current_list if str(item.get(item_key)) != str(item_value)]
+                patch[target_path] = new_list
+
+        elif operation == "update_list_item":
+            # 更新列表中的某个元素
+            current_list = self._get_nested_value(schema, target_path, [])
+            if isinstance(current_list, list):
+                item_key = params.get("key", "id")
+                item_value = params.get("value")
+                updates = params.get("updates", {})
+                # 渲染 updates 中的模板变量
+                if isinstance(updates, dict):
+                    updates = self._render_dict_template(schema, updates)
+                new_list = []
+                for item in current_list:
+                    if str(item.get(item_key)) == str(item_value):
+                        # 合并更新
+                        new_item = {**item, **updates}
+                        new_list.append(new_item)
+                    else:
+                        new_list.append(item)
+                patch[target_path] = new_list
+
+        elif operation == "clear_all_params":
+            # 清空所有 params 字段
+            current_params = self._get_nested_value(schema, "state.params", {})
+            for key in current_params.keys():
+                patch[f"state.params.{key}"] = ""
+
+        elif operation == "append_block":
+            # 添加新块到 schema
+            block_data = params.get("block")
+            if block_data:
+                new_blocks = list(schema.blocks) + [Block(**block_data)]
+                # 转换为字典以便 JSON 序列化
+                patch["blocks"] = [block.model_dump() for block in new_blocks]
+
+        elif operation == "prepend_block":
+            # 在开头添加新块
+            block_data = params.get("block")
+            if block_data:
+                new_blocks = [Block(**block_data)] + list(schema.blocks)
+                # 转换为字典以便 JSON 序列化
+                patch["blocks"] = [block.model_dump() for block in new_blocks]
+
+        elif operation == "remove_block":
+            # 删除块
+            block_id = params.get("block_id")
+            if block_id:
+                new_blocks = [block for block in schema.blocks if block.id != block_id]
+                # 转换为字典以便 JSON 序列化
+                patch["blocks"] = [block.model_dump() for block in new_blocks]
+
+        elif operation == "update_block":
+            # 更新块
+            block_id = params.get("block_id")
+            updates = params.get("updates", {})
+            if block_id:
+                new_blocks = []
+                for block in schema.blocks:
+                    if block.id == block_id:
+                        # 创建更新后的 block
+                        block_dict = block.model_dump()
+                        block_dict.update(updates)
+                        new_blocks.append(Block(**block_dict))
+                    else:
+                        new_blocks.append(block)
+                # 转换为字典以便 JSON 序列化
+                patch["blocks"] = [block.model_dump() for block in new_blocks]
+
+        elif operation == "merge":
+            # 合并对象
+            current_value = self._get_nested_value(schema, target_path, {})
+            if isinstance(current_value, dict):
+                patch[target_path] = {**current_value, **params.get("data", {})}
 
         return patch
 
@@ -345,8 +563,8 @@ class InstanceService:
     def _handle_external_api(
         self,
         schema: UISchema,
-        config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        config: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         处理外部 API 调用
 
@@ -486,8 +704,8 @@ class InstanceService:
     def _render_dict_template(
         self,
         schema: UISchema,
-        template_dict: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        template_dict: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         渲染字典中的模板值
 

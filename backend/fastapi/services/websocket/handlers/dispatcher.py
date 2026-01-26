@@ -1,8 +1,8 @@
 """WebSocket 消息分发器 - 负责向连接发送消息"""
 
-from typing import Dict, Optional, Set
 import logging
 from fastapi import WebSocket
+from typing import Any
 
 from ..connection.pool import ConnectionPool
 
@@ -18,7 +18,7 @@ class MessageDispatcher:
     async def send_to_instance(
         self,
         instance_id: str,
-        message: Dict,
+        message: dict[str, Any],
         auto_cleanup: bool = True
     ) -> bool:
         """向指定实例的所有连接发送消息
@@ -36,7 +36,7 @@ class MessageDispatcher:
             return False
 
         connections = self._pool.get_all(instance_id)
-        disconnected: Set[WebSocket] = set()
+        disconnected: set[WebSocket] = set()
 
         for websocket in connections:
             try:
@@ -58,9 +58,9 @@ class MessageDispatcher:
     async def send_patch(
         self,
         instance_id: str,
-        patch: Dict,
-        patch_id: Optional[int] = None,
-        base_version: Optional[int] = None
+        patch: dict[str, Any],
+        patch_id: int | None = None,
+        base_version: int | None = None
     ) -> bool:
         """发送 Patch 消息到指定实例
 
@@ -83,7 +83,7 @@ class MessageDispatcher:
 
         return await self.send_to_instance(instance_id, message)
 
-    async def broadcast(self, message: Dict) -> int:
+    async def broadcast(self, message: dict[str, Any]) -> int:
         """向所有实例广播消息
 
         Args:

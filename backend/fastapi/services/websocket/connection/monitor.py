@@ -1,9 +1,8 @@
 """WebSocket 连接监控器 - 提供连接统计和监控功能"""
 
 import logging
-from typing import Dict, List
 from .pool import ConnectionPool
-
+from typing import Any
 logger = logging.getLogger(__name__)
 
 
@@ -13,7 +12,7 @@ class ConnectionMonitor:
     def __init__(self, connection_pool: ConnectionPool):
         self._pool = connection_pool
 
-    def get_stats(self) -> Dict:
+    def get_stats(self) -> dict[str, Any]:
         """获取连接统计信息
 
         Returns:
@@ -34,7 +33,7 @@ class ConnectionMonitor:
             "instances": instance_stats
         }
 
-    def get_instance_stats(self, instance_id: str) -> Dict:
+    def get_instance_stats(self, instance_id: str) -> dict[str, Any]:
         """获取指定实例的连接统计
 
         Args:
@@ -49,7 +48,7 @@ class ConnectionMonitor:
             "has_connections": self._pool.has_instance(instance_id)
         }
 
-    def health_check(self) -> Dict:
+    def health_check(self) -> dict[str, Any]:
         """健康检查
 
         Returns:
@@ -63,7 +62,7 @@ class ConnectionMonitor:
             "stats": stats
         }
 
-    def list_active_instances(self) -> List[str]:
+    def list_active_instances(self) -> list[str]:
         """列出所有有活跃连接的实例
 
         Returns:

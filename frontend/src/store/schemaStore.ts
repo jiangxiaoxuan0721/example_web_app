@@ -96,24 +96,66 @@ export const useSchemaStore = create<SchemaStore>()(
 
         // ===== 特殊路径处理（与后端 apply_patch_to_schema 保持一致） =====
 
-        // 1. actions.X.patches - 更新 action 的 patches
+        // 1. actions.X.patches - 更新 action 的 patches（全局 actions）
         if (keys.length >= 3 && keys[0] === 'actions' && keys[2] === 'patches') {
           const actionIndex = parseInt(keys[1]);
           if (!isNaN(actionIndex) && newSchema.actions?.[actionIndex]) {
             newSchema.actions[actionIndex].patches = value;
             affectedActionId = newSchema.actions[actionIndex].id;
-            console.log(`[SchemaStore] 更新 action patches: ${affectedActionId}`);
+            console.log(`[SchemaStore] 更新全局 action patches: ${affectedActionId}`);
           }
           continue;
         }
 
-        // 2. actions.X - 替换整个 action
+        // 2. blocks.X.props.actions.X.patches - 更新 block action 的 patches
+        if (keys.length >= 5 && keys[0] === 'blocks' && keys[2] === 'props' && keys[3] === 'actions' && keys[5] === 'patches') {
+          const blockIndex = parseInt(keys[1]);
+          const actionIndex = parseInt(keys[4]);
+          if (!isNaN(blockIndex) && !isNaN(actionIndex) && newSchema.blocks?.[blockIndex]) {
+            const block = newSchema.blocks[blockIndex];
+            if (block.props?.actions?.[actionIndex]) {
+              block.props.actions[actionIndex].patches = value;
+              affectedActionId = block.props.actions[actionIndex].id;
+              console.log(`[SchemaStore] 更新 block action patches: ${affectedActionId}`);
+            }
+          }
+          continue;
+        }
+
+        // 3. actions.X - 替换整个 action（全局 actions）
         if (keys.length >= 2 && keys[0] === 'actions') {
           const actionIndex = parseInt(keys[1]);
           if (!isNaN(actionIndex) && newSchema.actions?.[actionIndex]) {
             newSchema.actions[actionIndex] = value;
             affectedActionId = value.id || newSchema.actions[actionIndex].id;
-            console.log(`[SchemaStore] 替换 action: ${affectedActionId}`);
+            console.log(`[SchemaStore] 替换全局 action: ${affectedActionId}`);
+          }
+          continue;
+        }
+
+        // 4. blocks.X.props.actions.X - 替换 block action
+        if (keys.length >= 5 && keys[0] === 'blocks' && keys[2] === 'props' && keys[3] === 'actions') {
+          const blockIndex = parseInt(keys[1]);
+          const actionIndex = parseInt(keys[4]);
+          if (!isNaN(blockIndex) && !isNaN(actionIndex) && newSchema.blocks?.[blockIndex]) {
+            const block = newSchema.blocks[blockIndex];
+            if (block.props?.actions?.[actionIndex]) {
+              block.props.actions[actionIndex] = value;
+              affectedActionId = value.id || block.props.actions[actionIndex].id;
+              console.log(`[SchemaStore] 替换 block action: ${affectedActionId}`);
+            }
+          }
+          continue;
+        }
+
+        // 5. blocks.X.props.actions - 替换 block 的 actions 数组
+        if (keys.length >= 4 && keys[0] === 'blocks' && keys[2] === 'props' && keys[3] === 'actions') {
+          const blockIndex = parseInt(keys[1]);
+          if (!isNaN(blockIndex) && newSchema.blocks?.[blockIndex]) {
+            const block = newSchema.blocks[blockIndex];
+            block.props = block.props || {};
+            block.props.actions = Array.isArray(value) ? value : [];
+            console.log(`[SchemaStore] 替换 block actions: block ${blockIndex}`);
           }
           continue;
         }
@@ -145,7 +187,7 @@ export const useSchemaStore = create<SchemaStore>()(
           const fieldIndex = parseInt(keys[4]);
 
           if (!isNaN(blockIndex) && !isNaN(fieldIndex) &&
-              newSchema.blocks?.[blockIndex]) {
+            newSchema.blocks?.[blockIndex]) {
             const block = newSchema.blocks[blockIndex];
             affectedBlockId = block.id;
 
@@ -193,7 +235,7 @@ export const useSchemaStore = create<SchemaStore>()(
           const fieldAttr = keys[5];
 
           if (!isNaN(blockIndex) && !isNaN(fieldIndex) &&
-              newSchema.blocks?.[blockIndex]) {
+            newSchema.blocks?.[blockIndex]) {
             const block = newSchema.blocks[blockIndex];
             affectedBlockId = block.id;
 

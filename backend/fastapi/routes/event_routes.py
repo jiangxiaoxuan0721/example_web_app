@@ -1,5 +1,8 @@
 """事件相关 API 路由"""
 
+from typing import Any
+
+
 from backend.core import SchemaManager, PatchHistoryManager
 from ..services import InstanceService
 
@@ -24,7 +27,7 @@ def register_event_routes(
     """
 
     @app.post("/ui/event")
-    async def handle_event(event: dict):
+    async def handle_event(event: dict[Any, Any]) -> dict[str, str] | dict[str, str | Any | int | dict[Any, Any]] | dict[str, Any] | dict[str, str | Any | dict[Any, Any] | None]:
         """
         处理前端事件
         """
@@ -32,8 +35,9 @@ def register_event_routes(
         action_id = event.get("payload", {}).get("actionId")
         instance_id = event.get("pageKey", default_instance_id)
         params = event.get("payload", {}).get("params", {})
+        block_id = event.get("payload", {}).get("blockId")  # 接收 blockId
 
-        print(f"[EventRoutes] 收到事件: {event_type}, actionId: {action_id}, instanceId: {instance_id}, params={params}")
+        print(f"[EventRoutes] 收到事件: {event_type}, actionId: {action_id}, instanceId: {instance_id}, params={params}, blockId={block_id}")
 
         # 获取当前实例的 Schema
         schema = schema_manager.get(instance_id)
@@ -70,29 +74,23 @@ def register_event_routes(
 
         # 处理操作按钮点击事件
         if event_type == "action:click":
-            # 先同步前端传来的 params（如果有）
-            if params and isinstance(params, dict):
-                from ..services.patch import apply_patch_to_schema
-                params_patch = {f"state.params.{k}": v for k, v in params.items()}
-                print(f"[EventRoutes] 同步前端 params: {params_patch}")
-                apply_patch_to_schema(schema, params_patch)
-
-                # 保存到历史记录并推送
-                patch_id = patch_history.save(instance_id, params_patch)
-                await ws_manager.send_patch(instance_id, params_patch, patch_id)
-
             # 调用 InstanceService 处理 action
+            # 注意：不再在这里同步前端传来的 params，让 InstanceService 来处理
             print(f"[EventRoutes] 调用 instance_service.handle_action")
-            result = instance_service.handle_action(instance_id, action_id, params)
+            result = instance_service.handle_action(instance_id, action_id, params, block_id)
             print(f"[EventRoutes] instance_service.handle_action 返回: {result}")
 
             if result.get("status") == "success" and result.get("patch"):
                 patch = result["patch"]
 
+                # 注意：schema 已在 handle_action 中通过 apply_patch_to_schema 更新
+                # 由于 schema 是引用类型，schema_manager._instances[instance_id] 中的对象已被修改
+                # 因此不需要再调用 schema_manager.set()
+
                 # 保存到历史记录
                 patch_id = patch_history.save(instance_id, patch)
 
-                # WebSocket 推送
+                # WebSocket 推送（此时 schema.state.runtime 已更新）
                 await ws_manager.send_patch(instance_id, patch, patch_id)
 
                 return {

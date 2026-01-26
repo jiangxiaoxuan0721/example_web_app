@@ -165,6 +165,35 @@ def handle_remove_operation(schema: UISchema, path: str, value: Any):
             print(f"[PatchRoutes] Block index {block_index} out of range or no fields found")
             return {"success": False, "reason": f"Block index {block_index} invalid or has no fields"}
 
+        # Special handling for blocks.X.props.actions path
+        if len(keys) == 4 and keys[0] == "blocks" and keys[2] == "props" and keys[3] == "actions":
+            # This is removing an action from a block
+            block_index = int(keys[1])
+            if block_index < len(schema.blocks):
+                block = schema.blocks[block_index]
+                # Check if block has actions
+                if hasattr(block.props, "actions") and isinstance(getattr(block.props, "actions"), list):
+                    # Find action to remove by id
+                    action_id = value.get("id") if isinstance(value, dict) else value
+
+                    for i, action in enumerate(getattr(block.props, "actions")):
+                        action_id_check = getattr(action, "id") if hasattr(action, "id") else action.get("id")
+                        if action_id_check == action_id:
+                            # Remove action
+                            getattr(block.props, "actions").pop(i)
+                            print(f"[PatchRoutes] Removed action from block {block_index}: {action_id}")
+                            return {"success": True}
+
+                    print(f"[PatchRoutes] Action with id '{action_id}' not found in block {block_index}")
+                    return {"success": False, "reason": f"Action with id '{action_id}' not found in block {block_index}"}
+                else:
+                    # Block has no actions array or it's None
+                    print(f"[PatchRoutes] Block {block_index} has no actions array")
+                    return {"success": False, "reason": f"Block {block_index} has no actions"}
+
+            print(f"[PatchRoutes] Block index {block_index} out of range")
+            return {"success": False, "reason": f"Block index {block_index} out of range"}
+
         # General navigation for other paths
         current: Any = schema
         for key in keys[:-1]:
@@ -173,13 +202,19 @@ def handle_remove_operation(schema: UISchema, path: str, value: Any):
                 if isinstance(current, list) and 0 <= index < len(current):
                     current = current[index]
                 else:
-                    return
+                    return {"success": False, "reason": f"Index {index} out of range for list"}
             else:
-                current = getattr(current, key)
+                try:
+                    current = getattr(current, key)
+                except AttributeError:
+                    return {"success": False, "reason": f"Attribute '{key}' not found"}
 
         # Get the final container
         final_key = keys[-1]
-        container = getattr(current, final_key)
+        try:
+            container = getattr(current, final_key)
+        except AttributeError:
+            return {"success": False, "reason": f"Attribute '{final_key}' not found"}
 
         # Remove the value from the container
         if isinstance(container, list):
@@ -406,6 +441,87 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
             print(f"[PatchRoutes] Block index {block_index} out of range or no props found")
             return {"success": False, "reason": f"Block index {block_index} invalid or has no props"}
 
+        # Special handling for blocks.X.props.actions path
+        if len(keys) == 4 and keys[0] == "blocks" and keys[2] == "props" and keys[3] == "actions":
+            # This is adding an action to a block
+            block_index = int(keys[1])
+            if block_index < len(schema.blocks):
+                block = schema.blocks[block_index]
+                if hasattr(block.props, "actions"):
+                    # Check if action with same id already exists
+                    new_action_id = value.get("id") if isinstance(value, dict) else getattr(value, "id", None)
+                    if new_action_id:
+                        current_actions = getattr(block.props, "actions")
+                        if isinstance(current_actions, list):
+                            for existing_action in current_actions:
+                                action_id_check = getattr(existing_action, "id") if hasattr(existing_action, "id") else existing_action.get("id")
+                                if action_id_check == new_action_id:
+                                    print(f"[PatchRoutes] Action with id '{new_action_id}' already exists in block {block_index}, skipping add")
+                                    return {"success": False, "reason": f"Action with id '{new_action_id}' already exists in block {block_index}"}
+                        else:
+                            # actions is a dict
+                            for existing_action in current_actions.values():
+                                action_id_check = getattr(existing_action, "id") if hasattr(existing_action, "id") else existing_action.get("id")
+                                if action_id_check == new_action_id:
+                                    print(f"[PatchRoutes] Action with id '{new_action_id}' already exists in block {block_index}, skipping add")
+                                    return {"success": False, "reason": f"Action with id '{new_action_id}' already exists in block {block_index}"}
+
+                    # Convert current actions to a list if it's not already
+                    if not isinstance(getattr(block.props, "actions"), list):
+                        current_actions = list(getattr(block.props, "actions").values())
+                    else:
+                        current_actions = getattr(block.props, "actions")
+
+                    # Convert dict value to an ActionConfig object
+                    if isinstance(value, dict):
+                        action_config = ActionConfig(**value)
+                    else:
+                        action_config = value
+
+                    # Add new action
+                    current_actions.append(action_config)
+
+                    # Update actions property
+                    setattr(block.props, "actions", current_actions)
+
+                    print(f"[PatchRoutes] Added action to block {block_index}: {value.get('id')}")
+
+                    return {"success": True}
+
+            print(f"[PatchRoutes] Block index {block_index} out of range or no props found")
+            return {"success": False, "reason": f"Block index {block_index} invalid or has no props"}
+
+        # Special handling for state.params.* and state.runtime.* paths
+        if len(keys) >= 3 and keys[0] == "state":
+            target_section = keys[1]  # 'params' or 'runtime'
+            target_key = keys[2]      # the key under params or runtime
+
+            # Get the container (params or runtime dict)
+            if target_section == "params":
+                container = schema.state.params
+            elif target_section == "runtime":
+                container = schema.state.runtime
+            else:
+                return {"success": False, "reason": f"Invalid state section: {target_section}"}
+
+            # Add the value to the container
+            if container is None:
+                return {"success": False, "reason": f"Container {target_section} is None"}
+
+            if isinstance(container, list):
+                container.append(value)
+                print(f"[PatchRoutes] Added value to list {target_section}.{target_key}")
+            elif isinstance(container, dict):
+                if target_key not in container or not isinstance(container[target_key], list):
+                    # Create list if it doesn't exist or isn't a list
+                    container[target_key] = []
+                container[target_key].append(value)
+                print(f"[PatchRoutes] Added value to dict {target_section}.{target_key} (now has {len(container[target_key])} items)")
+            else:
+                return {"success": False, "reason": f"Container {target_section}.{target_key} is not a list or dict"}
+
+            return {"success": True}
+
         # General navigation for other paths
         current: Any = schema
         for key in keys[:-1]:
@@ -414,13 +530,19 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
                 if isinstance(current, list) and 0 <= index < len(current):
                     current = current[index]
                 else:
-                    return
+                    return {"success": False, "reason": f"Index {index} out of range for list"}
             else:
-                current = getattr(current, key)
+                try:
+                    current = getattr(current, key)
+                except AttributeError:
+                    return {"success": False, "reason": f"Attribute '{key}' not found"}
 
         # Get the final container
         final_key = keys[-1]
-        container = getattr(current, final_key)
+        try:
+            container = getattr(current, final_key)
+        except AttributeError:
+            return {"success": False, "reason": f"Attribute '{final_key}' not found"}
 
         # Add the value to the container
         if isinstance(container, list):
@@ -454,12 +576,12 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
             setattr(current, final_key, [container, value])
 
         print(f"[PatchRoutes] Add operation applied: path={path}, value={value}")
+        return {"success": True}
 
     except (AttributeError, IndexError, ValueError) as e:
         print(f"[PatchRoutes] Error applying add operation: {e}")
         print(f"[PatchRoutes] Path: {path}, Keys: {keys}")
-        # For debugging, let's not raise an error but just log it
-        # This way we can continue with other patches
+        return {"success": False, "reason": str(e)}
 
 
 def register_patch_routes(
@@ -478,7 +600,7 @@ def register_patch_routes(
     """
 
     @app.post("/ui/patch")
-    async def apply_patch_endpoint(request: dict):
+    async def apply_patch_endpoint(request: dict[Any, Any]):
         """
         应用 Patch 到 Schema（供 MCP 工具调用）
 
@@ -849,7 +971,7 @@ def register_patch_routes(
             }
 
     @app.get("/ui/patches")
-    async def get_patches(instance_id: Optional[str] = Query(None, alias="instanceId")):
+    async def get_patches(instance_id: str | None = Query(None, alias="instanceId")):
         """
         获取所有 Patch 历史记录
         支持 Patch 重放
@@ -869,7 +991,7 @@ def register_patch_routes(
         }
 
     @app.get("/ui/patches/replay/{patch_id}")
-    async def replay_patch(patch_id: int, instance_id: Optional[str] = Query(None, alias="instanceId")):
+    async def replay_patch(patch_id: int, instance_id: str | None = Query(None, alias="instanceId")):
         """
         重放指定 Patch
 

@@ -1,15 +1,17 @@
 /** 操作按钮组件 */
 
 import { ActionConfig } from '../types/schema';
+import { useEventEmitter } from '../utils/eventEmitter';
 
 interface ActionButtonProps {
   action: ActionConfig;
   highlighted?: boolean;
-  onApiClick: () => void;  // API 操作回调
   onNavigate?: (targetInstance: string) => void;  // 导航操作回调（可选）
+  blockId?: string;  // 所属 block ID（用于 block 级别的 actions）
 }
 
-export default function ActionButton({ action, highlighted = false, onApiClick, onNavigate }: ActionButtonProps) {
+export default function ActionButton({ action, highlighted = false, onNavigate, blockId }: ActionButtonProps) {
+  const { emitActionClickWithBlockId } = useEventEmitter();
   const getBackgroundColor = (hover: boolean = false) => {
     if (action.style === 'primary') {
       return hover ? '#0056b3' : '#007bff';
@@ -26,8 +28,8 @@ export default function ActionButton({ action, highlighted = false, onApiClick, 
       // 导航到目标实例
       onNavigate(action.target_instance);
     } else {
-      // 默认为 API 操作
-      onApiClick();
+      // 默认为 API 操作，发送事件到后端（传递 blockId）
+      emitActionClickWithBlockId(action.id, blockId);
     }
   };
 

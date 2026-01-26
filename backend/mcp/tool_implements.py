@@ -4,7 +4,7 @@
 工具定义在tool_definitions.py文件中。
 """
 
-from typing import List, Dict, Any, Optional
+from typing import Any
 import httpx
 from backend.config import settings
 
@@ -14,10 +14,10 @@ FASTAPI_BASE_URL = f"http://localhost:{settings.port}"
 
 async def apply_patch_to_fastapi(
     instance_id: str,
-    patches: List[Dict[str, Any]],
-    new_instance_id: Optional[str] = None,
-    target_instance_id: Optional[str] = None
-) -> Dict[str, Any]:
+    patches: list[dict[str, Any]],
+    new_instance_id: str | None = None,
+    target_instance_id: str | None = None
+) -> dict[str, Any]:
     """通过 HTTP API 调用 FastAPI 后端应用 patch"""
     try:
         async with httpx.AsyncClient() as client:
@@ -53,129 +53,414 @@ async def apply_patch_to_fastapi(
 
 async def patch_ui_state_impl(
     instance_id: str,
-    patches: List[Dict[str, Any]] = [],
-    new_instance_id: Optional[str] = None,
-    target_instance_id: Optional[str] = None,
-    field_key: Optional[str] = None,
-    updates: Optional[Dict[str, Any]] = None,
-    remove_field: Optional[bool] = False,
-    block_index: Optional[int] = 0
-) -> Dict[str, Any]:
+    patches: list[dict[str, Any]] = [],
+    new_instance_id: str | None = None,
+    target_instance_id: str | None = None
+) -> dict[str, Any]:
     """patch_ui_state工具的实现"""
-    
-    # 如果使用了快捷操作，构建补丁
-    if (field_key is not None and ((remove_field is True) or (updates is not None))):
-        # 确保patches不为None
-        if patches is None:
-            patches = []
-        
-        try:
-            # 获取当前schema以验证字段存在
-            schema_result = await get_schema_from_fastapi(instance_id)
-            
-            if schema_result.get("status") == "error":
-                return {
-                    "status": "error",
-                    "error": f"Failed to get schema: {schema_result.get('error')}"
-                }
-            
-            schema = schema_result.get("schema", {})
-            blocks = schema.get("blocks", [])
-            
-            # 验证块索引有效
-            if block_index is not None and block_index >= len(blocks):
-                return {
-                    "status": "error",
-                    "error": f"Block index {block_index} out of range. Only {len(blocks)} blocks available."
-                }
-            
-            # 检查是否是表单块
-            block = blocks[block_index]
-            if block.get("type") != "form" or not block.get("props", {}).get("fields"):
-                return {
-                    "status": "error",
-                    "error": f"Block at index {block_index} is not a form block or has no fields."
-                }
-            
-            # 查找字段
-            fields = block["props"]["fields"]
-            field_to_modify = None
-            field_index = -1
-            
-            for i, field in enumerate(fields):
-                if isinstance(field, dict) and field.get("key") == field_key:
-                    field_to_modify = field
-                    field_index = i
-                    break
-                elif hasattr(field, "key") and getattr(field, "key") == field_key:
-                    field_to_modify = field
-                    field_index = i
-                    break
-            
-            if not field_to_modify:
-                return {
-                    "status": "error",
-                    "error": f"Field with key '{field_key}' not found in block {block_index}."
-                }
-            
-            # 根据操作类型构建补丁
-            if remove_field is True:
-                # 删除字段
-                patch = {
-                    "op": "remove",
-                    "path": f"blocks.{block_index}.props.fields",
-                    "value": {
-                        "key": field_key
-                    }
-                }
-                patches.append(patch)
-            elif updates is not None:
-                # 更新字段
-                updated_field = field_to_modify.copy() if isinstance(field_to_modify, dict) else field_to_modify.__dict__.copy()
-                updated_field.update(updates)
-                
-                patch = {
-                    "op": "set",
-                    "path": f"blocks.{block_index}.props.fields.{field_index}",
-                    "value": updated_field
-                }
-                patches.append(patch)
-        except Exception as e:
-            return {
-                "status": "error",
-                "error": f"Failed to process field operation: {str(e)}"
-            }
-    
-    # 如果没有提供patches且没有使用快捷操作，返回错误
-    elif patches is None:
+    # 验证patches
+    if not patches:
         return {
             "status": "error",
-            "error": "Either patches or field operation (field_key with updates/remove_field) must be provided"
+            "error": "Patches array must be provided"
         }
-    
+
     # 通过 HTTP API 调用 FastAPI 后端
     result = await apply_patch_to_fastapi(instance_id, patches, new_instance_id, target_instance_id)
 
     print(f"[MCP] 调用 FastAPI patch: instance_id={instance_id}, patches={patches}")
     print(f"[MCP] FastAPI 响应: {result}")
 
-    # 如果操作成功且是字段操作（更新或删除），标记自动刷新
-    # 注意：FastAPI 的 patch 接口内部已经通过 WebSocket 推送更新到前端
-    # 这里的自动刷新是指调用 access_instance 接口，确保实例为用户可见状态
-    if result.get("status") == "success" and (field_key is not None):
-        print(f"[MCP] 自动刷新实例: {instance_id}")
-        access_result = await access_instance_from_fastapi(instance_id)
-        print(f"[MCP] 刷新实例结果: {access_result}")
+    return result
 
-        # 在返回结果中添加刷新状态
-        result["auto_refreshed"] = True
-        if access_result.get("status") != "success":
-            result["auto_refresh_error"] = access_result.get("error", "Unknown refresh error")
+
+async def add_field_impl(
+    instance_id: str,
+    field: dict[str, Any],
+    block_index: int | None = 0,
+    state_path: str | None = None,
+    initial_value: Any | None = None
+) -> dict[str, Any]:
+    """add_field工具的实现"""
+    patches = []
+
+    # 如果提供了state_path和initial_value，先初始化状态
+    if state_path is not None:
+        value = initial_value
+        # 根据字段类型设置默认值
+        if value is None:
+            field_type = field.get("type", "text")
+            if field_type in ["number"]:
+                value = 0
+            elif field_type in ["checkbox"]:
+                value = False
+            elif field_type in ["multiselect", "tag"]:
+                value = []
+            elif field_type in ["progress"]:
+                value = {"current": 0, "total": 100, "showLabel": True}
+            elif field_type in ["badge"]:
+                value = {"count": 0, "label": "", "dot": False, "color": "#f5222d", "showZero": False, "max": 99}
+            elif field_type in ["table"]:
+                value = []
+            elif field_type in ["modal"]:
+                value = {"visible": False, "title": "", "content": "", "width": 520, "okText": "确定", "cancelText": "取消"}
+            else:
+                value = ""
+
+        patches.append({
+            "op": "set",
+            "path": state_path,
+            "value": value
+        })
+
+    # 添加字段
+    patches.append({
+        "op": "add",
+        "path": f"blocks.{block_index}.props.fields",
+        "value": field
+    })
+
+    # 通过 HTTP API 调用 FastAPI 后端
+    result = await apply_patch_to_fastapi(instance_id, patches)
+
+    print(f"[MCP] 添加字段: instance_id={instance_id}, block_index={block_index}, field={field}")
+    print(f"[MCP] FastAPI 响应: {result}")
 
     return result
 
 
-async def get_schema_from_fastapi(instance_id: Optional[str] = None) -> Dict[str, Any]:
+async def update_field_impl(
+    instance_id: str,
+    field_key: str,
+    updates: dict[str, Any],
+    block_index: int | None = 0,
+    update_all: bool | None = False
+) -> dict[str, Any]:
+    """update_field工具的实现"""
+    # 获取当前schema以查找字段
+    schema_result = await get_schema_from_fastapi(instance_id)
+
+    if schema_result.get("status") == "error":
+        return {
+            "status": "error",
+            "error": f"Failed to get schema: {schema_result.get('error')}"
+        }
+
+    schema = schema_result.get("schema", {})
+    blocks = schema.get("blocks", [])
+
+    patches = []
+
+    if update_all:
+        # 更新所有块中的匹配字段
+        for i, block in enumerate(blocks):
+            if block.get("type") != "form" or not block.get("props", {}).get("fields"):
+                continue
+
+            fields = block["props"]["fields"]
+            for j, field in enumerate(fields):
+                field_obj = field if isinstance(field, dict) else field.__dict__
+                if field_obj.get("key") == field_key:
+                    updated_field = field_obj.copy()
+                    updated_field.update(updates)
+                    patches.append({
+                        "op": "set",
+                        "path": f"blocks.{i}.props.fields.{j}",
+                        "value": updated_field
+                    })
+    else:
+        # 验证块索引有效
+        if block_index is None or block_index >= len(blocks):
+            return {
+                "status": "error",
+                "error": f"Block index {block_index} out of range. Only {len(blocks)} blocks available."
+            }
+
+        # 检查是否是表单块
+        block = blocks[block_index]
+        if block.get("type") != "form" or not block.get("props", {}).get("fields"):
+            return {
+                "status": "error",
+                "error": f"Block at index {block_index} is not a form block or has no fields."
+            }
+
+        # 查找字段
+        fields = block["props"]["fields"]
+        field_index = -1
+
+        for i, field in enumerate(fields):
+            field_obj = field if isinstance(field, dict) else field.__dict__
+            if field_obj.get("key") == field_key:
+                field_index = i
+                break
+
+        if field_index == -1:
+            return {
+                "status": "error",
+                "error": f"Field with key '{field_key}' not found in block {block_index}."
+            }
+
+        # 更新字段
+        field_obj = fields[field_index]
+        updated_field = field_obj if isinstance(field_obj, dict) else field_obj.__dict__.copy()
+        updated_field.update(updates)
+
+        patches.append({
+            "op": "set",
+            "path": f"blocks.{block_index}.props.fields.{field_index}",
+            "value": updated_field
+        })
+
+    # 通过 HTTP API 调用 FastAPI 后端
+    result = await apply_patch_to_fastapi(instance_id, patches)
+
+    print(f"[MCP] 更新字段: instance_id={instance_id}, field_key={field_key}, updates={updates}")
+    print(f"[MCP] FastAPI 响应: {result}")
+
+    return result
+
+
+async def remove_field_impl(
+    instance_id: str,
+    field_key: str,
+    block_index: int | None = 0,
+    remove_all: bool | None = False
+) -> dict[str, Any]:
+    """remove_field工具的实现"""
+    # 获取当前schema以查找字段
+    schema_result = await get_schema_from_fastapi(instance_id)
+
+    if schema_result.get("status") == "error":
+        return {
+            "status": "error",
+            "error": f"Failed to get schema: {schema_result.get('error')}"
+        }
+
+    schema = schema_result.get("schema", {})
+    blocks = schema.get("blocks", [])
+
+    patches = []
+
+    if remove_all:
+        # 删除所有块中的匹配字段
+        for i, block in enumerate(blocks):
+            if block.get("type") != "form" or not block.get("props", {}).get("fields"):
+                continue
+
+            fields = block["props"]["fields"]
+            has_field = any(
+                (field if isinstance(field, dict) else field.__dict__).get("key") == field_key
+                for field in fields
+            )
+
+            if has_field:
+                patches.append({
+                    "op": "remove",
+                    "path": f"blocks.{i}.props.fields",
+                    "value": {"key": field_key}
+                })
+    else:
+        # 验证块索引有效
+        if block_index is None or block_index >= len(blocks):
+            return {
+                "status": "error",
+                "error": f"Block index {block_index} out of range. Only {len(blocks)} blocks available."
+            }
+
+        # 检查是否是表单块
+        block = blocks[block_index]
+        if block.get("type") != "form" or not block.get("props", {}).get("fields"):
+            return {
+                "status": "error",
+                "error": f"Block at index {block_index} is not a form block or has no fields."
+            }
+
+        # 查找字段
+        fields = block["props"]["fields"]
+        has_field = any(
+            (field if isinstance(field, dict) else field.__dict__).get("key") == field_key
+            for field in fields
+        )
+
+        if not has_field:
+            return {
+                "status": "error",
+                "error": f"Field with key '{field_key}' not found in block {block_index}."
+            }
+
+        # 删除字段
+        patches.append({
+            "op": "remove",
+            "path": f"blocks.{block_index}.props.fields",
+            "value": {"key": field_key}
+        })
+
+    # 通过 HTTP API 调用 FastAPI 后端
+    result = await apply_patch_to_fastapi(instance_id, patches)
+
+    print(f"[MCP] 删除字段: instance_id={instance_id}, field_key={field_key}")
+    print(f"[MCP] FastAPI 响应: {result}")
+
+    return result
+
+
+async def add_block_impl(
+    instance_id: str,
+    block: dict[str, Any],
+    position: str | None = "end"
+) -> dict[str, Any]:
+    """add_block工具的实现"""
+    # 获取当前schema以确定位置
+    schema_result = await get_schema_from_fastapi(instance_id)
+
+    if schema_result.get("status") == "error":
+        return {
+            "status": "error",
+            "error": f"Failed to get schema: {schema_result.get('error')}"
+        }
+
+    schema = schema_result.get("schema", {})
+    blocks = schema.get("blocks", [])
+
+    # 确定插入位置
+    if position == "start" or position == "0":
+        # 使用insert操作在开始位置插入
+        patches = [{
+            "op": "insert",
+            "path": "blocks",
+            "index": 0,
+            "value": block
+        }]
+    elif isinstance(position, int) and 0 <= position < len(blocks):
+        # 在指定索引处插入
+        patches = [{
+            "op": "insert",
+            "path": "blocks",
+            "index": position,
+            "value": block
+        }]
+    else:
+        # 在末尾添加
+        patches = [{
+            "op": "add",
+            "path": "blocks",
+            "value": block
+        }]
+
+    # 通过 HTTP API 调用 FastAPI 后端
+    result = await apply_patch_to_fastapi(instance_id, patches)
+
+    print(f"[MCP] 添加块: instance_id={instance_id}, block={block}, position={position}")
+    print(f"[MCP] FastAPI 响应: {result}")
+
+    return result
+
+
+async def remove_block_impl(
+    instance_id: str,
+    block_id: str,
+    remove_all: bool | None = False
+) -> dict[str, Any]:
+    """remove_block工具的实现"""
+    patches = []
+
+    if remove_all:
+        # 删除所有匹配的块
+        patches.append({
+            "op": "remove",
+            "path": "blocks",
+            "value": {"id": block_id, "remove_all": True}
+        })
+    else:
+        # 删除单个块
+        patches.append({
+            "op": "remove",
+            "path": "blocks",
+            "value": {"id": block_id}
+        })
+
+    # 通过 HTTP API 调用 FastAPI 后端
+    result = await apply_patch_to_fastapi(instance_id, patches)
+
+    print(f"[MCP] 删除块: instance_id={instance_id}, block_id={block_id}")
+    print(f"[MCP] FastAPI 响应: {result}")
+
+    return result
+
+
+async def add_action_impl(
+    instance_id: str,
+    action: dict[str, Any],
+    block_index: int | None = None
+) -> dict[str, Any]:
+    """add_action工具的实现"""
+    patches = []
+
+    if block_index is not None:
+        # 添加到块级别的actions
+        patches.append({
+            "op": "add",
+            "path": f"blocks.{block_index}.props.actions",
+            "value": action
+        })
+    else:
+        # 添加到全局actions
+        patches.append({
+            "op": "add",
+            "path": "actions",
+            "value": action
+        })
+
+    # 通过 HTTP API 调用 FastAPI 后端
+    result = await apply_patch_to_fastapi(instance_id, patches)
+
+    print(f"[MCP] 添加action: instance_id={instance_id}, action={action}, block_index={block_index}")
+    print(f"[MCP] FastAPI 响应: {result}")
+
+    return result
+
+
+async def remove_action_impl(
+    instance_id: str,
+    action_id: str,
+    block_index: int | None = None,
+    remove_all: bool | None = False
+) -> dict[str, Any]:
+    """remove_action工具的实现"""
+    patches = []
+
+    if remove_all:
+        # 删除所有匹配的action（全局和块级别）
+        patches.append({
+            "op": "remove",
+            "path": "actions",
+            "value": {"id": action_id, "remove_all": True}
+        })
+    elif block_index is not None:
+        # 从指定块中删除action
+        patches.append({
+            "op": "remove",
+            "path": f"blocks.{block_index}.props.actions",
+            "value": {"id": action_id}
+        })
+    else:
+        # 从全局actions中删除
+        patches.append({
+            "op": "remove",
+            "path": "actions",
+            "value": {"id": action_id}
+        })
+
+    # 通过 HTTP API 调用 FastAPI 后端
+    result = await apply_patch_to_fastapi(instance_id, patches)
+
+    print(f"[MCP] 删除action: instance_id={instance_id}, action_id={action_id}, block_index={block_index}")
+    print(f"[MCP] FastAPI 响应: {result}")
+
+    return result
+
+
+async def get_schema_from_fastapi(instance_id: str | None = None) -> dict[str, Any]:
     """通过 HTTP API 从 FastAPI 获取 Schema"""
     try:
         async with httpx.AsyncClient() as client:
@@ -200,13 +485,13 @@ async def get_schema_from_fastapi(instance_id: Optional[str] = None) -> Dict[str
         }
 
 
-async def get_schema_impl(instance_id: Optional[str] = None) -> Dict[str, Any]:
+async def get_schema_impl(instance_id: str | None = None) -> dict[str, Any]:
     """get_schema工具的实现"""
     # 通过 HTTP API 调用 FastAPI 后端
     return await get_schema_from_fastapi(instance_id)
 
 
-async def list_instances_from_fastapi() -> Dict[str, Any]:
+async def list_instances_from_fastapi() -> dict[str, Any]:
     """通过 HTTP API 从 FastAPI 获取实例列表"""
     try:
         async with httpx.AsyncClient() as client:
@@ -228,13 +513,13 @@ async def list_instances_from_fastapi() -> Dict[str, Any]:
         }
 
 
-async def list_instances_impl() -> Dict[str, Any]:
+async def list_instances_impl() -> dict[str, Any]:
     """list_instances工具的实现"""
     # 通过 HTTP API 调用 FastAPI 后端
     return await list_instances_from_fastapi()
 
 
-async def access_instance_from_fastapi(instance_id: str) -> Dict[str, Any]:
+async def access_instance_from_fastapi(instance_id: str) -> dict[str, Any]:
     """通过 HTTP API 访问指定实例"""
     try:
         async with httpx.AsyncClient() as client:
@@ -258,7 +543,7 @@ async def access_instance_from_fastapi(instance_id: str) -> Dict[str, Any]:
         }
 
 
-async def access_instance_impl(instance_id: str) -> Dict[str, Any]:
+async def access_instance_impl(instance_id: str) -> dict[str, Any]:
     """access_instance工具的实现"""
     print(f"[MCP] 访问实例: {instance_id}")
     result = await access_instance_from_fastapi(instance_id)
@@ -269,8 +554,8 @@ async def access_instance_impl(instance_id: str) -> Dict[str, Any]:
 async def validate_completion_impl(
     instance_id: str,
     intent: str,
-    completion_criteria: List[Dict[str, Any]]
-) -> Dict[str, Any]:
+    completion_criteria: list[dict[str, Any]]
+) -> dict[str, Any]:
     """validate_completion工具的实现"""
     
     try:
@@ -406,7 +691,7 @@ def get_nested_value(obj: Any, path: str) -> Any:
     return current
 
 
-def evaluate_custom_condition(schema: Dict[str, Any], condition: str) -> bool:
+def evaluate_custom_condition(schema: dict[str, Any], condition: str) -> bool:
     """评估自定义条件（简化实现）"""
     # 这里应该有更复杂的表达式解析
     # 目前只是简单地检查某些条件

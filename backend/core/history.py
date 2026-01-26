@@ -1,17 +1,16 @@
 """Patch 历史管理器 - 管理和查询 Patch 历史记录"""
 
-from typing import Dict, List
 from datetime import datetime
 
 
 class PatchHistoryManager:
     """Patch 历史记录管理器"""
 
-    def __init__(self):
-        self._history: Dict[str, List[Dict]] = {}  # {instanceId: [patches]}
-        self._counters: Dict[str, int] = {}  # {instanceId: counter}
+    def __init__(self) -> None:
+        self._history: "dict[str, list[dict[str, object]]" = {}
+        self._counters: "dict[str, int]" = {}
 
-    def save(self, instance_id: str, patch: dict) -> int:
+    def save(self, instance_id: str, patch: "dict[str, object]") -> int:
         """保存 Patch 到历史记录
 
         Args:
@@ -36,7 +35,7 @@ class PatchHistoryManager:
         self._history[instance_id].append(patch_record)
         return self._counters[instance_id]
 
-    def get_all(self, instance_id: str) -> List[Dict]:
+    def get_all(self, instance_id: str) -> "list[dict[str, object]]":
         """获取实例的所有 Patch 历史
 
         Args:
@@ -47,7 +46,7 @@ class PatchHistoryManager:
         """
         return self._history.get(instance_id, [])
 
-    def get_by_id(self, instance_id: str, patch_id: int) -> Dict | None:
+    def get_by_id(self, instance_id: str, patch_id: int) -> "dict[str, object] | None":
         """根据 ID 获取特定 Patch
 
         Args:

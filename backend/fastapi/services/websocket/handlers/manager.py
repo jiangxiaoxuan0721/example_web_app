@@ -49,7 +49,7 @@ class WebSocketManager:
         self,
         instance_id: str,
         patch: dict,
-        patch_id: Optional[int] = None
+        patch_id: int | None = None
     ) -> bool:
         """向指定实例发送 Patch（兼容旧版本）
 
@@ -67,8 +67,8 @@ class WebSocketManager:
         self,
         instance_id: str,
         patch: dict,
-        patch_id: Optional[int] = None,
-        base_version: Optional[int] = None
+        patch_id: int | None = None,
+        base_version: int | None = None
     ) -> bool:
         """向指定实例发送 Patch（带版本号）
 

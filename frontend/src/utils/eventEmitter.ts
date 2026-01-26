@@ -28,7 +28,8 @@ export interface ActionClickEvent {
   type: EventType.ACTION_CLICK;
   payload: {
     actionId: string;
-    params?: Record<string, any>;
+    params?: Record<string, unknown>;
+    blockId?: string;  // 所属 block ID（用于 block 级别的 actions）
   };
 }
 
@@ -119,27 +120,41 @@ const handleActionClick = async (
   instanceId: string,
   schema: UISchema
 ): Promise<void> => {
-  const { actionId, params } = payload;
+  const { actionId, params, blockId } = payload;
 
   console.log('[EventEmitter] handleActionClick 被调用');
   console.log('[EventEmitter] 完整 schema:', schema);
   console.log('[EventEmitter] schema.state:', schema.state);
   console.log('[EventEmitter] schema.state.params:', schema.state?.params);
   console.log('[EventEmitter] params 参数:', params);
+  console.log('[EventEmitter] blockId 参数:', blockId);
 
   try {
-    // 发送事件到后端，携带当前所有params
-    const currentParams = schema.state?.params || {};
+    // 如果前端没有传 params，则从 schema 中获取所有 params
+    const currentParams = params || schema.state?.params || {};
 
-    console.log('[EventEmitter] 将发送的 currentParams:', currentParams);
-    console.log('[EventEmitter] currentParams 的键:', Object.keys(currentParams));
+    console.log('[EventEmitter] 最终发送的 params:', currentParams);
 
-    await emitEvent('action:click', instanceId, {
+    const response = await emitEvent('action:click', instanceId, {
       actionId,
-      params: params || currentParams
+      params: currentParams,
+      blockId  // 传递 blockId 到后端
     });
 
-    console.log(`[EventEmitter] Action click sent: ${actionId}`);
+    console.log('[EventEmitter] action:click 响应:', response);
+
+    // 如果响应包含 patch，应用到 schema
+    if (response.status === 'success' && response.patch) {
+      const { applyPatch } = useSchemaStore.getState();
+      applyPatch(response.patch, false, false);
+      console.log('[EventEmitter] Patch 已应用:', response.patch);
+    }
+
+    // 如果响应包含 navigate_to，处理导航
+    if (response.navigate_to) {
+      const { emitInstanceSwitch } = await import('./eventEmitter');
+      emitInstanceSwitch(response.navigate_to);
+    }
   } catch (err) {
     console.error('[EventEmitter] Failed to send action click:', err);
   }
@@ -176,10 +191,18 @@ export const useEventEmitter = () => {
     },
     
     // 动作点击事件
-    emitActionClick: (actionId: string, params?: Record<string, any>) => {
+    emitActionClick: (actionId: string, params?: Record<string, unknown>) => {
       return handleUIEvent({
         type: EventType.ACTION_CLICK,
         payload: { actionId, params }
+      });
+    },
+
+    // 动作点击事件（带 blockId）
+    emitActionClickWithBlockId: (actionId: string, blockId?: string, params?: Record<string, unknown>) => {
+      return handleUIEvent({
+        type: EventType.ACTION_CLICK,
+        payload: { actionId, blockId, params }
       });
     },
     

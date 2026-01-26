@@ -1,6 +1,5 @@
 """默认 Schema 实例"""
 
-from typing import Dict, Any
 from ..fastapi.models import UISchema, MetaInfo, StateInfo, LayoutInfo, Block, ActionConfig, StepInfo, BlockProps, FieldConfig
 
 
@@ -9,9 +8,8 @@ def get_default_instances() -> dict[str, UISchema]:
     return {
         "demo": _create_demo_schema(),
         "counter": _create_counter_schema(),
-        "form": _create_form_schema(),
-        "json_viewer": _create_json_viewer_schema(),
         "rich_content": _create_rich_content_schema(),
+        "block_actions_test": _create_block_actions_test_schema(),
     }
 
 
@@ -25,35 +23,44 @@ def _create_demo_schema() -> UISchema:
             schemaVersion="1.0"
         ),
         state=StateInfo(
-            params=dict(message="Hello Schema!", description="这是主页"),
+            params=dict(
+                users=[
+                    {"id": 1, "name": "张三", "email": "zhangsan@example.com", "status": "active", "avatar": "https://picsum.photos/seed/zhangsan/100/100.jpg"},
+                    {"id": 2, "name": "李四", "email": "lisi@example.com", "status": "inactive", "avatar": "https://picsum.photos/seed/lisi/100/100.jpg"},
+                    {"id": 3, "name": "王五", "email": "wangwu@example.com", "status": "active", "avatar": "https://picsum.photos/seed/wangwu/100/100.jpg"},
+                    {"id": 4, "name": "赵六", "email": "zhaoliu@example.com", "status": "pending", "avatar": "https://picsum.photos/seed/zhaoliu/100/100.jpg"},
+                    {"id": 5, "name": "钱七", "email": "qianqi@example.com", "status": "active", "avatar": "https://picsum.photos/seed/qianqi/100/100.jpg"}
+                ]
+            ),
             runtime={}
         ),
         layout=LayoutInfo(type="single"),
         blocks=[
             Block(
-                id="text_block",
+                id="demo_block",
                 type="form",
                 bind="state.params",
                 props=BlockProps(
                     fields=[
-                        FieldConfig(
-                            label="消息",
-                            key="message",
-                            type="text",
+                        FieldConfig(  # pyright: ignore[reportCallIssue]
+                            label="用户列表",
+                            key="users",
+                            type="table",
                             rid=None,
                             value=None,
-                            description=None,
-                            options=None
-                        ) # type: ignore
-                        ,
-                        FieldConfig(
-                            label="描述",
-                            key="description",
-                            type="text",
-                            rid=None,
-                            value=None,
-                            description=None,
-                            options=None
+                            description="示例用户数据表格",
+                            options=None,
+                            columns=[
+                                {"key": "id", "label": "ID", "align": "center"},
+                                {"key": "name", "label": "姓名", "sortable": True},
+                                {"key": "email", "label": "邮箱"},
+                                {"key": "avatar", "label": "头像", "renderType": "image"},
+                                {"key": "status", "label": "状态", "renderType": "tag", "tagType": "value => value === 'active' ? 'success' : value === 'inactive' ? 'default' : 'warning'"}
+                            ],
+                            rowKey="id",
+                            bordered=True,
+                            striped=True,
+                            hover=True
                         ) # type: ignore
                     ],
                     showProgress=None,
@@ -66,30 +73,68 @@ def _create_demo_schema() -> UISchema:
             )
         ],
         actions=[
-            ActionConfig(
-                id="to_counter", 
-                label="打开计数器", 
-                style="secondary",
-                action_type="navigate",
-                target_instance="counter"
+            ActionConfig(  # pyright: ignore[reportCallIssue]
+                id="add_user",
+                label="添加用户",
+                style="primary",
+                handler_type="set",
+                patches={
+                    "state.params.users": {
+                        "operation": "append_to_list",
+                        "params": {
+                            "item": {
+                                "id": 6,
+                                "name": "赵六",
+                                "email": "zhaoliu@example.com",
+                                "status": "pending",
+                                "avatar": "https://picsum.photos/seed/zhaoliu/100/100.jpg"
+                            }
+                        }
+                    }
+                }
             ),
-            ActionConfig(
-                id="to_form", 
-                label="打开表单", 
+            ActionConfig(  # pyright: ignore[reportCallIssue]
+                id="reset_users",
+                label="重置用户",
                 style="secondary",
-                action_type="navigate",
-                target_instance="form"
+                handler_type="set",
+                patches={"state.params.users": [
+                    {"id": 1, "name": "张三", "email": "zhangsan@example.com", "status": "active", "avatar": "https://picsum.photos/seed/zhangsan/100/100.jpg"},
+                    {"id": 2, "name": "李四", "email": "lisi@example.com", "status": "inactive", "avatar": "https://picsum.photos/seed/lisi/100/100.jpg"},
+                    {"id": 3, "name": "王五", "email": "wangwu@example.com", "status": "active", "avatar": "https://picsum.photos/seed/wangwu/100/100.jpg"}
+                ]}
             ),
-            ActionConfig(
-                id="to_json", 
-                label="JSON查看器", 
-                style="secondary",
-                action_type="navigate",
-                target_instance="json_viewer"
+            ActionConfig(  # pyright: ignore[reportCallIssue]
+                id="generate_block",
+                label="生成 Block",
+                style="primary",
+                handler_type="set",
+                patches={
+                    "blocks": {
+                        "operation": "append_block",
+                        "params": {
+                            "block": {
+                                "id": "generated_block",
+                                "type": "form",
+                                "bind": "state.params",
+                                "props": {
+                                    "fields": [
+                                        {
+                                            "label": "动态生成的 Block",
+                                            "key": "dynamic_field",
+                                            "type": "text",
+                                            "description": "这是一个通过按钮动态添加的 Block"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
             ),
-            ActionConfig(
-                id="to_rich_content", 
-                label="富内容展示", 
+            ActionConfig(  # pyright: ignore[reportCallIssue]
+                id="to_rich_content",
+                label="富内容展示",
                 style="secondary",
                 action_type="navigate",
                 target_instance="rich_content"
@@ -119,7 +164,7 @@ def _create_counter_schema() -> UISchema:
                 bind="state.params",
                 props=BlockProps(
                     fields=[
-                        FieldConfig(
+                        FieldConfig(  # pyright: ignore[reportCallIssue]
                             label="计数器",
                             key="count",
                             type="text",
@@ -135,213 +180,26 @@ def _create_counter_schema() -> UISchema:
             )
         ],
         actions=[
-            ActionConfig(
+            ActionConfig(  # pyright: ignore[reportCallIssue]
                 id="increment",
                 label="+1",
                 style="primary",
                 handler_type="increment",
                 patches={"state.params.count": 1}
             ),
-            ActionConfig(
+            ActionConfig(  # pyright: ignore[reportCallIssue]
                 id="decrement",
                 label="-1",
                 style="secondary",
                 handler_type="decrement",
                 patches={"state.params.count": 1}
             ),
-            ActionConfig(
+            ActionConfig(  # pyright: ignore[reportCallIssue]
                 id="to_form",
                 label="跳转到表单",
                 style="secondary",
                 action_type="navigate",
                 target_instance="form"
-            )
-        ]
-    )
-
-
-def _create_form_schema() -> UISchema:
-    """创建表单 Schema"""
-    return UISchema(
-        meta=MetaInfo(
-            pageKey="form",
-            step=StepInfo(current=1, total=1),
-            status="idle",
-            schemaVersion="1.0"
-        ),
-        state=StateInfo(
-            params=dict(name="", email=""),
-            runtime={}
-        ),
-        layout=LayoutInfo(type="single"),
-        blocks=[
-            Block(
-                id="form_block",
-                type="form",
-                bind="state.params",
-                props=BlockProps(
-                    fields=[
-                        FieldConfig(
-                            label="姓名",
-                            key="name",
-                            type="text",
-                        ), # type: ignore
-                        FieldConfig(
-                            label="邮箱",
-                            key="email",
-                            type="text",
-                        ) # type: ignore
-                    ],
-                    showProgress=None,
-                    showStatus=None,
-                    showImages=None,
-                    showTable=None,
-                    showCountInput=None,
-                    showTaskId=None
-                )
-            )
-        ],
-        actions=[
-            ActionConfig(
-                id="submit",
-                label="提交",
-                style="primary",
-                handler_type="template:all",
-                patches={
-                    "state.runtime.status": "submitted",
-                    "state.runtime.message": "表单已提交！${all}"
-                }
-            ),
-            ActionConfig(
-                id="clear",
-                label="清空",
-                style="danger",
-                handler_type="set",
-                patches={
-                    "state.params": "special:clear_all_params",
-                    "state.runtime.status": "idle",
-                    "state.runtime.message": ""
-                }
-            ),
-            ActionConfig(
-                id="to_counter",
-                label="跳转到计数器",
-                style="secondary",
-                action_type="navigate",
-                target_instance="counter"
-            ),
-            ActionConfig(
-                id="to_demo",
-                label="跳转到主页",
-                style="secondary",
-                action_type="navigate",
-                target_instance="demo"
-            )
-        ]
-    )
-
-
-def _create_json_viewer_schema() -> UISchema:
-    """创建 JSON 查看器 Schema"""
-    return UISchema(
-        meta=MetaInfo(
-            pageKey="json_viewer",
-            step=StepInfo(current=1, total=1),
-            status="idle",
-            schemaVersion="1.0"
-        ),
-        state=StateInfo(
-            params=dict(
-                json_data={"example": "data", "number": 123, "nested": {"key": "value"}},
-                editable=True,
-                theme="light"
-            ),
-            runtime={}
-        ),
-        layout=LayoutInfo(type="single"),
-        blocks=[
-            Block(
-                id="json_block",
-                type="form",
-                bind="state.params",
-                props=BlockProps(
-                    fields=[
-                        FieldConfig(
-                            label="JSON 数据",
-                            key="json_data",
-                            type="json",
-                            content_type="json",
-                            editable=True,
-                            description="可编辑的JSON数据"
-                        ), # type: ignore
-                        FieldConfig(
-                            label="可编辑模式",
-                            key="editable",
-                            type="checkbox",
-                            description="启用/禁用编辑功能"
-                        ), # type: ignore
-                        FieldConfig(
-                            label="主题",
-                            key="theme",
-                            type="select",
-                            options=[
-                                {"label": "浅色", "value": "light"},
-                                {"label": "深色", "value": "dark"}
-                            ]
-                        ) # type: ignore
-                    ]
-                ) # type: ignore
-            )
-        ],
-        actions=[
-            ActionConfig(
-                id="validate",
-                label="验证JSON",
-                style="primary",
-                handler_type="set",
-                patches={"state.runtime.message": "JSON 格式验证通过！"}
-            ),
-            ActionConfig(
-                id="format",
-                label="格式化",
-                style="secondary",
-                handler_type="set",
-                patches={"state.runtime.message": "JSON 已格式化"}
-            ),
-            ActionConfig(
-                id="clear",
-                label="清空",
-                style="danger",
-                handler_type="set",
-                patches={
-                    "state.params.json_data": {},
-                    "state.runtime.message": ""
-                }
-            ),
-            ActionConfig(
-                id="fetch_example",
-                label="获取示例数据",
-                style="primary",
-                handler_type="external",
-                patches={
-                    "url": "https://jsonplaceholder.typicode.com/users/1",
-                    "method": "GET",
-                    "response_mappings": {
-                        "state.params.json_data": "",  # 整个响应
-                        "state.runtime.message": "成功获取示例数据"
-                    },
-                    "error_mapping": {
-                        "state.runtime.error": "error.message",
-                        "state.runtime.status": "error"
-                    }
-                }
-            ),
-            ActionConfig(
-                id="to_demo",
-                label="返回主页",
-                style="secondary",
-                action_type="navigate",
-                target_instance="demo"
             )
         ]
     )
@@ -409,25 +267,25 @@ def _create_rich_content_schema() -> UISchema:
                 bind="state.params",
                 props=BlockProps(
                     fields=[
-                        FieldConfig(
+                        FieldConfig(  # pyright: ignore[reportCallIssue]
                             label="HTML 内容",
                             key="html_content",
                             type="html",
                             description="这是一个HTML内容字段，可以渲染各种HTML标签"
                         ), # type: ignore
-                        FieldConfig(
+                        FieldConfig(  # pyright: ignore[reportCallIssue]
                             label="简单图片",
                             key="image_url",
                             type="image",
                             description="使用简单URL的图片字段"
                         ), # type: ignore
-                        FieldConfig(
+                        FieldConfig(  # pyright: ignore[reportCallIssue]
                             label="详细图片",
                             key="image_info",
                             type="image",
                             description="包含URL、alt文本和标题的图片字段"
                         ), # type: ignore
-                        FieldConfig(
+                        FieldConfig(  # pyright: ignore[reportCallIssue]
                             label="增强版图片",
                             key="enhanced_image",
                             type="image",
@@ -449,17 +307,177 @@ def _create_rich_content_schema() -> UISchema:
             )
         ],
         actions=[
-            ActionConfig(
-                id="to_demo", 
-                label="返回主页", 
+            ActionConfig(  # pyright: ignore[reportCallIssue]
+                id="to_demo",
+                label="返回主页",
                 style="secondary",
                 action_type="navigate",
                 target_instance="demo"
             ),
-            ActionConfig(
-                id="refresh_images", 
-                label="刷新图片", 
+            ActionConfig(  # pyright: ignore[reportCallIssue]
+                id="refresh_images",
+                label="刷新图片",
                 style="primary"
             ) # type: ignore
+        ]
+    )
+
+
+def _create_block_actions_test_schema() -> UISchema:
+    """创建 Block Actions 测试 Schema - 用于测试 block 级别的 actions"""
+    from datetime import datetime
+    return UISchema(
+        meta=MetaInfo(
+            pageKey="block_actions_test",
+            step=StepInfo(current=1, total=1),
+            status="idle",
+            schemaVersion="1.0"
+        ),
+        state=StateInfo(
+            params=dict(
+                todo_list=[
+                    {"id": 1, "task": "学习 Python", "completed": False},
+                    {"id": 2, "task": "学习 FastAPI", "completed": True},
+                    {"id": 3, "task": "学习 React", "completed": False}
+                ],
+                message="欢迎使用 Block Actions 测试页面！"
+            ),
+            runtime={"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        ),
+        layout=LayoutInfo(type="single"),
+        blocks=[
+            # Block 1: 带有 block 级别 actions 的待办事项列表
+            Block(
+                id="todo_block",
+                type="form",
+                bind="state.params",
+                props=BlockProps(  # pyright: ignore[reportCallIssue]
+                    fields=[
+                        FieldConfig(  # pyright: ignore[reportCallIssue]
+                            label="待办事项列表",
+                            key="todo_list",
+                            type="table",
+                            rid=None,
+                            value=None,
+                            description="这是一个带 block 级别 actions 的待办事项列表",
+                            options=None,
+                            columns=[
+                                {"key": "id", "label": "ID", "align": "center"},
+                                {"key": "task", "label": "任务", "sortable": True},
+                                {"key": "completed", "label": "状态", "renderType": "tag", "tagType": "value => value ? 'success' : 'default'"}
+                            ],
+                            rowKey="id",
+                            bordered=True,
+                            striped=True,
+                            hover=True
+                        ) # type: ignore
+                    ],
+                    # Block 级别的 actions
+                    actions=[
+                        ActionConfig(  # pyright: ignore[reportCallIssue]
+                            id="add_todo",
+                            label="添加任务",
+                            style="primary",
+                            handler_type="set",
+                            patches={
+                                "state.params.todo_list": {
+                                    "operation": "append_to_list",
+                                    "params": {
+                                        "item": {
+                                            "id": 4,
+                                            "task": "新任务",
+                                            "completed": False
+                                        }
+                                    }
+                                }
+                            }
+                        ),
+                        ActionConfig(  # pyright: ignore[reportCallIssue]
+                            id="clear_completed",
+                            label="清除已完成",
+                            style="danger",
+                            handler_type="set",
+                            patches={
+                                "state.params.todo_list": {
+                                    "operation": "remove_from_list",
+                                    "params": {
+                                        "key": "completed",
+                                        "value": True
+                                    }
+                                }
+                            }
+                        )
+                    ]
+                ) # type: ignore
+            ),
+            # Block 2: 消息显示和操作
+            Block(
+                id="message_block",
+                type="form",
+                bind="state.params",
+                props=BlockProps(  # pyright: ignore[reportCallIssue]
+                    fields=[
+                        FieldConfig(  # pyright: ignore[reportCallIssue]
+                            label="消息",
+                            key="message",
+                            type="text",
+                        ) # type: ignore
+                    ],
+                    # Block 级别的 actions
+                    actions=[
+                        ActionConfig(  # pyright: ignore[reportCallIssue]
+                            id="update_message",
+                            label="更新消息",
+                            style="primary",
+                            handler_type="set",
+                            patches={
+                                "state.params.message": "消息已更新！时间戳: ${state.runtime.timestamp}"
+                            }
+                        ),
+                        ActionConfig(  # pyright: ignore[reportCallIssue]
+                            id="clear_message",
+                            label="清空消息",
+                            style="secondary",
+                            handler_type="set",
+                            patches={
+                                "state.params.message": ""
+                            }
+                        )
+                    ]
+                ) # type: ignore
+            ),
+            # Block 3: 显示当前时间（只读展示，无 actions）
+            Block(
+                id="info_block",
+                type="display",
+                bind="state.runtime",
+                props=BlockProps(  # pyright: ignore[reportCallIssue]
+                    fields=[]
+                ) # type: ignore
+            )
+        ],
+        # 全局级别的 actions
+        actions=[
+            ActionConfig(  # pyright: ignore[reportCallIssue]
+                id="reset_all",
+                label="重置所有",
+                style="danger",
+                handler_type="set",
+                patches={
+                    "state.params.todo_list": [
+                        {"id": 1, "task": "学习 Python", "completed": False},
+                        {"id": 2, "task": "学习 FastAPI", "completed": True},
+                        {"id": 3, "task": "学习 React", "completed": False}
+                    ],
+                    "state.params.message": "欢迎使用 Block Actions 测试页面！"
+                }
+            ),
+            ActionConfig(  # pyright: ignore[reportCallIssue]
+                id="to_demo",
+                label="返回主页",
+                style="secondary",
+                action_type="navigate",
+                target_instance="demo"
+            )
         ]
     )

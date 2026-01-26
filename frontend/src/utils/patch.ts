@@ -1,54 +1,69 @@
 /** Patch 工具函数 */
 
+import { UISchema } from '../types/schema';
+
 /**
- * 应用 patch 到 schema
- * @param schema - 原始 schema
- * @param patch - patch 对象（键为点路径，值为任意类型）
- * @returns 应用 patch 后的新 schema
+ * 获取字段值
+ * @param schema - UISchema 对象
+ * @param bindPath - 绑定路径（如 "state.params"）
+ * @param fieldKey - 字段键
+ * @returns 字段值
  */
-export function applyPatchToSchema<T extends Record<string, any>>(
-  schema: T,
-  patch: Record<string, any>
-): T {
-  const newSchema = { ...schema };
+export function getFieldValue(schema: UISchema, bindPath: string, fieldKey: string): any {
+  const path = `${bindPath}.${fieldKey}`;
+  const keys = path.split('.');
+  let current: any = schema;
 
-  // 应用 patch（简单的点路径实现）
-  for (const [path, value] of Object.entries(patch)) {
-    const keys = path.split('.');
-    let current: any = newSchema;
-
-    for (let i = 0; i < keys.length - 1; i++) {
-      if (!current[keys[i]]) {
-        current[keys[i]] = {};
-      }
-      current = current[keys[i]];
+  for (const key of keys) {
+    if (current === undefined || current === null) {
+      return undefined;
     }
-
-    current[keys[keys.length - 1]] = value;
+    current = current[key];
   }
 
-  return newSchema;
+  return current;
 }
 
 /**
- * 从 schema 中读取字段值
- * @param schema - schema 对象
- * @param bindPath - 绑定路径（如 "state.params"）
- * @param fieldKey - 字段键（如 "message"）
- * @returns 字段值
+ * 应用 patch 到 schema
+ * @param schema - 原始 schema
+ * @param patch - patch 对象（键为点路径，值为新值）
+ * @returns 更新后的 schema
  */
-export function getFieldValue(
-  schema: any,
-  bindPath: string,
-  fieldKey: string
-): any {
-  // 1. 先解析 block.bind 路径
-  let baseObj: any = schema;
-  if (bindPath) {
-    const bindPathKeys = bindPath.split('.');
-    baseObj = bindPathKeys.reduce((obj: any, key: string) => obj?.[key], schema);
+export function applyPatchToSchema(schema: UISchema, patch: Record<string, any>): UISchema {
+  console.log('[Patch] 应用 patch:', patch);
+  console.log('[Patch] 原始 schema:', schema);
+
+  // 深拷贝 schema
+  const result = JSON.parse(JSON.stringify(schema));
+
+  for (const [path, value] of Object.entries(patch)) {
+    console.log(`[Patch] 应用: ${path} =`, value);
+    setNestedValue(result, path, value);
   }
-  // 2. 再读取 field.key
-  const fieldKeys = fieldKey.split('.');
-  return fieldKeys.reduce((obj: any, key: string) => obj?.[key], baseObj);
+
+  console.log('[Patch] 更新后的 schema:', result);
+  return result;
+}
+
+/**
+ * 设置嵌套对象的值
+ * @param obj - 目标对象
+ * @param path - 点分隔路径（如 "state.params.count"）
+ * @param value - 要设置的值
+ */
+function setNestedValue(obj: any, path: string, value: any): void {
+  const keys = path.split('.');
+  let current = obj;
+
+  for (let i = 0; i < keys.length - 1; i++) {
+    const key = keys[i];
+    if (!(key in current)) {
+      current[key] = {};
+    }
+    current = current[key];
+  }
+
+  const lastKey = keys[keys.length - 1];
+  current[lastKey] = value;
 }

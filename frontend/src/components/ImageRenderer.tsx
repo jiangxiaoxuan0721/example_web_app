@@ -44,31 +44,31 @@ export default function ImageRenderer({
   const [showToolbar, setShowToolbar] = useState(false);
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [retryKey, setRetryKey] = useState(0); // 用于重试加载
-  
+
   const imageRef = useRef<HTMLImageElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  
+
   // 检查是否为HTML链接
   const isHtmlLink = () => {
     if (!source) return false;
-    return /\.(html?)(\?.*)?$/i.test(source) || 
-           (source.includes('wave_') && source.includes('.html')) ||
-           source.endsWith('.html') || 
-           source.indexOf('.html?') !== -1;
+    return /\.(html?)(\?.*)?$/i.test(source) ||
+      (source.includes('wave_') && source.includes('.html')) ||
+      source.endsWith('.html') ||
+      source.indexOf('.html?') !== -1;
   };
-  
+
   // 处理加载成功
   const handleLoad = () => {
     setIsLoaded(true);
     setHasError(false);
     if (onLoad) onLoad();
   };
-  
+
   // 处理加载失败
   const handleError = () => {
     setHasError(true);
     setIsLoaded(false);
-    
+
     // 如果有备用图片且不是HTML链接，则尝试加载备用图片
     if (fallback && !isHtmlLink() && imageRef.current) {
       imageRef.current.src = fallback;
@@ -76,24 +76,24 @@ export default function ImageRenderer({
       if (onError) onError();
     }
   };
-  
+
   // 重试加载
   const handleRetry = () => {
     setHasError(false);
     setIsLoaded(false);
     setRetryKey(prev => prev + 1); // 更新key以强制重新加载
   };
-  
+
   // 打开全屏
   const openFullscreen = () => {
     if (hasError) return;
     setFullscreenOpen(true);
   };
-  
+
   // 下载图片/HTML
   const handleDownload = () => {
     if (hasError) return;
-    
+
     if (isHtmlLink()) {
       // 对于HTML链接，直接在新窗口打开
       window.open(source, '_blank');
@@ -108,13 +108,13 @@ export default function ImageRenderer({
       document.body.removeChild(link);
     }
   };
-  
+
   // 渲染图片/iframe
   const renderContent = () => {
     if (isHtmlLink()) {
       return (
-        <div 
-          className="iframe-wrapper" 
+        <div
+          className="iframe-wrapper"
           style={{
             position: 'relative',
             width: '100%',
@@ -162,7 +162,7 @@ export default function ImageRenderer({
       );
     }
   };
-  
+
   // 渲染加载指示器
   const renderLoading = () => (
     <div className="picture-loading" style={{
@@ -193,7 +193,7 @@ export default function ImageRenderer({
       }}>加载中...</div>
     </div>
   );
-  
+
   // 渲染错误指示器
   const renderError = () => (
     <div className="picture-error" style={{
@@ -220,8 +220,8 @@ export default function ImageRenderer({
         marginBottom: '16px'
       }}>图片加载失败</div>
       {fallback && !isHtmlLink() && (
-        <button 
-          className="retry-btn" 
+        <button
+          className="retry-btn"
           onClick={handleRetry}
           style={{
             padding: '6px 16px',
@@ -236,14 +236,14 @@ export default function ImageRenderer({
       )}
     </div>
   );
-  
+
   // 渲染工具栏
   const renderToolbar = () => {
     if (!isLoaded || hasError || (!showFullscreen && !showDownload)) return null;
-    
+
     return (
-      <div 
-        className="picture-toolbar" 
+      <div
+        className="picture-toolbar"
         style={{
           position: 'absolute',
           top: '12px',
@@ -256,7 +256,7 @@ export default function ImageRenderer({
         }}
       >
         {showFullscreen && (
-          <button 
+          <button
             className="toolbar-btn fullscreen-btn"
             onClick={openFullscreen}
             title="全屏查看"
@@ -276,7 +276,7 @@ export default function ImageRenderer({
           >⛶</button>
         )}
         {showDownload && (
-          <button 
+          <button
             className="toolbar-btn download-btn"
             onClick={handleDownload}
             title="下载"
@@ -298,13 +298,13 @@ export default function ImageRenderer({
       </div>
     );
   };
-  
+
   // 渲染全屏模态框
   const renderFullscreen = () => {
     if (!fullscreenOpen) return null;
-    
+
     return (
-      <div 
+      <div
         className="picture-fullscreen-modal"
         style={{
           position: 'fixed',
@@ -348,7 +348,7 @@ export default function ImageRenderer({
             onClick={(e) => e.stopPropagation()}
           />
         )}
-        <button 
+        <button
           className="fullscreen-close"
           onClick={() => setFullscreenOpen(false)}
           style={{
@@ -371,9 +371,9 @@ export default function ImageRenderer({
       </div>
     );
   };
-  
+
   return (
-    <div 
+    <div
       className={`picture-container ${isLoaded ? 'loaded' : ''} ${className}`}
       style={{
         position: 'relative',
@@ -412,10 +412,10 @@ export default function ImageRenderer({
           )}
         </div>
       )}
-      
+
       {/* 内容包装器 */}
-      <div 
-        className="picture-wrapper" 
+      <div
+        className="picture-wrapper"
         style={{
           position: 'relative',
           overflow: 'hidden',
@@ -427,20 +427,20 @@ export default function ImageRenderer({
       >
         {/* 图片/iframe内容 */}
         {renderContent()}
-        
+
         {/* 加载指示器 */}
         {!isLoaded && !hasError && renderLoading()}
-        
+
         {/* 错误指示器 */}
         {hasError && renderError()}
-        
+
         {/* 工具栏 */}
         {renderToolbar()}
       </div>
-      
+
       {/* 全屏模态框 */}
       {renderFullscreen()}
-      
+
       {/* 添加CSS动画 */}
       <style dangerouslySetInnerHTML={{
         __html: `
