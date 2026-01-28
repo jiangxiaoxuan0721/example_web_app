@@ -15,7 +15,7 @@ This project implements a runtime where AI agents can programmatically control U
    - Support complex logic processing (through diverse handler types)
    - No hardcoded logic required for specific features - all functionality is configuration-driven
    - Support cross-instance referencing and component reuse
-   - Support 17 field types and 9 operation types, enabling infinite possibilities
+   - Support 19 field types and 9 operation types, enabling infinite possibilities
 
 2. **Structured**:
    - All operations follow predefined data models
@@ -60,7 +60,7 @@ This project implements a runtime where AI agents can programmatically control U
 - **MCP Integration**: AI agents can modify UI using well-defined MCP tools
 - **Multi-Instance Support**: Manage multiple UI instances with independent states
 - **Event-Driven Architecture**: Clean separation between UI events and state changes
-- **17 Field Types**: text, number, textarea, checkbox, select, radio, multiselect, json, html, image, tag, progress, badge, table, modal, component, and more
+- **19 Field Types**: text, number, textarea, checkbox, json, date, datetime, file, select, radio, multiselect, html, image, tag, progress, badge, table, modal, component
 - **9 Handler Types**: set, increment, decrement, toggle, template, external, template:all, template:state, and operation objects
 - **Template Rendering**: Support for `${state.xxx}` syntax for dynamic content updates with automatic timestamp updates
 - **Object Value Handling**: Automatically converts objects to JSON strings to avoid `[object Object]` display
@@ -158,7 +158,7 @@ Access them at:
 
 ## MCP Tools
 
-The system provides **12 MCP tools** for comprehensive UI manipulation:
+The system provides **5 MCP tools** for comprehensive UI manipulation:
 
 ### 1. patch_ui_state (Generic Patch Tool)
 
@@ -268,141 +268,6 @@ Access a specific UI instance and mark it as active.
 ```python
 result = await access_instance(instance_id="form")
 # Returns: {"status": "success", "instance_id": "form", "schema": {...}}
-```
-
-### 6. add_field (Specialized Tool)
-
-Add a new field to a form block with optional initial value.
-
-**Use Cases**:
-- Add new input fields to forms
-- Automatic state initialization
-
-```python
-result = await add_field({
-    "instance_id": "form",
-    "field": {
-        "key": "email",
-        "label": "Email Address",
-        "type": "email",
-        "placeholder": "Enter your email"
-    },
-    "block_index": 0,
-    "state_path": "state.params.email",
-    "initial_value": ""
-})
-```
-
-### 7. update_field (Specialized Tool)
-
-Update an existing field in a form block.
-
-**Use Cases**:
-- Modify field labels, types, or other properties
-- Batch updates
-
-```python
-result = await update_field({
-    "instance_id": "form",
-    "field_key": "email",
-    "updates": {
-        "label": "Email Address (Updated)",
-        "required": true
-    }
-})
-```
-
-### 8. remove_field (Specialized Tool)
-
-Remove a field from a form block and clean up associated state.
-
-**Use Cases**:
-- Remove unneeded fields
-- Automatic state cleanup
-
-```python
-result = await remove_field({
-    "instance_id": "form",
-    "field_key": "email"
-})
-```
-
-### 9. add_block (Specialized Tool)
-
-Add a new block to schema with positioning control.
-
-**Use Cases**:
-- Create new content blocks
-- Flexible position control
-
-```python
-result = await add_block({
-    "instance_id": "form",
-    "block": {
-        "id": "info_block",
-        "type": "card",
-        "props": {
-            "title": "Information",
-            "content": "Please fill in form below"
-        }
-    },
-    "position": "end"  # or "start" or an index number
-})
-```
-
-### 10. remove_block (Specialized Tool)
-
-Remove a block and clean up its associated state.
-
-**Use Cases**:
-- Remove entire content blocks
-- Automatic dependency cleanup
-
-```python
-result = await remove_block({
-    "instance_id": "form",
-    "block_id": "info_block"
-})
-```
-
-### 11. add_action (Specialized Tool)
-
-Add a new action (button) to a block or globally with handler configuration.
-
-**Use Cases**:
-- Add interactive features to UI
-- Support global and block-level actions
-
-```python
-result = await add_action({
-    "instance_id": "form",
-    "action": {
-        "id": "submit",
-        "label": "Submit Form",
-        "style": "primary",
-        "action_type": "handler",
-        "handler_type": "template",
-        "patches": {
-            "state.runtime.message": "Form submitted at ${state.runtime.timestamp}"
-        }
-    },
-    "block_index": 0  # omit for global action
-})
-```
-
-### 12. remove_action (Specialized Tool)
-
-Remove an action from a block or globally.
-
-**Use Cases**:
-- Remove unneeded action buttons
-
-```python
-result = await remove_action({
-    "instance_id": "form",
-    "action_id": "submit",
-    "block_index": 0  # omit for global action
-})
 ```
 
 ## Supported Operations
@@ -711,7 +576,7 @@ For details, see [MCP_FIELD_TYPES.md](./backend/mcp/MCP_FIELD_TYPES.md).
 
 For details, see "Action Handler Details" in [MCP_Tool_Reference_Manual.md](./backend/mcp/MCP_Tool_Reference_Manual.md).
 
-### 12 MCP Tools
+### 5 MCP Tools
 
 **Query Tools**:
 - `get_schema` - Get instance schema
@@ -719,14 +584,5 @@ For details, see "Action Handler Details" in [MCP_Tool_Reference_Manual.md](./ba
 - `validate_completion` - Validate completion criteria
 - `access_instance` - Access and activate instance
 
-**Specialized Tools**:
-- `add_field` - Add field
-- `update_field` - Update field
-- `remove_field` - Remove field
-- `add_block` - Add block
-- `remove_block` - Remove block
-- `add_action` - Add action
-- `remove_action` - Remove action
-
 **Generic Tool**:
-- `patch_ui_state` - Apply structured patches (for complex operations, batch updates, instance creation/deletion)
+- `patch_ui_state` - Apply structured patches (for all UI modifications including creating/deleting instances)

@@ -1,5 +1,6 @@
 """Schema 实例管理器 - 管理所有 UI Schema 实例"""
 
+from typing import Any
 from ..fastapi.models import UISchema
 
 
@@ -36,7 +37,7 @@ class SchemaManager:
         """获取实例总数"""
         return len(self._instances)
 
-    def get_info(self, instance_id: str) -> dict | None:
+    def get_info(self, instance_id: str) -> dict[Any, Any] | None:
         """获取实例信息"""
         schema = self.get(instance_id)
         if not schema:
@@ -44,12 +45,12 @@ class SchemaManager:
 
         return {
             "instance_id": instance_id,
-            "page_key": schema.meta.pageKey,
+            "page_key": schema.meta.page_key,
             "status": schema.meta.status,
             "blocks_count": len(schema.blocks),
             "actions_count": len(schema.actions)
         }
 
-    def get_all_info(self) -> list[dict]:
+    def get_all_info(self) -> list[dict[Any, Any]]:
         """获取所有实例信息"""
-        return [self.get_info(instance_id) for instance_id in self.list_all()] # type: ignore
+        return [info for info in (self.get_info(instance_id) for instance_id in self.list_all()) if info is not None]

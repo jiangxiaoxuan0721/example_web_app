@@ -590,7 +590,7 @@ const defaultRenderers: FieldRendererRegistry = {
   table: ({ field, value }) => {
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
     const [imageModalOpen, setImageModalOpen] = useState(false);
-    const [currentImage, setCurrentImage] = useState<{ url: string; title?: string; alt?: string } | null>(null);
+    const [currentImage, setCurrentImage] = useState<{ url: string; title?: string; alt?: string; isHtml?: boolean } | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
 
     const columns = field.columns || [];
@@ -659,18 +659,20 @@ const defaultRenderers: FieldRendererRegistry = {
         const match = expr.match(/^value\s*=>\s*(.+)$/);
         if (match) {
           const body = match[1];
-          // 简单的条件表达式求值
+          // 简单的条件表达式求值: value === 'active' ? 'success' : 'default'
           const conditions = body.split('?');
           if (conditions.length === 3) {
             const condition = conditions[0].trim();
             const trueValue = conditions[1].trim();
             const falseValue = conditions[2].trim();
-            // 简单的相等比较
+
+            // 处理简单的相等比较 (value === 'active')
             if (condition.includes('===') || condition.includes('==')) {
               const [left, right] = condition.split(/===?/).map(s => s.trim());
               const leftVal = left === 'value' ? val : left.replace(/['"]/g, '');
               const rightVal = right.replace(/['"]/g, '');
               const isMatch = String(leftVal) === rightVal;
+              console.log(`[evaluateExpression] ${expr}, val=${val}, isMatch=${isMatch}, result=${isMatch ? trueValue.replace(/['"]/g, '') : falseValue.replace(/['"]/g, '')}`);
               return isMatch ? trueValue.replace(/['"]/g, '') : falseValue.replace(/['"]/g, '');
             } else {
               // 处理简单的布尔值判断 (value ? 'success' : 'default')
@@ -685,19 +687,25 @@ const defaultRenderers: FieldRendererRegistry = {
                   conditionVal = val;
                 }
               }
+              console.log(`[evaluateExpression] ${expr}, val=${val}, conditionVal=${conditionVal}, result=${conditionVal ? trueValue.replace(/['"]/g, '') : falseValue.replace(/['"]/g, '')}`);
               return conditionVal ? trueValue.replace(/['"]/g, '') : falseValue.replace(/['"]/g, '');
             }
           }
         }
         return val;
       } catch (e) {
-        console.warn('Expression evaluation failed:', e);
+        console.warn('[evaluateExpression] Expression evaluation failed:', e, 'expr:', expr, 'val:', val);
         return val;
       }
     };
 
     // 渲染单元格内容
     const renderCell = (column: any, val: any, record: any, index: number) => {
+      // 调试日志
+      if (column.key === 'avatar') {
+        console.log('[renderCell] avatar column:', column);
+      }
+
       // 如果有 renderType，使用内置渲染器
       if (column.renderType) {
         switch (column.renderType) {
@@ -816,6 +824,38 @@ const defaultRenderers: FieldRendererRegistry = {
                       );
 
                     case 'image':
+                      // 检测是否为HTML内容
+                      const trimmedSrc = String(componentValue || '').trim();
+                      const isComponentHtml = trimmedSrc.startsWith('<') ||
+                        (trimmedSrc.includes('<') && trimmedSrc.includes('>') &&
+                         trimmedSrc.indexOf('<') < trimmedSrc.indexOf('>') &&
+                         trimmedSrc.indexOf('<') < 10);
+
+                      if (isComponentHtml) {
+                        return (
+                          <button
+                            key={compIndex}
+                            onClick={() => {
+                              setImageModalOpen(true);
+                              setCurrentImage({ url: trimmedSrc, title: 'HTML内容', isHtml: true });
+                            }}
+                            style={{
+                              padding: '4px 12px',
+                              background: '#007bff',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '13px',
+                              marginLeft: comp.margin || 0
+                            }}
+                          >
+                            查看内容
+                          </button>
+                        );
+                      }
+
+                      // 正常图片显示
                       return (
                         <img
                           key={compIndex}
@@ -1020,57 +1060,133 @@ const defaultRenderers: FieldRendererRegistry = {
             );
           case 'image':
             const imageSrc = typeof val === 'string' ? val : (val?.url || '');
-            const imageTitle = typeof val === 'object' ? (val?.title || column.label) : column.label;
+            const imageTitle = typeof val === 'object' ? (val?.title || column.title) : column.title;
 
             if (!imageSrc) {
-              return <span style={{ color: '#999', fontSize: '12px' }}>无图片</span>;
+              return <span style={{ color: '#999', fontSize: '12px' }}>无内容</span>;
             }
 
-            // 使用全屏模态框查看
-            return (
-              <>
-                <button
-                  onClick={() => {
-                    setCurrentImage({ url: imageSrc, title: imageTitle });
-                    setImageModalOpen(true);
-                  }}
-                  style={{
-                    padding: '6px 16px',
-                    borderRadius: '4px',
-                    border: '1px solid #007bff',
-                    background: '#fff',
-                    color: '#007bff',
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                    fontWeight: '500',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#007bff';
-                    e.currentTarget.style.color = '#fff';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = '#fff';
-                    e.currentTarget.style.color = '#007bff';
-                  }}
-                >
-                  点击查看
-                </button>
-                {/* 图片模态框 */}
-                {currentImage && currentImage.url === imageSrc && (
-                  <ImageModal
-                    visible={imageModalOpen}
-                    url={currentImage.url}
-                    title={currentImage.title}
-                    alt={imageTitle}
-                    onClose={() => {
-                      setImageModalOpen(false);
-                      setCurrentImage(null);
+            // 判断是图片还是 HTML - 更精确的判断
+            const trimmedSrc = imageSrc.trim();
+            const isHtml = trimmedSrc.startsWith('<') || (trimmedSrc.includes('<') && trimmedSrc.includes('>') && trimmedSrc.indexOf('<') < trimmedSrc.indexOf('>') && trimmedSrc.indexOf('<') < 10);
+
+            console.log('[renderCell - image] imageSrc:', imageSrc, 'isHtml:', isHtml, 'trimmedSrc:', trimmedSrc);
+
+            if (isHtml) {
+              // HTML 内容 - 使用按钮点击查看
+              return (
+                <>
+                  <button
+                    onClick={() => {
+                      setCurrentImage({ url: imageSrc, title: imageTitle || 'HTML 内容' });
+                      setImageModalOpen(true);
                     }}
-                  />
-                )}
-              </>
-            );
+                    style={{
+                      padding: '6px 16px',
+                      borderRadius: '4px',
+                      border: '1px solid #007bff',
+                      background: '#fff',
+                      color: '#007bff',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      fontWeight: '500',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#007bff';
+                      e.currentTarget.style.color = '#fff';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = '#fff';
+                      e.currentTarget.style.color = '#007bff';
+                    }}
+                  >
+                    查看内容
+                  </button>
+                  {currentImage && currentImage.url === imageSrc && (
+                    <ImageModal
+                      visible={imageModalOpen}
+                      url={currentImage.url}
+                      title={currentImage.title}
+                      alt={imageTitle}
+                      isHtml={currentImage.isHtml || false}
+                      onClose={() => {
+                        setImageModalOpen(false);
+                        setCurrentImage(null);
+                      }}
+                    />
+                  )}
+                </>
+              );
+            } else {
+              // 图片内容 - 使用按钮点击查看（缩略图预览在按钮中）
+              return (
+                <>
+                  <button
+                    onClick={() => {
+                      setCurrentImage({ url: imageSrc, title: imageTitle || 'image' });
+                      setImageModalOpen(true);
+                    }}
+                    style={{
+                      padding: '4px',
+                      borderRadius: '4px',
+                      border: '1px solid #ddd',
+                      background: '#fff',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minHeight: '40px',
+                      minWidth: '40px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = '#007bff';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,123,255,0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = '#ddd';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                    title={imageTitle || '点击查看大图'}
+                  >
+                    <img
+                      src={imageSrc}
+                      alt={imageTitle || 'avatar'}
+                      onError={(e) => {
+                        // 图片加载失败时隐藏
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                      onLoad={(e) => {
+                        // 图片加载成功时显示
+                        (e.target as HTMLImageElement).style.display = 'block';
+                      }}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        objectFit: 'cover',
+                        borderRadius: '3px',
+                        pointerEvents: 'none',
+                        display: 'none'
+                      }}
+                    />
+                  </button>
+                  {currentImage && currentImage.url === imageSrc && (
+                    <ImageModal
+                      visible={imageModalOpen}
+                      url={currentImage.url}
+                      title={currentImage.title}
+                      alt={imageTitle}
+                      isHtml={currentImage.isHtml || false}
+                      onClose={() => {
+                        setImageModalOpen(false);
+                        setCurrentImage(null);
+                      }}
+                    />
+                  )}
+                </>
+              );
+            }
         }
       }
 
@@ -1161,7 +1277,7 @@ const defaultRenderers: FieldRendererRegistry = {
                           transition: 'background 0.2s'
                         }}
                       >
-                        {column.label}
+                        {column.title}
                         <span style={{ marginLeft: '4px', color: isSorted ? '#007bff' : '#999' }}>
                           {sortIcon}
                         </span>

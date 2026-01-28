@@ -10,10 +10,7 @@ from pydantic import BaseModel, Field
 from enum import Enum
 
 # 从已有的模型导入
-from backend.fastapi.models import (
-    FieldConfig, BlockProps, Block, ActionConfig, 
-    StepInfo, MetaInfo, StateInfo, LayoutInfo, UISchema
-)
+from backend.fastapi.models import *
 
 # 定义操作类型
 PatchOp = Literal["set", "add", "remove", "clear", "delete", "create", "replace"]
@@ -35,19 +32,15 @@ class PatchInput(BaseModel):
     target_instance_id: str | None = Field(None, description="当 instance_id == '__DELETE__' 时必需")
     patches: list[PatchOperation] = Field(default_factory=list, description="补丁操作数组")
 
-# 扩展版本，包含字段操作快捷方式
+# 扩展版本，包含字段操作快捷方式（已弃用，保留用于向后兼容）
 class PatchInputWithShortcuts(BaseModel):
-    """带有字段操作快捷方式的补丁输入接口"""
+    """带有字段操作快捷方式的补丁输入接口（已弃用，请使用 PatchInput）"""
     instance_id: str = Field(..., description="目标实例（如 'demo', 'counter', 'form'）")
                                  # 使用 "__CREATE__" 创建新实例
                                  # 使用 "__DELETE__" 删除实例
     new_instance_id: str | None = Field(None, description="当 instance_id == '__CREATE__' 时必需")
     target_instance_id: str | None = Field(None, description="当 instance_id == '__DELETE__' 时必需")
     patches: list[PatchOperation] = Field(default_factory=list, description="补丁操作数组（使用字段快捷方式时为可选）")
-    field_key: str | None = Field(None, description="要更新/删除的字段键（用于快捷操作）")
-    updates: dict[str, Any] | None = Field(None, description="字段属性字典（用于更新快捷方式）")
-    remove_field: bool | None = Field(False, description="如果为True，删除指定字段（用于删除快捷方式）")
-    block_index: int | None = Field(0, description="表单块索引（默认为0，第一个块）")
 
 class CompletionCriterion(BaseModel):
     """完成标准"""

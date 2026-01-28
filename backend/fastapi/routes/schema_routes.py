@@ -1,7 +1,7 @@
 """Schema 相关 API 路由"""
 
 from fastapi import Query
-from typing import Optional
+from typing import Any
 from ...core.manager import SchemaManager
 
 
@@ -45,10 +45,19 @@ def register_schema_routes(app, schema_manager: SchemaManager, default_instance_
 
         print(f"[SchemaRoutes] 找到实例 '{instance_id}'")
 
+        dumped_schema = schema.model_dump(by_alias=True)
+        # 调试：检查 columns 的 renderType 字段
+        if dumped_schema.get('blocks'):
+            first_block = dumped_schema['blocks'][0]
+            if 'props' in first_block and 'fields' in first_block['props']:
+                first_field = first_block['props']['fields'][0]
+                if 'columns' in first_field:
+                    print(f"[SchemaRoutes] columns 数据: {first_field['columns'][2]}")  # 打印第3列（avatar）
+
         return {
             "status": "success",
             "instance_id": instance_id,
-            "schema": schema.model_dump()
+            "schema": dumped_schema
         }
 
     @app.get("/ui/instances")
@@ -62,17 +71,17 @@ def register_schema_routes(app, schema_manager: SchemaManager, default_instance_
             "total": len(instances_info)
         }
 
-    @app.post("/ui/access")
-    async def access_instance(request: dict):
-        """访问指定实例并设置为活跃状态"""
+    @app.post("/ui/switch")
+    async def switch_instance(request: dict[Any, Any]):
+        """切换到指定实例并设置为活跃状态"""
         instance_id = request.get("instance_id")
-        
+
         if not instance_id:
             return {
                 "status": "error",
                 "error": "缺少 instance_id 参数"
             }
-        
+
         # 检查实例是否存在
         schema = schema_manager.get(instance_id)
         if not schema:
@@ -81,21 +90,19 @@ def register_schema_routes(app, schema_manager: SchemaManager, default_instance_
                 "error": f"实例 '{instance_id}' 不存在",
                 "available_instances": schema_manager.list_all()
             }
-        
-        print(f"[SchemaRoutes] 访问实例: '{instance_id}'")
-        
+
+        print(f"[SchemaRoutes] 切换实例: '{instance_id}'")
+
         # 如果WebSocket管理器可用，通知前端切换到指定实例
         if ws_manager:
             await ws_manager.broadcast({
                 "type": "switch_instance",
-                "instance_id": instance_id,
-                "schema": schema.model_dump()
+                "instance_id": instance_id
             })
             print(f"[SchemaRoutes] 已通知前端切换到实例: '{instance_id}'")
-        
+
         return {
             "status": "success",
-            "message": f"已成功访问实例 '{instance_id}' 并通知前端切换",
-            "instance_id": instance_id,
-            "schema": schema.model_dump()
+            "message": f"已成功切换到实例 '{instance_id}'",
+            "instance_id": instance_id
         }

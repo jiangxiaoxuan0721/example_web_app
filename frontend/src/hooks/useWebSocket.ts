@@ -49,8 +49,8 @@ export function useWebSocket(onPatch: (patch: Record<string, any>) => void, onSw
     }
 
     // 连接到 WebSocket
-    const port = (import.meta.env as any).VITE_API_PORT || 8001;
-    const wsUrl = `ws://localhost:${port}/ui/ws/${currentInstanceId}`;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ui/ws/${currentInstanceId}`;
     console.log('[WS] 连接到:', wsUrl);
 
     // 使用快速连接模式
@@ -91,7 +91,8 @@ export function useWebSocket(onPatch: (patch: Record<string, any>) => void, onSw
         } else if (message.type === 'switch_instance' && message.instance_id) {
           console.log('[WS] 切换实例到:', message.instance_id);
           if (onSwitchInstanceRef.current) {
-            onSwitchInstanceRef.current(message.instance_id, message.schema);
+            // switch_instance 不再返回 schema，前端需要通过 API 获取
+            onSwitchInstanceRef.current(message.instance_id, undefined);
           }
         } else if (message.type === 'access_instance' && message.instance_id) {
           console.log('[WS] 访问实例:', message.instance_id);

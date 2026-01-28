@@ -20,16 +20,17 @@ export interface PictureConfig {
 /** 表格列配置接口 */
 export interface TableColumn {
   key: string;
-  label: string;
+  title: string;
   width?: string;
   align?: 'left' | 'center' | 'right';
   sortable?: boolean;  // 是否可排序
+  filterable?: boolean;  // 是否可过滤
   editable?: boolean;  // 列是否可编辑
   render?: string | ((value: any, record: any, index: number) => React.ReactNode);
   // 渲染类型，用于在 JSON 中指定简单的渲染逻辑
   renderType?: 'text' | 'tag' | 'badge' | 'progress' | 'image' | 'mixed';
-  // tag 类型时的属性
-  tagType?: (value: any) => 'success' | 'warning' | 'error' | 'info' | 'default';
+  // tag 类型时的属性 - 支持字符串表达式
+  tagType?: string;
   // badge 类型时的属性
   badgeColor?: string;
   // mixed 类型时的属性 - 组合多个元素

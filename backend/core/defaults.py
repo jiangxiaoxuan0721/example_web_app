@@ -1,6 +1,10 @@
 """默认 Schema 实例"""
 
-from ..fastapi.models import UISchema, MetaInfo, StateInfo, LayoutInfo, Block, ActionConfig, StepInfo, BlockProps, FieldConfig
+from ..fastapi.models import (
+    UISchema, MetaInfo, StateInfo, LayoutInfo, Block, ActionConfig,
+    StepInfo, BlockProps,  StatusType, LayoutType,
+    BaseFieldConfig, SelectableFieldConfig, TableFieldConfig, ImageFieldConfig
+)
 
 
 def get_default_instances() -> dict[str, UISchema]:
@@ -14,58 +18,113 @@ def get_default_instances() -> dict[str, UISchema]:
 
 
 def _create_demo_schema() -> UISchema:
-    """创建 demo Schema"""
+    """创建 demo Schema - 展示系统核心功能"""
+    from datetime import datetime
+
     return UISchema(
         meta=MetaInfo(
             pageKey="demo",
             step=StepInfo(current=1, total=1),
-            status="idle",
-            schemaVersion="1.0"
+            status=StatusType.IDLE,
+            schemaVersion="1.0",
+            title="UI Patch System",
+            description="基于 Patch 驱动的动态 UI 系统",
+            created_at=datetime.now()
         ),
         state=StateInfo(
             params=dict(
+                # 用户数据表格
                 users=[
                     {"id": 1, "name": "张三", "email": "zhangsan@example.com", "status": "active", "avatar": "https://picsum.photos/seed/zhangsan/100/100.jpg"},
                     {"id": 2, "name": "李四", "email": "lisi@example.com", "status": "inactive", "avatar": "https://picsum.photos/seed/lisi/100/100.jpg"},
                     {"id": 3, "name": "王五", "email": "wangwu@example.com", "status": "active", "avatar": "https://picsum.photos/seed/wangwu/100/100.jpg"},
                     {"id": 4, "name": "赵六", "email": "zhaoliu@example.com", "status": "pending", "avatar": "https://picsum.photos/seed/zhaoliu/100/100.jpg"},
                     {"id": 5, "name": "钱七", "email": "qianqi@example.com", "status": "active", "avatar": "https://picsum.photos/seed/qianqi/100/100.jpg"},
-                    {"id": 6, "name": "孙八", "email": "sunba@example.com", "status": "inactive", "avatar": "https://picsum.photos/seed/sunba/100/100.jpg"},
-                    {"id": 7, "name": "周九", "email": "zhoujiu@example.com", "status": "active", "avatar": "https://picsum.photos/seed/zhoujiu/100/100.jpg"},
-                    {"id": 8, "name": "吴十", "email": "wushi@example.com", "status": "pending", "avatar": "https://picsum.photos/seed/wushi/100/100.jpg"},
-                    {"id": 9, "name": "郑十一", "email": "zhengshiyi@example.com", "status": "active", "avatar": "https://picsum.photos/seed/zhengshiyi/100/100.jpg"},
-                    {"id": 10, "name": "王十二", "email": "wangshier@example.com", "status": "inactive", "avatar": "https://picsum.photos/seed/wangshier/100/100.jpg"},
-                    {"id": 11, "name": "冯十三", "email": "fengshisan@example.com", "status": "active", "avatar": "https://picsum.photos/seed/fengshisan/100/100.jpg"},
-                    {"id": 12, "name": "陈十四", "email": "chenshisi@example.com", "status": "pending", "avatar": "https://picsum.photos/seed/chenshisi/100/100.jpg"},
-                    {"id": 13, "name": "楚十五", "email": "chushiwu@example.com", "status": "active", "avatar": "https://picsum.photos/seed/chushiwu/100/100.jpg"},
-                    {"id": 14, "name": "卫十六", "email": "weishiliu@example.com", "status": "inactive", "avatar": "https://picsum.photos/seed/weishiliu/100/100.jpg"},
-                    {"id": 15, "name": "蒋十七", "email": "jiangshiqi@example.com", "status": "active", "avatar": "https://picsum.photos/seed/jiangshiqi/100/100.jpg"}
-                ]
+                ],
+                # 动态交互
+                counter=0,
+                message="欢迎使用 UI Patch System！点击按钮体验动态更新功能",
+                # 模板表达式演示字段
+                new_name="",
+                new_email="",
+                next_id=2,  # 下一个用户的 ID
+                dynamic_users=[
+                    {"id": 1, "name": "示例用户", "email": "demo@example.com", "added_at": "2026-01-27 10:00:00"}
+                ],
+                # 示例图片 URL
+                demo_image="https://picsum.photos/seed/demo/800/300.jpg"
             ),
-            runtime={}
+            runtime={
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "version": "1.0.0"
+            }
         ),
-        layout=LayoutInfo(type="single"),
+        layout=LayoutInfo(type=LayoutType.SINGLE, columns=None, gap=None),
         blocks=[
+            # Block 1: 系统消息和计数器
             Block(
-                id="demo_block",
+                id="overview_block",
                 type="form",
                 bind="state.params",
                 props=BlockProps(
                     fields=[
-                        FieldConfig(  # pyright: ignore[reportCallIssue]
+                        BaseFieldConfig(
+                            label="系统消息",
+                            key="message",
+                            type="text",
+                            description="系统状态消息"
+                        ),
+                        BaseFieldConfig(
+                            label="计数器",
+                            key="counter",
+                            type="text",
+                            description="实时计数器，展示动态更新功能"
+                        ),
+                    ],
+                    actions=[
+                        ActionConfig(
+                            id="increment_counter",
+                            label="+1",
+                            style="primary",
+                            handler_type="increment",
+                            patches={"state.params.counter": 1}
+                        ),
+                        ActionConfig(
+                            id="decrement_counter",
+                            label="-1",
+                            style="secondary",
+                            handler_type="decrement",
+                            patches={"state.params.counter": 1}
+                        ),
+                        ActionConfig(
+                            id="update_message",
+                            label="更新消息",
+                            style="secondary",
+                            handler_type="set",
+                            patches={"state.params.message": "消息已更新！时间戳: ${state.runtime.timestamp}"}
+                        ),
+                    ]
+                )
+            ),
+
+            # Block 2: 用户数据表格
+            Block(
+                id="users_table_block",
+                type="form",
+                bind="state.params",
+                props=BlockProps(
+                    fields=[
+                        TableFieldConfig(
                             label="用户列表",
                             key="users",
                             type="table",
-                            rid=None,
-                            value=None,
-                            description="示例用户数据表格",
-                            options=None,
+                            description="用户数据表格，支持排序、分页、状态标签",
                             columns=[
-                                {"key": "id", "label": "ID", "align": "center"},
-                                {"key": "name", "label": "姓名", "sortable": True},
-                                {"key": "email", "label": "邮箱"},
-                                {"key": "avatar", "label": "头像", "renderType": "image"},
-                                {"key": "status", "label": "状态", "renderType": "tag", "tagType": "value => value === 'active' ? 'success' : value === 'inactive' ? 'default' : 'warning'"}
+                                {"key": "id", "title": "ID", "align": "center"},
+                                {"key": "name", "title": "姓名", "sortable": True},
+                                {"key": "email", "title": "邮箱"},
+                                {"key": "status", "title": "状态", "renderType": "tag", "tagType": "value => value === 'active' ? 'success' : value === 'inactive' ? 'default' : 'warning'"},
+                                {"key": "avatar", "title": "头像", "renderType": "image"},
                             ],
                             rowKey="id",
                             bordered=True,
@@ -73,56 +132,198 @@ def _create_demo_schema() -> UISchema:
                             hover=True,
                             showPagination=True,
                             pageSize=10
-                        ) # type: ignore
+                        )
                     ],
-                    showProgress=None,
-                    showStatus=None,
-                    showImages=None,
-                    showTable=None,
-                    showCountInput=None,
-                    showTaskId=None
+                    actions=[
+                        ActionConfig(
+                            id="add_user",
+                            label="添加用户",
+                            style="primary",
+                            handler_type="set",
+                            patches={
+                                "state.params.users": {
+                                    "mode": "operation",
+                                    "operation": "append_to_list",
+                                    "params": {
+                                        "items": [
+                                            {
+                                                "id": 6,
+                                                "name": "新用户",
+                                                "email": "newuser@example.com",
+                                                "status": "active",
+                                                "avatar": "https://picsum.photos/seed/newuser/100/100.jpg"
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        ),
+                        ActionConfig(
+                            id="reset_users",
+                            label="重置列表",
+                            style="secondary",
+                            handler_type="set",
+                            patches={
+                                "state.params.users": [
+                                    {"id": 1, "name": "张三", "email": "zhangsan@example.com", "status": "active", "avatar": "https://picsum.photos/seed/zhangsan/100/100.jpg"},
+                                    {"id": 2, "name": "李四", "email": "lisi@example.com", "status": "inactive", "avatar": "https://picsum.photos/seed/lisi/100/100.jpg"},
+                                    {"id": 3, "name": "王五", "email": "wangwu@example.com", "status": "active", "avatar": "https://picsum.photos/seed/wangwu/100/100.jpg"}
+                                ]
+                            }
+                        ),
+                    ]
                 )
-            )
+            ),
+
+            # Block 3: 模板表达式演示 - 动态添加数据到表格
+            Block(
+                id="template_demo_block",
+                type="form",
+                bind="state.params",
+                props=BlockProps(
+                    fields=[
+                        BaseFieldConfig(
+                            label="姓名",
+                            key="new_name",
+                            type="text",
+                            description="输入姓名后点击下方按钮添加到表格"
+                        ),
+                        BaseFieldConfig(
+                            label="邮箱",
+                            key="new_email",
+                            type="text",
+                            description="输入邮箱后点击下方按钮添加到表格"
+                        ),
+                        BaseFieldConfig(
+                            label="下一个 ID",
+                            key="next_id",
+                            type="text",
+                            description="下一个用户的 ID（自动递增）"
+                        ),
+                        TableFieldConfig(
+                            label="动态数据表格",
+                            key="dynamic_users",
+                            type="table",
+                            description="使用模板表达式 ${state.xxx} 动态添加的数据",
+                            columns=[
+                                {"key": "id", "title": "ID", "align": "center"},
+                                {"key": "name", "title": "姓名"},
+                                {"key": "email", "title": "邮箱"},
+                                {"key": "added_at", "title": "添加时间"},
+                            ],
+                            rowKey="id",
+                            bordered=True,
+                            striped=True,
+                            hover=True,
+                            showPagination=True,
+                            pageSize=5
+                        )
+                    ],
+                    actions=[
+                        ActionConfig(
+                            id="add_dynamic_user",
+                            label="添加到表格",
+                            style="primary",
+                            handler_type="set",
+                            patches={
+                                "state.params.dynamic_users": {
+                                    "mode": "operation",
+                                    "operation": "append_to_list",
+                                    "params": {
+                                        "items": [
+                                            {
+                                                "id": "${state.params.next_id}",
+                                                "name": "${state.params.new_name}",
+                                                "email": "${state.params.new_email}",
+                                                "added_at": "${state.runtime.timestamp}"
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        ),
+                        ActionConfig(
+                            id="clear_dynamic_users",
+                            label="清空表格",
+                            style="danger",
+                            handler_type="set",
+                            patches={
+                                "state.params.dynamic_users": [],
+                                "state.params.next_id": 2,
+                                "state.params.new_name": "",
+                                "state.params.new_email": ""
+                            }
+                        ),
+                    ]
+                )
+            ),
+
+            # Block 4: 图片展示
+            Block(
+                id="image_block",
+                type="form",
+                bind="state.params",
+                props=BlockProps(
+                    fields=[
+                        ImageFieldConfig(
+                            label="示例图片",
+                            key="demo_image",
+                            type="image",
+                            description="示例图片展示，支持全屏查看",
+                            value="https://picsum.photos/seed/demo/800/300.jpg",
+                            showFullscreen=True,
+                            showDownload=True,
+                            imageHeight="300px",
+                            imageFit="cover"
+                        )
+                    ],
+                    actions=[
+                        ActionConfig(
+                            id="refresh_image",
+                            label="刷新图片",
+                            style="primary",
+                            handler_type="set",
+                            patches={
+                                "state.params.demo_image": f"https://picsum.photos/seed/{datetime.now().strftime('%Y%m%d%H%M%S')}/800/300.jpg"
+                            }
+                        )
+                    ]
+                )
+            ),
         ],
         actions=[
-            ActionConfig(  # pyright: ignore[reportCallIssue]
-                id="add_user",
-                label="添加用户",
+            # 实例导航 actions
+            ActionConfig(
+                id="to_counter",
+                label="计数器演示",
                 style="primary",
-                handler_type="set",
-                patches={
-                    "state.params.users": {
-                        "operation": "append_to_list",
-                        "params": {
-                            "item": {
-                                "id": 6,
-                                "name": "赵六",
-                                "email": "zhaoliu@example.com",
-                                "status": "pending",
-                                "avatar": "https://picsum.photos/seed/zhaoliu/100/100.jpg"
-                            }
-                        }
-                    }
-                }
+                action_type="navigate",
+                target_instance="counter"
             ),
-            ActionConfig(  # pyright: ignore[reportCallIssue]
-                id="reset_users",
-                label="重置用户",
+            ActionConfig(
+                id="to_rich_content",
+                label="富内容展示",
                 style="secondary",
-                handler_type="set",
-                patches={"state.params.users": [
-                    {"id": 1, "name": "张三", "email": "zhangsan@example.com", "status": "active", "avatar": "https://picsum.photos/seed/zhangsan/100/100.jpg"},
-                    {"id": 2, "name": "李四", "email": "lisi@example.com", "status": "inactive", "avatar": "https://picsum.photos/seed/lisi/100/100.jpg"},
-                    {"id": 3, "name": "王五", "email": "wangwu@example.com", "status": "active", "avatar": "https://picsum.photos/seed/wangwu/100/100.jpg"}
-                ]}
+                action_type="navigate",
+                target_instance="rich_content"
             ),
-            ActionConfig(  # pyright: ignore[reportCallIssue]
+            ActionConfig(
+                id="to_block_actions",
+                label="Block Actions",
+                style="secondary",
+                action_type="navigate",
+                target_instance="block_actions_test"
+            ),
+
+            # 全局操作 actions
+            ActionConfig(
                 id="generate_block",
                 label="生成 Block",
                 style="primary",
                 handler_type="set",
                 patches={
                     "blocks": {
+                        "mode": "operation",
                         "operation": "append_block",
                         "params": {
                             "block": {
@@ -144,12 +345,24 @@ def _create_demo_schema() -> UISchema:
                     }
                 }
             ),
-            ActionConfig(  # pyright: ignore[reportCallIssue]
-                id="to_rich_content",
-                label="富内容展示",
-                style="secondary",
-                action_type="navigate",
-                target_instance="rich_content"
+            ActionConfig(
+                id="reset_all",
+                label="重置所有",
+                style="danger",
+                handler_type="set",
+                patches={
+                    "state.params.users": [
+                        {"id": 1, "name": "张三", "email": "zhangsan@example.com", "status": "active", "avatar": "https://picsum.photos/seed/zhangsan/100/100.jpg"},
+                        {"id": 2, "name": "李四", "email": "lisi@example.com", "status": "inactive", "avatar": "https://picsum.photos/seed/lisi/100/100.jpg"},
+                        {"id": 3, "name": "王五", "email": "wangwu@example.com", "status": "active", "avatar": "https://picsum.photos/seed/wangwu/100/100.jpg"},
+                    ],
+                    "state.params.counter": 0,
+                    "state.params.message": "欢迎使用 UI Patch System！点击按钮体验动态更新功能",
+                    "state.params.new_name": "",
+                    "state.params.new_email": "",
+                    "state.params.next_id": 2,
+                    "state.params.dynamic_users": [{"id": 1, "name": "示例用户", "email": "demo@example.com", "added_at": "2026-01-27 10:00:00"}]
+                }
             )
         ]
     )
@@ -161,14 +374,16 @@ def _create_counter_schema() -> UISchema:
         meta=MetaInfo(
             pageKey="counter",
             step=StepInfo(current=1, total=1),
-            status="idle",
-            schemaVersion="1.0"
+            status=StatusType.IDLE,
+            schemaVersion="1.0",
+            title=None,
+            description=None
         ),
         state=StateInfo(
             params=dict(count=0),
             runtime={}
         ),
-        layout=LayoutInfo(type="single"),
+        layout=LayoutInfo(type=LayoutType.SINGLE, columns=None, gap=None),
         blocks=[
             Block(
                 id="counter_block",
@@ -176,11 +391,11 @@ def _create_counter_schema() -> UISchema:
                 bind="state.params",
                 props=BlockProps(  # pyright: ignore[reportCallIssue]
                     fields=[
-                        FieldConfig(  # pyright: ignore[reportCallIssue]
+                        BaseFieldConfig(  # pyright: ignore[reportCallIssue]
                             label="计数器",
                             key="count",
-                            type="text",
-                        ) # type: ignore
+                            type="text"
+                        )
                     ],
                     # Block 级别的 actions
                     actions=[
@@ -219,8 +434,10 @@ def _create_rich_content_schema() -> UISchema:
         meta=MetaInfo(
             pageKey="rich_content",
             step=StepInfo(current=1, total=1),
-            status="idle",
-            schemaVersion="1.0"
+            status=StatusType.IDLE,
+            schemaVersion="1.0",
+            title=None,
+            description=None
         ),
         state=StateInfo(
             params=dict(
@@ -267,33 +484,33 @@ def _create_rich_content_schema() -> UISchema:
             ),
             runtime={}
         ),
-        layout=LayoutInfo(type="single"),
+        layout=LayoutInfo(type=LayoutType.SINGLE, columns=None, gap=None),
         blocks=[
             Block(
                 id="rich_content_block",
                 type="form",
                 bind="state.params",
-                props=BlockProps(
+                props=BlockProps(  # type: ignore
                     fields=[
-                        FieldConfig(  # pyright: ignore[reportCallIssue]
+                        BaseFieldConfig(  # type: ignore  # pyright: ignore[reportCallIssue]
                             label="HTML 内容",
                             key="html_content",
                             type="html",
                             description="这是一个HTML内容字段，可以渲染各种HTML标签"
-                        ), # type: ignore
-                        FieldConfig(  # pyright: ignore[reportCallIssue]
+                        ),
+                        ImageFieldConfig(  # type: ignore  # pyright: ignore[reportCallIssue]
                             label="简单图片",
                             key="image_url",
                             type="image",
                             description="使用简单URL的图片字段"
-                        ), # type: ignore
-                        FieldConfig(  # pyright: ignore[reportCallIssue]
+                        ),
+                        ImageFieldConfig(  # type: ignore  # pyright: ignore[reportCallIssue]
                             label="详细图片",
                             key="image_info",
                             type="image",
                             description="包含URL、alt文本和标题的图片字段"
-                        ), # type: ignore
-                        FieldConfig(  # pyright: ignore[reportCallIssue]
+                        ),
+                        ImageFieldConfig(  # type: ignore  # pyright: ignore[reportCallIssue]
                             label="增强版图片",
                             key="enhanced_image",
                             type="image",
@@ -303,14 +520,8 @@ def _create_rich_content_schema() -> UISchema:
                             imageHeight="400px",
                             imageFit="cover",
                             subtitle="点击可全屏查看，支持多种图片格式"
-                        ) # type: ignore
-                    ],
-                    showProgress=None,
-                    showStatus=None,
-                    showImages=None,
-                    showTable=None,
-                    showCountInput=None,
-                    showTaskId=None
+                        )
+                    ]
                 )
             )
         ],
@@ -338,8 +549,10 @@ def _create_block_actions_test_schema() -> UISchema:
         meta=MetaInfo(
             pageKey="block_actions_test",
             step=StepInfo(current=1, total=1),
-            status="idle",
-            schemaVersion="1.0"
+            status=StatusType.IDLE,
+            schemaVersion="1.0",
+            title=None,
+            description=None
         ),
             state=StateInfo(
                 params=dict(
@@ -348,40 +561,31 @@ def _create_block_actions_test_schema() -> UISchema:
                         {"id": 2, "task": "学习 FastAPI", "completed": True},
                         {"id": 3, "task": "学习 React", "completed": False},
                         {"id": 4, "task": "学习 TypeScript", "completed": True},
-                        {"id": 5, "task": "学习 Vue", "completed": False},
-                        {"id": 6, "task": "学习 Node.js", "completed": True},
-                        {"id": 7, "task": "学习数据库设计", "completed": False},
-                        {"id": 8, "task": "学习前端开发", "completed": True},
-                        {"id": 9, "task": "学习后端开发", "completed": False},
-                        {"id": 10, "task": "学习运维部署", "completed": True},
-                        {"id": 11, "task": "学习测试自动化", "completed": False},
-                        {"id": 12, "task": "学习性能优化", "completed": True}
                     ],
                     message="欢迎使用 Block Actions 测试页面！"
                 ),
                 runtime={"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
             ),
-        layout=LayoutInfo(type="single"),
+        layout=LayoutInfo(type=LayoutType.SINGLE, columns=None, gap=None),
         blocks=[
             # Block 1: 带有 block 级别 actions 的待办事项列表
             Block(
                 id="todo_block",
                 type="form",
                 bind="state.params",
-                props=BlockProps(  # pyright: ignore[reportCallIssue]
+                props=BlockProps(  # type: ignore
                     fields=[
-                        FieldConfig(  # pyright: ignore[reportCallIssue]
+                        TableFieldConfig(  # type: ignore  # pyright: ignore[reportCallIssue]
                             label="待办事项列表",
                             key="todo_list",
                             type="table",
                             rid=None,
                             value=None,
                             description="这是一个带 block 级别 actions 的待办事项列表",
-                            options=None,
                             columns=[
-                                {"key": "id", "label": "ID", "align": "center"},
-                                {"key": "task", "label": "任务", "sortable": True},
-                                {"key": "completed", "label": "状态", "renderType": "tag", "tagType": "value => value ? 'success' : 'default'"}
+                                {"key": "id", "title": "ID", "align": "center"},
+                                {"key": "task", "title": "任务", "sortable": True},
+                                {"key": "completed", "title": "状态", "renderType": "tag", "tagType": "value => value ? 'success' : 'default'"}
                             ],
                             rowKey="id",
                             bordered=True,
@@ -389,7 +593,7 @@ def _create_block_actions_test_schema() -> UISchema:
                             hover=True,
                             showPagination=True,
                             pageSize=10
-                        ) # type: ignore
+                        )
                     ],
                     # Block 级别的 actions
                     actions=[
@@ -400,13 +604,16 @@ def _create_block_actions_test_schema() -> UISchema:
                             handler_type="set",
                             patches={
                                 "state.params.todo_list": {
+                                    "mode": "operation",
                                     "operation": "append_to_list",
                                     "params": {
-                                        "item": {
-                                            "id": 4,
-                                            "task": "新任务",
-                                            "completed": False
-                                        }
+                                        "items": [
+                                            {
+                                                "id": 5,
+                                                "task": "新任务",
+                                                "completed": False
+                                            }
+                                        ]
                                     }
                                 }
                             }
@@ -418,10 +625,12 @@ def _create_block_actions_test_schema() -> UISchema:
                             handler_type="set",
                             patches={
                                 "state.params.todo_list": {
+                                    "mode": "operation",
                                     "operation": "remove_from_list",
                                     "params": {
                                         "key": "completed",
-                                        "value": True
+                                        "value": True,
+                                        "index": -1
                                     }
                                 }
                             }
@@ -436,11 +645,11 @@ def _create_block_actions_test_schema() -> UISchema:
                 bind="state.params",
                 props=BlockProps(  # pyright: ignore[reportCallIssue]
                     fields=[
-                        FieldConfig(  # pyright: ignore[reportCallIssue]
+                        BaseFieldConfig(  # pyright: ignore[reportCallIssue]
                             label="消息",
                             key="message",
-                            type="text",
-                        ) # type: ignore
+                            type="text"
+                        )
                     ],
                     # Block 级别的 actions
                     actions=[

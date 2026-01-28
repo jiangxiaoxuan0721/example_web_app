@@ -745,13 +745,13 @@ await patch_ui_state(
 
 ### 核心工具
 
-|| 工具 | 主要用途 | 常用参数 |
-||------|----------|----------|
-|| `get_schema` | 查看当前状态 | `instance_id` |
-|| `patch_ui_state` | 修改 UI | `instance_id`, `patches` |
-|| `validate_completion` | 验证结果 | `instance_id`, `completion_criteria` |
-|| `list_instances` | 浏览实例 | 无 |
-|| `access_instance` | 切换实例 | `instance_id` |
+| 工具 | 主要用途 | 常用参数 |
+|------|----------|----------|
+| `get_schema` | 查看当前状态 | `instance_id` |
+| `patch_ui_state` | 修改 UI | `instance_id`, `patches` |
+| `validate_completion` | 验证结果 | `instance_id`, `completion_criteria` |
+| `list_instances` | 浏览实例 | 无 |
+| `access_instance` | 切换实例 | `instance_id` |
 
 ### 推荐工作流
 

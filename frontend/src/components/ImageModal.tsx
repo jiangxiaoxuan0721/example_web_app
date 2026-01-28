@@ -7,10 +7,11 @@ interface ImageModalProps {
   url: string;
   title?: string;
   alt?: string;
+  isHtml?: boolean; // 新增：是否为HTML字符串内容
   onClose: () => void;
 }
 
-export default function ImageModal({ visible, url, title, alt, onClose }: ImageModalProps) {
+export default function ImageModal({ visible, url, title, alt, isHtml = false, onClose }: ImageModalProps) {
   // 禁止背景滚动
   useEffect(() => {
     if (visible) {
@@ -37,6 +38,10 @@ export default function ImageModal({ visible, url, title, alt, onClose }: ImageM
            url.indexOf('.html?') !== -1;
   };
 
+  // 检查是否为HTML字符串内容
+  const isHtmlContent = isHtml || (url && url.trim().startsWith('<'));
+  const showHtml = isHtmlContent || isHtmlLink();
+
   return (
     <div
       style={{
@@ -55,24 +60,46 @@ export default function ImageModal({ visible, url, title, alt, onClose }: ImageM
       onClick={onClose}
     >
       {/* 内容区域 */}
-      {isHtmlLink() ? (
-        <iframe
-          src={url}
-          title={title || alt}
-          style={{
-            position: 'absolute',
-            top: '2.5%',
-            left: '2.5%',
-            width: '95%',
-            height: '95%',
-            border: 'none',
-            borderRadius: '8px',
-            backgroundColor: 'white',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
-            cursor: 'default'
-          }}
-          onClick={(e) => e.stopPropagation()}
-        />
+      {showHtml ? (
+        isHtmlContent ? (
+          // 直接渲染HTML字符串
+          <div
+            dangerouslySetInnerHTML={{ __html: url }}
+            style={{
+              position: 'absolute',
+              top: '2.5%',
+              left: '2.5%',
+              width: '95%',
+              height: '95%',
+              background: 'white',
+              borderRadius: '8px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+              cursor: 'default',
+              overflow: 'auto',
+              padding: '20px'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          // HTML链接使用iframe
+          <iframe
+            src={url}
+            title={title || alt}
+            style={{
+              position: 'absolute',
+              top: '2.5%',
+              left: '2.5%',
+              width: '95%',
+              height: '95%',
+              border: 'none',
+              borderRadius: '8px',
+              backgroundColor: 'white',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+              cursor: 'default'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        )
       ) : (
         <img
           src={url}

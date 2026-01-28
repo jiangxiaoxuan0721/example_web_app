@@ -1,35 +1,26 @@
-"""FastAPI 数据模型（Pydantic）
+"""FastAPI 数据模型包
 
-本文件提供向后兼容的导入接口，实际模型定义已拆分到 models/ 目录中。
-为了兼容性，这里重新导出所有模型。
-
-建议新代码直接使用 from backend.fastapi.models import ... 的形式。
+本包包含所有 Pydantic 模型定义，按功能模块拆分为多个文件：
+- enums: 枚举定义
+- base: 基础模型和通用配置
+- event_models: 事件相关模型
+- patch_models: Patch 相关模型
+- field_models: 字段配置模型
+- schema_models: Schema 相关模型
+- response_models: 响应模型
 """
 
-# 从 models 包导入所有模型，保持向后兼容
-from .models import *  # noqa: F401, F403
-
-# 为了兼容性，直接导出
-from .models.enums import (  # noqa: F401
-    EventType,
-    HandlerType,
-    ActionType,
-    OperationType,
-    HTTPMethod,
-    BodyTemplateType,
-    FieldType,
-    LayoutType,
-    StatusType,
-)
-from .models.base import BaseModelWithConfig  # noqa: F401
-from .models.event_models import EventPayload, UIEvent  # noqa: F401
-from .models.patch_models import (  # noqa: F401
+# 导出所有模型，保持向后兼容
+from .enums import *
+from .base import BaseModelWithConfig
+from .event_models import EventPayload, UIEvent
+from .patch_models import (
     DirectValuePatch,
     OperationPatch,
     ExternalApiPatch,
-    PatchValue,
+    PatchValue
 )
-from .models.field_models import (  # noqa: F401
+from .field_models import (
     OptionItem,
     ColumnConfig,
     BaseFieldConfig,
@@ -37,9 +28,9 @@ from .models.field_models import (  # noqa: F401
     ImageFieldConfig,
     TableFieldConfig,
     ComponentFieldConfig,
-    FieldConfig,
+    FieldConfig
 )
-from .models.schema_models import (  # noqa: F401
+from .schema_models import (
     StepInfo,
     MetaInfo,
     StateInfo,
@@ -47,9 +38,9 @@ from .models.schema_models import (  # noqa: F401
     BlockProps,
     Block,
     ActionConfig,
-    UISchema,
+    UISchema
 )
-from .models.response_models import (  # noqa: F401
+from .response_models import (
     BaseResponse,
     ConfigResponse,
     SchemaResponse,
@@ -57,7 +48,7 @@ from .models.response_models import (  # noqa: F401
     EventResponse,
     BatchPatchItem,
     BatchPatchRequest,
-    BatchPatchResponse,
+    BatchPatchResponse
 )
 
 __all__ = [

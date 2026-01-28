@@ -1,13 +1,14 @@
 """Patch 相关 API 路由"""
 
 from fastapi import Query
-from typing import Optional, Any
+from typing import Any
 from ...core.history import PatchHistoryManager
 from ...core.manager import SchemaManager
 from ..services.patch import apply_patch_to_schema
 from ..models import (
     UISchema, MetaInfo, StateInfo, LayoutInfo,
-    Block, BlockProps, FieldConfig, ActionConfig, StepInfo
+    Block, FieldConfig, ActionConfig, StepInfo,
+    BaseFieldConfig, LayoutType
 )
 
 
@@ -49,7 +50,7 @@ def handle_remove_operation(schema: UISchema, path: str, value: Any):
                         # For form blocks, delete state keys for each field
                         print(f"[PatchRoutes] Form block detected, will clean up state for all fields")
                         for field in block.props.fields:
-                            field_key = getattr(field, "key", None) if hasattr(field, "key") else field.get("key")
+                            field_key = getattr(field, "key", None) if hasattr(field, "key") else (field.get("key") if isinstance(field, dict) else None)
                             if field_key:
                                 # Try to delete from params and runtime
                                 try:
@@ -305,7 +306,7 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
                 # For form blocks, initialize state keys for each field in params only
                 print(f"[PatchRoutes] Form block detected, will initialize state for all fields")
                 for field in block.props.fields:
-                    field_key = getattr(field, "key", None) if hasattr(field, "key") else field.get("key")
+                    field_key = getattr(field, "key", None) if hasattr(field, "key") else (field.get("key") if isinstance(field, dict) else None)
                     if field_key:
                         # Initialize in params if not exists (form data goes to params)
                         if field_key not in schema.state.params:
@@ -419,7 +420,7 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
 
                     # Convert the dict value to a FieldConfig object
                     if isinstance(value, dict):
-                        field_config = FieldConfig(**value)
+                        field_config = BaseFieldConfig(**value)
                     else:
                         field_config = value
 
@@ -548,7 +549,7 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
         if isinstance(container, list):
             if isinstance(value, dict) and "key" in value and "label" in value:
                 # Convert dict to FieldConfig if it looks like a field
-                field_config = FieldConfig(**value)
+                field_config = BaseFieldConfig(**value)
                 container.append(field_config)
             else:
                 container.append(value)
@@ -557,7 +558,7 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
             if isinstance(container.fields, list):
                 if isinstance(value, dict) and "key" in value and "label" in value:
                     # Convert dict to FieldConfig if it looks like a field
-                    field_config = FieldConfig(**value)
+                    field_config = BaseFieldConfig(**value)
                     container.fields.append(field_config)
                 else:
                     container.fields.append(value)
@@ -566,7 +567,7 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
                 fields_list = list(container.fields.values())
                 if isinstance(value, dict) and "key" in value and "label" in value:
                     # Convert dict to FieldConfig if it looks like a field
-                    field_config = FieldConfig(**value)
+                    field_config = BaseFieldConfig(**value)
                     fields_list.append(field_config)
                 else:
                     fields_list.append(value)
@@ -647,10 +648,12 @@ def register_patch_routes(
                             meta=MetaInfo(
                                 pageKey=meta_data.get("pageKey", new_instance_id),
                                 step=StepInfo(**meta_data.get("step", {"current": 1, "total": 1})),
-                                status=meta_data.get("status", "idle")
+                                status=meta_data.get("status", "idle"),
+                                title=meta_data.get("title"),
+                                description=meta_data.get("description")
                             ),
                             state=StateInfo(params={}, runtime={}),
-                            layout=LayoutInfo(type="single"),
+                            layout=LayoutInfo(type=LayoutType.SINGLE),
                             blocks=[],
                             actions=[]
                         )
@@ -673,7 +676,7 @@ def register_patch_routes(
                                 props_copy = dict(block_copy.get('props', {}))
                                 if 'fields' in props_copy and props_copy.get('fields') is not None:
                                     fields_data = props_copy.get('fields', []) or []
-                                    converted_fields = [FieldConfig(**field) for field in fields_data]
+                                    converted_fields = [BaseFieldConfig(**field) for field in fields_data]
                                     props_copy['fields'] = converted_fields
                                     block_copy['props'] = props_copy
                             converted_blocks.append(Block(**block_copy))
@@ -885,14 +888,14 @@ def register_patch_routes(
                                 if hasattr(item, 'model_dump') or hasattr(item, '__dict__'):
                                     # For Pydantic models, use model_dump() method
                                     if hasattr(item, 'model_dump'):
-                                        item_dict = item.model_dump()
+                                        item_dict = item.model_dump(by_alias=True)
                                     else:
                                         item_dict = item.__dict__.copy()
 
                                     # Special handling for block.props with fields
                                     if 'props' in item_dict and item_dict['props'] is not None:
                                         if hasattr(item_dict['props'], 'model_dump'):
-                                            props_dict = item_dict['props'].model_dump()
+                                            props_dict = item_dict['props'].model_dump(by_alias=True)
                                         else:
                                             props_dict = item_dict['props'].__dict__.copy() if hasattr(item_dict['props'], '__dict__') else item_dict['props']
 
@@ -901,7 +904,7 @@ def register_patch_routes(
                                             fields_list = []
                                             for field in props_dict['fields']:
                                                 if hasattr(field, 'model_dump'):
-                                                    fields_list.append(field.model_dump())
+                                                    fields_list.append(field.model_dump(by_alias=True))
                                                 elif hasattr(field, '__dict__'):
                                                     fields_list.append(field.__dict__)
                                                 else:
@@ -1018,10 +1021,13 @@ def register_patch_routes(
         # 应用到当前 Schema
         schema = schema_manager.get(instance_id)
         if schema:
-            apply_patch_to_schema(schema, patch_record["patch"])
+            patch_data = patch_record["patch"]
+            if not isinstance(patch_data, dict):
+                patch_data = {}
+            apply_patch_to_schema(schema, patch_data)
 
             # WebSocket 推送
-            await ws_manager.send_patch(instance_id, patch_record["patch"], None)
+            await ws_manager.send_patch(instance_id, patch_data, None)
 
         return {
             "status": "success",

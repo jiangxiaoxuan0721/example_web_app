@@ -87,11 +87,7 @@ async def patch_ui_state(
     instance_id: str,
     patches: list[dict[str, Any]] = [],
     new_instance_id: str | None = None,
-    target_instance_id: str | None = None,
-    field_key: str | None = None,
-    updates: dict[str, Any] | None = None,
-    remove_field: bool | None = False,
-    block_index: int | None = 0
+    target_instance_id: str | None = None
 ) -> dict[str, Any]
 ```
 
@@ -228,9 +224,19 @@ interface FieldConfig {
 | `checkbox` | 布尔切换 | - |
 | `select` | 下拉选择 | 需要 `options` 数组 |
 | `radio` | 单选按钮组 | 需要 `options` 数组 |
+| `multiselect` | 多选下拉框 | 需要 `options` 数组 |
 | `json` | JSON 编辑器，带验证 | - |
 | `image` | 图片显示，带控制功能 | 支持图片专用属性 |
+| `table` | 表格显示 | 需要 `columns` 数组 |
+| `component` | 组件嵌入 | 需要 `target_instance` |
+| `date` | 日期选择器 | - |
+| `datetime` | 日期时间选择器 | - |
+| `file` | 文件上传 | - |
 | `html` | 只读 HTML 内容 | - |
+| `tag` | 标签显示 | - |
+| `progress` | 进度条 | - |
+| `badge` | 徽章 | - |
+| `modal` | 模态框 | - |
 
 **图片专用属性**（仅当 `type="image"` 时有效）:
 
@@ -329,18 +335,18 @@ interface FieldConfig {
 
 **支持的操作类型**:
 
-||| Operation | 说明 | params 格式 | 使用场景 |
-|||-----------|------|-------------|----------|
-||| `append_to_list` | 向列表末尾添加元素 | `{"item": {...}}` | 添加数据项、追加记录 |
-||| `prepend_to_list` | 向列表开头添加元素 | `{"item": {...}}` | 插入数据到开头 |
-||| `remove_from_list` | 从列表删除元素 | `{"key": "字段名", "value": "值"}` | 删除特定项 |
-||| `update_list_item` | 更新列表中的元素 | `{"key": "字段名", "value": "值", "updates": {...}}` | 修改某条记录 |
-||| `clear_all_params` | 清空所有 params | `{}` | 重置表单 |
-||| `append_block` | 添加新块 | `{"block": {...}}` | 动态添加 UI 组件 |
-||| `prepend_block` | 在开头添加块 | `{"block": {...}}` | 动态插入 UI 组件 |
-||| `remove_block` | 删除块 | `{"block_id": "..."}` | 移除 UI 组件 |
-||| `update_block` | 更新块 | `{"block_id": "...", "updates": {...}}` | 修改 UI 组件 |
-||| `merge` | 合并对象 | `{"data": {...}}` | 部分更新对象 |
+| Operation | 说明 | params 格式 | 使用场景 |
+|-----------|------|-------------|----------|
+| `append_to_list` | 向列表末尾添加元素 | `{"items": [...]}` | 添加数据项、追加记录 |
+| `prepend_to_list` | 向列表开头添加元素 | `{"items": [...]}` | 插入数据到开头 |
+| `remove_from_list` | 从列表删除元素 | `{"key": "字段名", "value": "值"}` 或 `{"key": "字段名", "value": "值", "index": -1}` | 删除单个或批量删除 |
+| `update_list_item` | 更新列表中的元素 | `{"key": "字段名", "value": "值", "updates": {...}}` | 修改某条记录 |
+| `clear_all_params` | 清空所有 params | `{}` | 重置表单 |
+| `append_block` | 添加新块 | `{"block": {...}}` | 动态添加 UI 组件 |
+| `prepend_block` | 在开头添加块 | `{"block": {...}}` | 动态插入 UI 组件 |
+| `remove_block` | 删除块 | `{"block_id": "..."}` | 移除 UI 组件 |
+| `update_block` | 更新块 | `{"block_id": "...", "updates": {...}}` | 修改 UI 组件 |
+| `merge` | 合并对象 | `{"data": {...}}` | 部分更新对象 |
 
 **示例 1: 向列表添加元素**
 
@@ -354,12 +360,14 @@ interface FieldConfig {
     "state.params.users": {
       "operation": "append_to_list",
       "params": {
-        "item": {
-          "id": 6,
-          "name": "赵六",
-          "email": "zhaoliu@example.com",
-          "status": "pending"
-        }
+        "items": [
+          {
+            "id": 6,
+            "name": "赵六",
+            "email": "zhaoliu@example.com",
+            "status": "pending"
+          }
+        ]
       }
     }
   }
@@ -386,7 +394,50 @@ interface FieldConfig {
 }
 ```
 
-**示例 3: 更新列表中的元素**
+**示例 3: 从列表删除单个元素**
+
+```json
+{
+  "id": "remove_user",
+  "label": "删除用户",
+  "style": "danger",
+  "handler_type": "set",
+  "patches": {
+    "state.params.users": {
+      "operation": "remove_from_list",
+      "params": {
+        "key": "id",
+        "value": "5"
+      }
+    }
+  }
+}
+```
+
+**示例 3.1: 批量删除列表元素（删除所有满足条件的项）**
+
+```json
+{
+  "id": "clear_completed",
+  "label": "清除已完成",
+  "style": "danger",
+  "handler_type": "set",
+  "patches": {
+    "state.params.todo_list": {
+      "operation": "remove_from_list",
+      "params": {
+        "key": "completed",
+        "value": true,
+        "index": -1
+      }
+    }
+  }
+}
+```
+
+**说明**：当 `index` 为 `-1` 时，会删除所有满足 `key` 和 `value` 条件的项。例如，上述配置会删除所有 `completed=true` 的待办事项。
+
+**示例 4: 更新列表中的元素**
 
 ```json
 {
@@ -409,7 +460,7 @@ interface FieldConfig {
 }
 ```
 
-**示例 4: 添加新块（动态 UI 组件）**
+**示例 5: 添加新块（动态 UI 组件）**
 
 ```json
 {
@@ -641,26 +692,26 @@ interface FieldConfig {
 
 ### 通用错误代码
 
-|| 错误代码 | HTTP 状态 | 描述 | 解决方案 |
-||-----------|-----------|------|----------|
-|| `INVALID_INSTANCE` | 404 | 实例不存在 | 检查 `instance_id` |
-|| `INVALID_OP` | 400 | 未知的操作类型 | 使用有效的 op: set, add, remove |
-|| `INVALID_PATH` | 400 | 路径语法错误 | 使用有效的路径模式 |
-|| `PATH_NOT_FOUND` | 404 | 无法解析路径 | 确保路径存在或可创建 |
-|| `SCHEMA_MUTATION` | 403 | 不可变字段修改 | 检查允许的字段 |
-|| `MISSING_VALUE` | 400 | 缺少必需的值 | 提供 `value` 字段 |
-|| `DUPLICATE_ID` | 409 | ID 已存在 | 使用唯一的 ID |
-|| `INSTANCE_EXISTS` | 409 | 实例 ID 冲突 | 使用不同的 `instance_id` |
-|| `INVALID_STRUCTURE` | 400 | 无效的 block/action 结构 | 验证 UISchema 格式 |
+| 错误代码 | HTTP 状态 | 描述 | 解决方案 |
+|-----------|-----------|------|----------|
+| `INVALID_INSTANCE` | 404 | 实例不存在 | 检查 `instance_id` |
+| `INVALID_OP` | 400 | 未知的操作类型 | 使用有效的 op: set, add, remove |
+| `INVALID_PATH` | 400 | 路径语法错误 | 使用有效的路径模式 |
+| `PATH_NOT_FOUND` | 404 | 无法解析路径 | 确保路径存在或可创建 |
+| `SCHEMA_MUTATION` | 403 | 不可变字段修改 | 检查允许的字段 |
+| `MISSING_VALUE` | 400 | 缺少必需的值 | 提供 `value` 字段 |
+| `DUPLICATE_ID` | 409 | ID 已存在 | 使用唯一的 ID |
+| `INSTANCE_EXISTS` | 409 | 实例 ID 冲突 | 使用不同的 `instance_id` |
+| `INVALID_STRUCTURE` | 400 | 无效的 block/action 结构 | 验证 UISchema 格式 |
 
 ### 验证错误代码
 
-|| 错误类型 | 描述 |
-||----------|------|
-|| `FIELD_NOT_FOUND` | 指定的字段路径不存在 |
-|| `INVALID_CRITERION_TYPE` | 不支持的验证类型 |
-|| `INVALID_CONDITION` | 自定义条件语法错误 |
-|| `INVALID_JSON_PATH` | JSONPath 解析失败 |
+| 错误类型 | 描述 |
+|----------|------|
+| `FIELD_NOT_FOUND` | 指定的字段路径不存在 |
+| `INVALID_CRITERION_TYPE` | 不支持的验证类型 |
+| `INVALID_CONDITION` | 自定义条件语法错误 |
+| `INVALID_JSON_PATH` | JSONPath 解析失败 |
 
 ---
 
@@ -675,7 +726,7 @@ MCP 工具的设计核心理念是**高度自由化但结构化**，这意味着
    - 支持复杂的逻辑处理（通过 handler 的多样化类型）
    - 无需为特定功能编写硬编码逻辑，所有功能都通过配置实现
    - 支持跨实例引用和组件复用
-   - 支持 17 种字段类型和 9 种操作类型，可以组合出无限可能
+   - 支持 19 种字段类型和 9 种操作类型，可以组合出无限可能
 
 2. **结构化**：
    - 所有操作都遵循预定义的数据模型

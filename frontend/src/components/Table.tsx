@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 
 interface Column {
   key: string;
-  label: string;
+  title: string;
   width?: string;
   align?: 'left' | 'center' | 'right';
   render?: (value: any, record: any, index: number) => React.ReactNode;
@@ -231,7 +231,7 @@ export default function Table({
                     whiteSpace: 'nowrap'
                   }}
                 >
-                  {column.label}
+                  {column.title}
                 </th>
               ))}
             </tr>

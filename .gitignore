@@ -54,3 +54,6 @@ old/
 
 # CodeBuddy
 .codebuddy/
+
+# Claude AI 
+.claude

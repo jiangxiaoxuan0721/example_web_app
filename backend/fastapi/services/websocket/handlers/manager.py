@@ -1,6 +1,6 @@
 """WebSocket 连接管理器 - 整合所有 WebSocket 功能"""
 
-from typing import Optional
+from typing import Any
 import logging
 from fastapi import WebSocket
 from ..connection.pool import ConnectionPool
@@ -28,7 +28,7 @@ class WebSocketManager:
         await websocket.accept()
         self._pool.add(websocket, instance_id)
         logger.info(
-            f"[WSManager] 新连接加入实例 '{instance_id}'，"
+            f"[WSManager] 新连接加入实例 '{instance_id}'，"+
             f"当前该实例连接数: {self._pool.count(instance_id)}"
         )
 
@@ -41,14 +41,14 @@ class WebSocketManager:
         """
         self._pool.remove(websocket, instance_id)
         logger.info(
-            f"[WSManager] 连接断开实例 '{instance_id}'，"
+            f"[WSManager] 连接断开实例 '{instance_id}'，"+
             f"剩余连接数: {self._pool.count(instance_id)}"
         )
 
     async def send_patch(
         self,
         instance_id: str,
-        patch: dict,
+        patch: dict[Any,Any],
         patch_id: int | None = None
     ) -> bool:
         """向指定实例发送 Patch（兼容旧版本）
@@ -66,7 +66,7 @@ class WebSocketManager:
     async def send_patch_with_version(
         self,
         instance_id: str,
-        patch: dict,
+        patch: dict[Any,Any],
         patch_id: int | None = None,
         base_version: int | None = None
     ) -> bool:
@@ -83,7 +83,7 @@ class WebSocketManager:
         """
         return await self._dispatcher.send_patch(instance_id, patch, patch_id, base_version)
 
-    async def send_message(self, instance_id: str, message: dict) -> bool:
+    async def send_message(self, instance_id: str, message: dict[Any,Any]) -> bool:
         """向指定实例发送自定义消息
 
         Args:
@@ -95,7 +95,7 @@ class WebSocketManager:
         """
         return await self._dispatcher.send_to_instance(instance_id, message)
 
-    async def broadcast(self, message: dict) -> int:
+    async def broadcast(self, message: dict[Any,Any]) -> int:
         """向所有实例广播消息
 
         Args:
@@ -125,7 +125,7 @@ class WebSocketManager:
         """
         return self._monitor.get_connection_count()
 
-    def get_stats(self) -> dict:
+    def get_stats(self) -> dict[Any,Any]:
         """获取连接统计信息
 
         Returns:
@@ -133,7 +133,7 @@ class WebSocketManager:
         """
         return self._monitor.get_stats()
 
-    def get_instance_stats(self, instance_id: str) -> dict:
+    def get_instance_stats(self, instance_id: str) -> dict[Any,Any]:
         """获取指定实例的统计信息
 
         Args:
@@ -144,7 +144,7 @@ class WebSocketManager:
         """
         return self._monitor.get_instance_stats(instance_id)
 
-    def health_check(self) -> dict:
+    def health_check(self) -> dict[Any,Any]:
         """健康检查
 
         Returns:
@@ -152,7 +152,7 @@ class WebSocketManager:
         """
         return self._monitor.health_check()
 
-    def list_active_instances(self) -> list:
+    def list_active_instances(self) -> list[str]:
         """列出所有有活跃连接的实例
 
         Returns:

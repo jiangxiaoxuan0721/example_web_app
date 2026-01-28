@@ -1,13 +1,14 @@
 """Patch 历史管理器 - 管理和查询 Patch 历史记录"""
 
 from datetime import datetime
+from typing import cast
 
 
 class PatchHistoryManager:
     """Patch 历史记录管理器"""
 
     def __init__(self) -> None:
-        self._history: "dict[str, list[dict[str, object]]" = {}
+        self._history: "dict[str, list[dict[str, object]]]" = {}
         self._counters: "dict[str, int]" = {}
 
     def save(self, instance_id: str, patch: "dict[str, object]") -> int:
@@ -32,7 +33,8 @@ class PatchHistoryManager:
             "patch": patch
         }
 
-        self._history[instance_id].append(patch_record)
+        # 使用 cast 显式转换类型，解决 dict 类型参数的不变性问题
+        self._history[instance_id].append(cast("dict[str, object]", patch_record))
         return self._counters[instance_id]
 
     def get_all(self, instance_id: str) -> "list[dict[str, object]]":

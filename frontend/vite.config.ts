@@ -22,6 +22,7 @@ export default defineConfig({
       '/ui': {
         target: 'http://localhost:8001',
         changeOrigin: true,
+        ws: true,
       },
       '/api': {
         target: 'http://localhost:8001',

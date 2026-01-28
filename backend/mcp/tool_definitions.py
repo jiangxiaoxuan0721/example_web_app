@@ -1,343 +1,16 @@
 """MCP工具定义文件
 
-此文件定义了所有可用的MCP工具及其参数，但不包含具体实现。
-实现逻辑应在tool_implements.py文件中。
-
-重要：工具描述会被注入到Agent上下文，所有必要信息都在工具描述中。
+此文件定义所有MCP工具。实现逻辑在tool_implements.py中。
+工具描述会被注入到Agent上下文，必须完整、准确。
 """
 
 from typing import Any
 from fastmcp import FastMCP
 
-# 创建FastMCP服务器实例
 mcp = FastMCP("ui-patch-server")
 
 
-# 工具注册区域 - 所有工具在此处注册但不在本文件中实现
-
-@mcp.tool()
-async def add_field(
-    instance_id: str,
-    field: dict[str, Any],
-    block_index: int | None = 0,
-    state_path: str | None = None,
-    initial_value: Any | None = None
-) -> dict[str, Any]:
-    """
-    Add a new field to a form block. Auto-initializes state and updates UI.
-
-    WHEN TO USE: Add input/display fields to forms. Supports 17 field types.
-
-    FIELD TYPES (17 total):
-        Input (5): text, number, textarea, checkbox, json
-        Selection (3): select, radio, multiselect (needs options array)
-        Display (9): html, image, tag, progress, badge, table, modal, component
-
-    REQUIRED FIELD PROPS: label, key, type
-    COMMON OPTIONAL: value, description, editable, options (for select/radio/multiselect)
-
-    FIELD TYPE DETAILS:
-        text: Single-line text input. Special: Object values auto-convert to JSON, supports template ${state.xxx}.
-              Props: label, key, type, value, description, editable. Example: {"label":"Name","key":"name","type":"text"}
-        number: Numeric input. Props: label, key, type, value, description. Example: {"label":"Age","key":"age","type":"number","value":0}
-        textarea: Multi-line text. Special: Object values auto-convert to JSON, supports template ${state.xxx}.
-                 Props: label, key, type, value, description, rows (default:4). Example: {"label":"Bio","key":"bio","type":"textarea","rows":6}
-        checkbox: Boolean toggle. Props: label, key, type, value (boolean), description. Example: {"label":"Agreed","key":"agreed","type":"checkbox","value":false}
-        json: JSON editor. Special: Object values auto-convert to JSON string, supports template ${state.xxx}.
-              Props: label, key, type, value, description, editable. Example: {"label":"Config","key":"config","type":"json"}
-        select: Dropdown. Props: label, key, type, value, options (REQUIRED: array of {label,value}).
-                Example: {"label":"Country","key":"country","type":"select","options":[{"label":"CN","value":"cn"}]}
-        radio: Radio buttons. Props: label, key, type, value, options (REQUIRED: array of {label,value}).
-              Example: {"label":"Gender","key":"gender","type":"radio","options":[{"label":"Male","value":"male"}]}
-        multiselect: Multi-select. Props: label, key, type, value (array), options (REQUIRED: array of {label,value}).
-                    Example: {"label":"Skills","key":"skills","type":"multiselect","value":["coding"],"options":[{"label":"Coding","value":"coding"}]}
-        html: Read-only HTML. Props: label, key, type, value (HTML string), description.
-              Example: {"label":"Content","key":"content","type":"html","value":"<h3>Title</h3>"}
-        image: Image display. Props: label, key, type, value (URL or {url,title,alt}), showFullscreen (default:true),
-                showDownload (default:true), imageHeight (default:"auto"), imageFit (default:"contain":contain/cover/fill), lazy, fallback, subtitle.
-                Example: {"label":"Avatar","key":"avatar","type":"image","imageFit":"cover","imageHeight":"200px"}
-        tag: Tag display with auto-type-detection and custom text mapping. Props: label, key, type, value (array of tags),
-              renderText, evaluate. Tag types: success/active/completed->green, warning/pending->yellow,
-              error/failed/danger->red, info/processing->blue, other->gray.
-              renderText format: "value1:text1|value2:text2" (e.g., "true:已完成|false:未完成").
-              evaluate format: Boolean expression (e.g., "status === 'completed'").
-              Example: {"label":"Status","key":"status","type":"tag","renderText":"true:已完成|false:未完成"}
-        progress: Progress bar. Props: label, key, type, value (object: {current,total,showLabel}).
-                  Example: {"label":"Progress","key":"progress","type":"progress","value":{"current":3,"total":5,"showLabel":true}}
-        badge: Badge notification. Props: label, key, type, value (object: {count,label,dot,color,showZero,max}).
-                Example: {"label":"Notifs","key":"notifs","type":"badge","value":{"count":5,"label":"Msg","color":"#f5222d"}}
-        table: Data table with sorting and multiple render types. Required: columns (array of column config).
-                Columns props: key, label, width, align (left/center/right), sortable (default:false), editable (default:false),
-                renderType (default:text/tag/badge/progress/image/mixed).
-                Table props: value (data array), rowKey (default:"id"), bordered (default:true), striped (default:true),
-                hover (default:true), showHeader (default:true), showPagination (default:false), pageSize (default:10),
-                maxHeight, emptyText (default:"暂无数据"), compact (default:false).
-                Example: {"label":"Users","key":"users","type":"table","columns":[{"key":"name","label":"Name"}],"value":[{"id":1,"name":"John"}]}
-        modal: Modal dialog. Props: label, key, type, value (object: {visible,title,content,width,okText,cancelText}).
-                Example: {"label":"Confirm","key":"confirm","type":"modal","value":{"visible":true,"title":"Confirm?","content":"<p>Are you sure?</p>"}}
-        component: Embedded cross-instance rendering. Props: label, key, type, targetInstance (REQUIRED), targetBlock.
-                   Example: {"label":"Chart","key":"chart","type":"component","targetInstance":"chart_instance"}
-
-    TEMPLATE RENDERING:
-        Syntax: ${state.params.xxx} for params, ${state.runtime.xxx} for runtime
-        Auto-timestamp: When ${state.runtime.timestamp} is referenced, auto-updates to current time
-        Object handling: For text/textarea/json fields, object values auto-convert to JSON string
-
-    ARGS:
-        instance_id: Target instance ID
-        field: Field config object
-        block_index: Block index to add to (default: 0)
-        state_path: State path to init (e.g., "state.params.username")
-        initial_value: Initial state value
-
-    RETURNS: {status, instance_id, patches_applied, message/error}
-
-    EXAMPLES:
-        Text: {"instance_id":"form","field":{"label":"Name","key":"name","type":"text"},
-               "state_path":"state.params.name","initial_value":""}
-        Select: {"instance_id":"form","field":{"label":"Country","key":"country","type":"select",
-                "options":[{"label":"CN","value":"cn"}]},"state_path":"state.params.country"}
-        Table: {"instance_id":"form","field":{"label":"Users","key":"users","type":"table",
-                "columns":[{"key":"name","label":"Name"}]},"state_path":"state.params.users",
-                "initial_value":[{"id":1,"name":"John"}]}
-
-    NOTE: UI auto-refreshes. No need to call access_instance.
-    """
-    from backend.mcp.tool_implements import add_field_impl
-    return await add_field_impl(instance_id, field, block_index, state_path, initial_value)
-
-
-@mcp.tool()
-async def update_field(
-    instance_id: str,
-    field_key: str,
-    updates: dict[str, Any],
-    block_index: int | None = 0,
-    update_all: bool | None = False
-) -> dict[str, Any]:
-    """
-    Update an existing field's properties. Modifies field config only.
-
-    WHEN TO USE: Change field label, type, or other properties. NOT for changing field values.
-
-    ARGS:
-        instance_id: Target instance ID
-        field_key: Key of field to update
-        updates: Field properties to update (e.g., {"label": "New Label", "type": "textarea"})
-        block_index: Block index containing field (default: 0)
-        update_all: Update all fields with matching key across all blocks (default: False)
-
-    RETURNS: {status, instance_id, patches_applied, message/error}
-
-    EXAMPLES:
-        Change label: {"instance_id":"form","field_key":"name","updates":{"label":"Full Name"}}
-        Change type: {"instance_id":"form","field_key":"desc","updates":{"type":"textarea"}}
-        Multi-prop: {"instance_id":"form","field_key":"avatar","updates":{"imageFit":"cover","imageHeight":"150px"}}
-
-    NOTE: To change field values, use patch_ui_state with "state.params.xxx" path.
-    """
-    from backend.mcp.tool_implements import update_field_impl
-    return await update_field_impl(instance_id, field_key, updates, block_index, update_all)
-
-
-@mcp.tool()
-async def remove_field(
-    instance_id: str,
-    field_key: str,
-    block_index: int | None = 0,
-    remove_all: bool | None = False
-) -> dict[str, Any]:
-    """
-    Remove a field from a form block.
-
-    WHEN TO USE: Delete unused/incorrect fields from UI.
-
-    ARGS:
-        instance_id: Target instance ID
-        field_key: Key of field to remove
-        block_index: Block index containing field (default: 0)
-        remove_all: Remove all fields with matching key across all blocks (default: False)
-
-    RETURNS: {status, instance_id, patches_applied, message/error}
-
-    EXAMPLES:
-        Single field: {"instance_id":"form","field_key":"email"}
-        Specific block: {"instance_id":"form","field_key":"phone","block_index":1}
-        All matching: {"instance_id":"form","field_key":"temp","remove_all":true}
-    """
-    from backend.mcp.tool_implements import remove_field_impl
-    return await remove_field_impl(instance_id, field_key, block_index, remove_all)
-
-
-@mcp.tool()
-async def add_block(
-    instance_id: str,
-    block: dict[str, Any],
-    position: str | None = "end"
-) -> dict[str, Any]:
-    """
-    Add a new block to UI instance. Blocks organize fields and actions.
-
-    WHEN TO USE: Create new content sections (forms, displays, custom layouts).
-
-    BLOCK TYPES:
-        form: Block with input fields
-        display: Block for read-only content
-        other: Custom block types
-
-    REQUIRED BLOCK PROPS: id, type, bind, props (props.fields for form/display)
-
-    ARGS:
-        instance_id: Target instance ID
-        block: Block config object
-        position: Insert location - "start", "end", or integer index (default: "end")
-
-    RETURNS: {status, instance_id, patches_applied, message/error}
-
-    EXAMPLES:
-        Form block: {"instance_id":"demo","block":{"id":"contact","type":"form",
-                    "bind":"state.params","props":{"fields":[{"label":"Name","key":"name","type":"text"}]}}}
-        Display block: {"instance_id":"demo","position":"start","block":{"id":"header","type":"display",
-                     "bind":"state.params","props":{"fields":[{"label":"Title","key":"title","type":"html"}]}}}
-        With actions: {"instance_id":"demo","block":{"id":"actions_block","type":"form",
-                     "bind":"state.params","props":{"fields":[{"label":"Status","key":"status","type":"text"}]},
-                     "actions":[{"id":"reset","label":"Reset","style":"secondary","handler_type":"set",
-                     "patches":{"state.params.status":""}}]}}
-
-    NOTE: UI auto-refreshes. No need to call access_instance.
-    """
-    from backend.mcp.tool_implements import add_block_impl
-    return await add_block_impl(instance_id, block, position)
-
-
-@mcp.tool()
-async def remove_block(
-    instance_id: str,
-    block_id: str,
-    remove_all: bool | None = False
-) -> dict[str, Any]:
-    """
-    Remove a block from UI instance.
-
-    WHEN TO USE: Delete entire content sections from UI.
-
-    ARGS:
-        instance_id: Target instance ID
-        block_id: ID of block to remove
-        remove_all: Remove all blocks with matching ID (default: False)
-
-    RETURNS: {status, instance_id, patches_applied, message/error}
-
-    EXAMPLES:
-        Single block: {"instance_id":"form","block_id":"old_block"}
-        All matching: {"instance_id":"form","block_id":"temp","remove_all":true}
-    """
-    from backend.mcp.tool_implements import remove_block_impl
-    return await remove_block_impl(instance_id, block_id, remove_all)
-
-
-@mcp.tool()
-async def add_action(
-    instance_id: str,
-    action: dict[str, Any],
-    block_index: int | None = None
-) -> dict[str, Any]:
-    """
-    Add an action button to UI. Actions trigger handlers when clicked.
-
-    WHEN TO USE: Add interactive buttons that modify state, navigate, or call APIs.
-
-    REQUIRED ACTION PROPS: id, label, style
-    STYLE OPTIONS: primary (blue), secondary (gray), danger (red)
-
-    OPTIONAL PROPS:
-        action_type: "api" (default) or "navigate"
-        target_instance: Target instance ID (when action_type="navigate")
-        handler_type: Handler type (see details below)
-        patches: Patch mappings (for set/increment/decrement/toggle/template)
-
-    HANDLER TYPES (9 total):
-        set: Direct assignment. Patches: {"path": "value"}. Example: {"handler_type":"set","patches":{"state.params.count":42}}
-              Supports operation object for complex actions:
-              - append_to_list: {"operation":"append_to_list","params":{"item":{...}}}
-              - prepend_to_list: {"operation":"prepend_to_list","params":{"item":{...}}}
-              - remove_from_list: {"operation":"remove_from_list","params":{"key":"field","value":"val"}}
-              - update_list_item: {"operation":"update_list_item","params":{"key":"field","value":"val","updates":{...}}}
-              - clear_all_params: {"operation":"clear_all_params","params":{}}
-              - append_block: {"operation":"append_block","params":{"block":{...}}}
-              - prepend_block: {"operation":"prepend_block","params":{"block":{...}}}
-              - remove_block: {"operation":"remove_block","params":{"block_id":"id"}}
-              - update_block: {"operation":"update_block","params":{"block_id":"id","updates":{...}}}
-              - merge: {"operation":"merge","params":{"data":{...}}}
-        increment: Add to number. Patches: {"path": delta}. Example: {"handler_type":"increment","patches":{"state.params.count":1}}
-        decrement: Subtract from number. Patches: {"path": delta}. Example: {"handler_type":"decrement","patches":{"state.params.count":1}}
-        toggle: Boolean toggle. Patches: {"path": true}. Example: {"handler_type":"toggle","patches":{"state.params.enabled":true}}
-        template: Render template string. Patches: {"path": "template"}. Example: {"handler_type":"template",
-                 "patches":{"state.runtime.message":"Done at ${state.runtime.timestamp}"}}
-        external: Call external API. Config: url, method, headers, body_template, response_mappings, error_mapping.
-                 Example: {"handler_type":"external","patches":{"url":"https://api.example.com/data","method":"GET",
-                 "response_mappings":{"state.params.user":"data"}}}
-        template:all: Render all patches with template variables
-        template:state: Render only state patches (state.params.* and state.runtime.*)
-
-    TEMPLATE RENDERING:
-        Syntax: ${state.params.xxx} for params, ${state.runtime.xxx} for runtime
-        Auto-timestamp: When ${state.runtime.timestamp} is referenced, auto-updates to current time
-
-    ARGS:
-        instance_id: Target instance ID
-        action: Action config object
-        block_index: Optional block index (adds to global actions if None)
-
-    RETURNS: {status, instance_id, patches_applied, message/error}
-
-    EXAMPLES:
-        Clear form: {"instance_id":"form","action":{"id":"clear","label":"Clear","style":"danger",
-                    "handler_type":"set","patches":{"state.params.name":"","state.runtime.status":"idle"}}}
-        Increment: {"instance_id":"counter","action":{"id":"inc","label":"+","style":"primary",
-                   "handler_type":"increment","patches":{"state.params.count":1}}}
-        Navigate: {"instance_id":"form","action":{"id":"goto","label":"Go to list","style":"secondary",
-                   "action_type":"navigate","target_instance":"list_page"}}
-        Template: {"instance_id":"form","action":{"id":"submit","label":"Submit","style":"primary",
-                   "handler_type":"template","patches":{"state.runtime.message":"Done at ${state.runtime.timestamp}"}}}
-        External API: {"instance_id":"form","action":{"id":"fetch","label":"Fetch","style":"primary",
-                      "handler_type":"external","patches":{"url":"https://api.example.com/data",
-                      "method":"GET","response_mappings":{"state.params.data":""}}}
-
-    NOTE: UI auto-refreshes. No need to call access_instance.
-    """
-    from backend.mcp.tool_implements import add_action_impl
-    return await add_action_impl(instance_id, action, block_index)
-
-
-@mcp.tool()
-async def remove_action(
-    instance_id: str,
-    action_id: str,
-    block_index: int | None = None,
-    remove_all: bool | None = False
-) -> dict[str, Any]:
-    """
-    Remove an action button from UI.
-
-    WHEN TO USE: Delete unused action buttons.
-
-    ARGS:
-        instance_id: Target instance ID
-        action_id: ID of action to remove
-        block_index: Optional block index (removes from global actions if None)
-        remove_all: Remove all actions with matching ID (default: False)
-
-    RETURNS: {status, instance_id, patches_applied, message/error}
-
-    EXAMPLES:
-        Global action: {"instance_id":"form","action_id":"old_action"}
-        Block action: {"instance_id":"form","action_id":"reset","block_index":0}
-        All matching: {"instance_id":"form","action_id":"temp","remove_all":true}
-    """
-    from backend.mcp.tool_implements import remove_action_impl
-    return await remove_action_impl(instance_id, action_id, block_index, remove_all)
-
+# ===== 万能修改工具（推荐使用）=====
 
 @mcp.tool()
 async def patch_ui_state(
@@ -346,132 +19,373 @@ async def patch_ui_state(
     new_instance_id: str | None = None,
     target_instance_id: str | None = None
 ) -> dict[str, Any]:
+    """通过JSON Patch修改UI Schema。
+
+    <parameter>
+    参数:
+        instance_id: 目标实例ID。三种模式：
+            - 修改现有："demo"、"form"、"counter"
+            - 创建新实例："__CREATE__"（需提供new_instance_id）
+            - 删除实例："__DELETE__"（需提供target_instance_id）
+        patches: Patch操作数组，每项包含op、path、value
+        new_instance_id: 创建实例时的新ID（instance_id="__CREATE__"时必需）
+        target_instance_id: 删除实例时的目标ID（instance_id="__DELETE__"时必需）
+    </parameter>
+
+    <operations>
+    操作类型(op):
+        set: 设置或更新值，路径不存在则创建
+        add: 向数组末尾添加元素（blocks、actions、fields等）
+        remove: 从数组删除元素（通过id或key匹配）
+    </operations>
+
+    <paths>
+    路径示例:
+        state.params.xxx: 状态参数
+        state.runtime.xxx: 运行时数据
+        blocks.0: 第一个block
+        blocks.0.props.fields: block的字段数组
+        blocks.0.props.fields.0.label: 第一个字段的label属性
+        blocks.0.props.actions: block级actions
+        actions: 全局actions
+    </paths>
+
+    <field_types>
+    字段类型(19种):
+        输入: text, number, textarea, checkbox, json, date, datetime, file
+        选择: select, radio, multiselect
+        显示: html, image, tag, progress, badge, table, modal, component
+    </field_types>
+
+    <action_handlers>
+    Action Handler类型(9种):
+        set: 直接赋值
+        increment/decrement: 数值增减
+        toggle: 布尔切换
+        template: 模板渲染（${state.xxx}语法）
+        external: 外部API调用
+        template:all/template:state: 模板变体
+    </action_handlers>
+
+    <list_operations>
+    列表操作(在action patches中):
+        通过 mode: "operation" 触发，支持以下操作:
+
+        ⚠️ 重要：params 参数名必须严格匹配，不能随意修改！
+
+        - append_to_list: 追加元素到列表末尾
+            * 格式: {"mode": "operation", "operation": "append_to_list", "params": {"items": [...]}}
+            * 注意：必须使用 items（数组），不能使用 item（单数）
+            * 示例: {"items": [{"name": "张三", "id": "001"}]}
+            * 支持模板: {"items": [{"name": "${state.params.input_name}"}]}
+
+        - prepend_to_list: 在列表开头插入元素
+            * 格式: {"mode": "operation", "operation": "prepend_to_list", "params": {"items": [...]}}
+            * 注意：必须使用 items（数组），不能使用 item（单数）
+            * 示例: {"items": [{"name": "新用户"}]}
+
+        - remove_from_list: 删除匹配的元素
+            * 删除单个: {"mode": "operation", "operation": "remove_from_list", "params": {"key": "id", "value": "5"}}
+            * 批量删除: {"mode": "operation", "operation": "remove_from_list", "params": {"key": "status", "value": "completed", "index": -1}}
+            * 说明: index=-1 表示删除所有满足条件的项
+
+        - remove_last: 删除列表最后一项
+            * 格式: {"mode": "operation", "operation": "remove_last", "params": {}}
+
+        - update_list_item: 更新指定位置的元素
+            * 格式: {"mode": "operation", "operation": "update_list_item", "params": {"key": "id", "value": "5", "updates": {...}}}
+
+        - clear_all_params: 清空所有参数
+            * 格式: {"mode": "operation", "operation": "clear_all_params", "params": {}}
+
+        - append_block: 追加block到blocks数组
+        - prepend_block: 在blocks开头插入block
+        - remove_block: 删除指定block
+        - update_block: 更新指定block
+
+        通用格式:
+        {"mode": "operation", "operation": "操作名称", "params": {...}}
+    </list_operations>
+
+    <template_expressions>
+    模板表达式(在action patches值中使用):
+        支持 ${state.xxx} 语法引用状态值，在运行时动态替换
+
+        支持的场景:
+        1. 直接赋值字符串: "姓名: ${state.params.name}"
+        2. 列表操作的items参数: {"name": "${state.params.input_name}"}
+        3. 列表更新的updates参数: {"email": "${state.params.new_email}"}
+        4. 字典嵌套模板: {"text": "你好 ${state.params.name}, 邮箱: ${state.params.email}"}
+
+        注意: 模板仅在 action patches 的 value 中生效，MCP 调用 patches 的 value 不支持
+    </template_expressions>
+
+    <block_operations>
+    Block操作(在action patches中):
+        通过 mode: "operation" + operation: "append_block" 触发
+        格式:
+        {"mode": "operation", "operation": "append_block", "params": {"block": {...}}}
+    </block_operations>
+
+    <return_value>
+    返回值:
+        {status: "success"|"error", instance_id, patches_applied, skipped_patches, message/error}
+    </return_value>
+
+    <examples>
+    常用示例:
+
+    ⚠️ 格式规范提醒：
+        - append_to_list 和 prepend_to_list 必须使用 params.items（复数），不要使用 item（单数）
+        - 所有操作参数名必须严格匹配，不能随意修改
+        - 模板表达式仅在 action patches 的 value 中生效
+
+    <example>1. 修改状态:
+    {"instance_id":"counter","patches":[{"op":"set","path":"state.params.count","value":42}]}
+    </example>
+
+    <example>2. 添加字段:
+    {"instance_id":"form","patches":[
+        {"op":"set","path":"state.params.name","value":""},
+        {"op":"add","path":"blocks.0.props.fields","value":{"label":"姓名","key":"name","type":"text"}}
+    ]}
+    </example>
+
+    <example>3. 添加表格:
+    {"instance_id":"form","patches":[
+        {"op":"set","path":"state.params.students","value":[{"name":"张三","id":"001","class":"一班"}]},
+        {"op":"add","path":"blocks.0.props.fields","value":{
+            "label":"学生列表","key":"students","type":"table",
+            "columns":[{"key":"name","label":"姓名"},{"key":"id","label":"学号"}],
+            "showPagination":true,"pageSize":5
+        }}
+    ]}
+    </example>
+
+    <example>4. 添加block级action（添加学生）:
+    {"instance_id":"form","patches":[
+        {"op":"add","path":"blocks.0.props.actions","value":{
+            "id":"add_student","label":"添加学生","style":"primary","handler_type":"set",
+            "patches":{"state.params.students":{"mode":"operation","operation":"append_to_list","params":{"items":[{"name":"新生","id":"999"}]}}}
+        }}
+    ]}
+    </example>
+
+    <example>5. 添加全局action:
+    {"instance_id":"form","patches":[
+        {"op":"add","path":"actions","value":{
+            "id":"reset","label":"重置","style":"danger","handler_type":"set","patches":{"state.params.count":0}
+        }}
+    ]}
+    </example>
+
+    <example>6. 删除列表项（单个）:
+    {"instance_id":"todo","patches":[
+        {"op":"add","path":"actions","value":{
+            "id":"remove","label":"删除","handler_type":"set",
+            "patches":{"state.params.todos":{"mode":"operation","operation":"remove_from_list","params":{"key":"id","value":"5"}}}
+        }}
+    ]}
+    </example>
+
+    <example>7. 批量删除（删除所有completed=true的项）:
+    {"instance_id":"todo","patches":[
+        {"op":"add","path":"actions","value":{
+            "id":"clear_done","label":"清除已完成","handler_type":"set",
+            "patches":{"state.params.todos":{"mode":"operation","operation":"remove_from_list","params":{"key":"done","value":true,"index":-1}}}
+        }}
+    ]}
+    </example>
+
+    <example>8. 删除列表最后一项:
+    {"instance_id":"list_demo","patches":[
+        {"op":"add","path":"actions","value":{
+            "id":"remove_last","label":"删除最后一项","handler_type":"set",
+            "patches":{"state.params.items":{"mode":"operation","operation":"remove_last","params":{}}}
+        }}
+    ]}
+    </example>
+
+    <example>9. 修改字段属性:
+    {"instance_id":"form","patches":[{"op":"set","path":"blocks.0.props.fields.0.label","value":"新标签"}]}
+    </example>
+
+    <example>10. 删除字段:
+    {"instance_id":"form","patches":[{"op":"remove","path":"blocks.0.props.fields","value":{"key":"old_field"}}]}
+    </example>
+
+    <example>11. 添加完整block:
+    {"instance_id":"form","patches":[
+        {"op":"add","path":"blocks","value":{
+            "id":"students","type":"form","bind":"state.params","props":{
+                "fields":[{"label":"学生","key":"students","type":"table","columns":[{"key":"name","label":"姓名"}]}],
+                "actions":[{"id":"add","label":"添加","handler_type":"set","patches":{"state.params.students":{"mode":"operation","operation":"append_to_list","params":{"items":[{"name":"新生"}]}}}}]
+            }
+        }}
+    ]}
+    </example>
+
+    <example>12. 创建实例:
+    {"instance_id":"__CREATE__","new_instance_id":"my_ui","patches":[
+        {"op":"set","path":"meta","value":{"pageKey":"my_ui","step":{"current":1,"total":1},"status":"idle","schemaVersion":"1.0"}},
+        {"op":"set","path":"state","value":{"params":{},"runtime":{}}},
+        {"op":"set","path":"layout","value":{"type":"single"}},
+        {"op":"set","path":"blocks","value":[]},
+        {"op":"set","path":"actions","value":[]}
+    ]}
+    </example>
+
+    <example>13. 删除实例:
+    {"instance_id":"__DELETE__","target_instance_id":"old_ui"}
+    </example>
+
+    <example>14. 添加全局action（动态生成block）:
+    {"instance_id":"demo","patches":[
+        {"op":"add","path":"actions","value":{
+            "id":"generate_block","label":"生成 Block","style":"primary","handler_type":"set",
+            "patches":{"blocks":{"mode":"operation","operation":"append_block","params":{"block":{
+                "id":"dynamic_block","type":"form","bind":"state.params","props":{
+                    "fields":[{"label":"动态字段","key":"dynamic","type":"text"}]
+                }
+            }}}}
+        }}
+    ]}
+    </example>
+
+    <example>15. 使用模板表达式（将输入框值添加到表格）:
+    {"instance_id":"form","patches":[
+        {"op":"set","path":"state.params.name","value":""},
+        {"op":"set","path":"state.params.email","value":""},
+        {"op":"set","path":"state.params.students","value":[]},
+        {"op":"add","path":"blocks.0.props.fields","value":{"label":"姓名","key":"name","type":"text"}},
+        {"op":"add","path":"blocks.0.props.fields","value":{"label":"邮箱","key":"email","type":"text"}},
+        {"op":"add","path":"blocks.0.props.fields","value":{"label":"学生列表","key":"students","type":"table","columns":[{"key":"name","label":"姓名"},{"key":"email","label":"邮箱"}]}},
+        {"op":"add","path":"blocks.0.props.actions","value":{
+            "id":"add_student","label":"添加学生","style":"primary","handler_type":"set",
+            "patches":{"state.params.students":{"mode":"operation","operation":"append_to_list","params":{"items":[{"name":"${state.params.name}","email":"${state.params.email}"}]}}}
+        }}
+    ]}
+    </example>
+
+    <example>16. 使用模板表达式（更新字段）:
+    {"instance_id":"form","patches":[
+        {"op":"set","path":"state.params.username","value":"张三"},
+        {"op":"set","path":"state.params.nickname","value":""},
+        {"op":"add","path":"actions","value":{
+            "id":"sync_nickname","label":"同步昵称","style":"secondary","handler_type":"set",
+            "patches":{"state.params.nickname":"${state.params.username}"}
+        }}
+    ]}
+
+    17. 使用模板表达式（批量更新列表项）:
+    {"instance_id":"form","patches":[
+        {"op":"set","path":"state.params.todos","value":[{"id":"1","task":"任务1","done":false}]},
+        {"op":"set","path":"state.params.new_task","value":""},
+        {"op":"set","path":"state.params.update_msg","value":"已完成更新"},
+        {"op":"add","path":"actions","value":{
+            "id":"update_todo","label":"更新任务","style":"primary","handler_type":"set",
+            "patches":{"state.params.todos":{"mode":"operation","operation":"update_list_item","params":{"key":"id","value":"1","updates":{"task":"${state.params.new_task}","status":"${state.params.update_msg}"}}}}
+        }}
+    ]}
+    </example>
+
+    <note>
+    注意:
+    - 修改后UI自动刷新，无需调用access_instance
+    - state.runtime.timestamp引用会自动更新为当前时间
+    - items是单个对象时，也使用数组表示
+    - 使用前先调用get_schema了解当前结构
+    - 使用operation时必须包含 mode: "operation" 字段，否则会被当作普通值处理
+    - 模板表达式 ${state.xxx} 仅在 action patches 的 value 中生效，运行时才替换
+    - MCP 调用的 patches value 中使用模板字符串不会被处理（因为 action 还没执行）
+    </note>
+    </examples>
     """
-    Apply raw patch operations to UI Schema. Most flexible tool for all modifications.
-
-    WHEN TO USE: Batch operations, complex modifications, or when specialized tools don't fit.
-    For simple field/block/action ops, prefer: add_field, update_field, add_block, etc.
-
-    INSTANCE IDs:
-        Regular: "demo", "form", "counter" (modify existing)
-        "__CREATE__": Create new instance (requires new_instance_id)
-        "__DELETE__": Delete instance (requires target_instance_id)
-
-    OPERATIONS (op field):
-        set: Set/update value at path. Creates if missing.
-        add: Append item to array (blocks, actions, blocks.X.props.fields).
-        remove: Remove item from array by ID/key (blocks, actions, blocks.X.props.fields).
-
-    PATH EXAMPLES:
-        state.params.count - Set/modify state value
-        state.runtime.status - Set runtime status
-        blocks.0 - Access first block
-        blocks.0.props.fields.0 - Access first field
-        blocks.0.props.fields.0.label - Update field property
-
-    FIELD TYPES (17): text, number, textarea, checkbox, json, select, radio, multiselect, html, image, tag, progress, badge, table, modal, component
-
-    HANDLER TYPES (9): set, increment, decrement, toggle, template, external, template:all, template:state
-        See add_action tool for complete handler details and examples.
-
-    AUTO-TIMESTAMP: When patches reference state.runtime.timestamp in templates, auto-updates to current time.
-
-    ARGS:
-        instance_id: Target instance ID
-        patches: Array of patch operations
-        new_instance_id: Required when instance_id=="__CREATE__"
-        target_instance_id: Required when instance_id=="__DELETE__"
-
-    RETURNS: {status, instance_id, patches_applied, skipped_patches, message/error}
-
-    EXAMPLES:
-        Update state: {"instance_id":"counter","patches":[{"op":"set","path":"state.params.count","value":42}]}
-        Add field: {"instance_id":"form","patches":[
-                    {"op":"set","path":"state.params.name","value":""},
-                    {"op":"add","path":"blocks.0.props.fields","value":{"label":"Name","key":"name","type":"text"}}]}
-        Update field: {"instance_id":"form","patches":[{"op":"set","path":"blocks.0.props.fields.0.label","value":"New"}]}
-        Remove field: {"instance_id":"form","patches":[{"op":"remove","path":"blocks.0.props.fields",
-                      "value":{"key":"email"}}]}
-        Create instance: {"instance_id":"__CREATE__","new_instance_id":"my","patches":[
-                        {"op":"set","path":"meta","value":{"pageKey":"my","step":{"current":1,"total":1}}},
-                        {"op":"set","path":"state","value":{"params":{},"runtime":{}}},
-                        {"op":"set","path":"blocks","value":[]},{"op":"set","path":"actions","value":[]}]}
-        Delete instance: {"instance_id":"__DELETE__","target_instance_id":"old"}
-    """
-    # 实现在tool_implements.py中
     from backend.mcp.tool_implements import patch_ui_state_impl
     return await patch_ui_state_impl(
         instance_id, patches, new_instance_id, target_instance_id
     )
 
 
+# ===== 只读查询工具 =====
+
 @mcp.tool()
 async def get_schema(instance_id: str | None = None) -> dict[str, Any]:
-    """
-    Get current UI Schema for an instance. Returns complete instance structure.
+    """获取实例的完整UI Schema。
 
-    WHEN TO USE: Inspect current state, check structure, or prepare modifications.
+    参数:
+        instance_id: 实例ID（如"demo"、"form"）。None返回默认"demo"实例
 
-    ARGS:
-        instance_id: Instance ID (e.g., "demo", "form"). If None, returns default "demo" instance.
-
-    RETURNS: {status, error (if any), instance_id, schema}
-        Schema structure: {meta, state, layout, blocks, actions}
-        - meta: {pageKey, step, ...}
+    返回值:
+        {status: "success"|"error", instance_id, schema}
+        Schema结构:
+        - meta: {pageKey, step: {current, total}, status, schemaVersion}
         - state: {params: {...}, runtime: {...}}
-        - blocks: [{id, type, bind, props, actions}, ...]
+        - layout: {type}
+        - blocks: [{id, type, bind, props: {fields, actions}}, ...]
         - actions: [{id, label, style, handler_type, patches}, ...]
 
-    EXAMPLE: {"instance_id":"form"} or get_schema() for default instance.
-
-    NOTE: Use before modifications to understand current structure.
+    示例:
+        {"instance_id": "form"}
+        {"instance_id": null}
     """
-    # 实现在tool_implements.py中
     from backend.mcp.tool_implements import get_schema_impl
     return await get_schema_impl(instance_id)
 
 
 @mcp.tool()
 async def list_instances() -> dict[str, Any]:
+    """列出所有可用实例。
+
+    返回值:
+        {status: "success"|"error", instances: [{instance_id, page_key, status, blocks_count, actions_count}, ...], total}
+
+    示例:
+        {}（无需参数）
     """
-    List all available UI Schema instances.
-
-    WHEN TO USE: Discover available instances, browse resources, or check instance status.
-
-    RETURNS: {status, error (if any), instances, total}
-        instances array: [{instance_id, page_key, status, blocks_count, actions_count}, ...]
-        total: Number of instances
-
-    EXAMPLE: No args needed. Call directly.
-
-    NOTE: Use to discover what instances exist before using get_schema or access_instance.
-    """
-    # 实现在tool_implements.py中
     from backend.mcp.tool_implements import list_instances_impl
     return await list_instances_impl()
 
 
 @mcp.tool()
-async def access_instance(instance_id: str) -> dict[str, Any]:
+async def switch_to_instance(instance_id: str) -> dict[str, Any]:
+    """切换到指定实例，将其显示给用户。
+
+    <parameter>
+    参数:
+        instance_id: 要切换到的实例ID（如"demo"、"form"、"counter"）
+    </parameter>
+
+    <description>
+    功能说明:
+        - 切换前端显示的UI实例
+        - 自动触发WebSocket推送通知前端
+        - 不返回schema数据（如需获取schema请使用get_schema工具）
+        - 主要用于在不同实例间切换
+    </description>
+
+    <return_value>
+    返回值:
+        {status: "success"|"error", instance_id, message}
+    </return_value>
+
+    <note>
+    注意事项:
+        - 如果需要查看实例的schema，请在切换后调用get_schema
+        - 切换后前端会立即更新显示
+        - 实例不存在时会返回错误并列出可用实例
+    </note>
+
+    <example>
+    示例:
+        {"instance_id": "form"}
+    </example>
     """
-    Access and activate a specific UI instance. Brings instance to user view.
+    from backend.mcp.tool_implements import switch_to_instance_impl
+    return await switch_to_instance_impl(instance_id)
 
-    WHEN TO USE: Switch between instances, mark instance as active for user interaction.
 
-    ARGS:
-        instance_id: Instance ID to access (e.g., "demo", "form", "counter")
-
-    RETURNS: {status, error (if any), instance_id, schema}
-        Schema structure: Same as get_schema (meta, state, blocks, actions)
-
-    EXAMPLE: {"instance_id":"form"} to switch to form instance.
-
-    NOTE: Automatically triggers WebSocket update to user. UI refreshes immediately.
-    """
-    # 实现在tool_implements.py中
-    from backend.mcp.tool_implements import access_instance_impl
-    return await access_instance_impl(instance_id)
-
+# ===== 验证工具 =====
 
 @mcp.tool()
 async def validate_completion(
@@ -479,72 +393,55 @@ async def validate_completion(
     intent: str,
     completion_criteria: list[dict[str, Any]]
 ) -> dict[str, Any]:
-    """
-    Validate UI instance against completion criteria. Returns objective evaluation data.
+    """验证UI实例是否满足完成标准。
 
-    WHEN TO USE: Check if UI meets requirements, evaluate progress, or verify modifications.
+    参数:
+        instance_id: 要验证的实例ID
+        intent: UI目标的高级描述
+        completion_criteria: 验证标准数组
 
-    IMPORTANT: This is a DATA-DRIVEN tool. Returns evaluation metrics, NOT boolean "is_complete".
-                Agent should autonomously decide based on completion_ratio (>=1.0 = done).
+    标准类型:
+        field_exists: 检查字段路径是否存在
+        field_value: 检查字段是否具有特定值
+        block_count: 检查block数量
+        action_exists: 检查action是否存在（通过action的id）
+        custom: 使用条件表达式进行自定义验证
 
-    CRITERION TYPES:
-        field_exists: Check if field path exists in state
-        field_value: Check if field has specific value
-        block_count: Check number of blocks
-        action_exists: Check if action exists
-        custom: Custom validation with condition expression
+    标准属性:
+        type: 标准类型（必需）
+        path: 字段路径（field_exists/field_value必需）
+        value: 期望值（field_value必需）
+        count: 期望数量（block_count必需）
+        condition: 自定义表达式（custom必需）
+        description: 描述（必需）
 
-    CRITERION PROPERTIES:
-        type: One of criterion types above
-        path: Field path (for field-related criteria)
-        value: Expected value (for field_value)
-        count: Expected count (for block_count)
-        condition: Custom expression (for custom)
-        description: Human-readable description
-
-    ARGS:
-        instance_id: Instance ID to validate
-        intent: High-level description of what UI should accomplish
-        completion_criteria: Array of criterion objects
-
-    RETURNS: {status, error (if any), evaluation}
-        evaluation object:
-        - passed_criteria: Number of criteria met
-        - total_criteria: Total number of criteria
-        - completion_ratio: passed/total (Agent should use this to decide)
+    返回值:
+        {status: "success"|"error", evaluation: {passed_criteria, total_criteria, completion_ratio, detailed_results, summary, recommendations}}
+        - completion_ratio >= 1.0 表示完全完成
         - detailed_results: [{criterion, passed, actual, expected}, ...]
-        - summary: Text summary
-        - recommendations: Next step suggestions
 
-    EXAMPLES:
-        Check counter exists:
-            {"instance_id":"counter","intent":"Create counter with display and button",
-             "completion_criteria":[
-                {"type":"field_exists","path":"state.params.count","description":"Count field exists"},
-                {"type":"action_exists","path":"increment","description":"Increment button exists"}]}
+    示例:
 
-        Check form values:
-            {"instance_id":"form","intent":"Form should have email field",
-             "completion_criteria":[
-                {"type":"field_exists","path":"state.params.email","description":"Email exists"},
-                {"type":"field_value","path":"state.params.email","value":"","description":"Email is empty"}]}
+    检查计数器:
+    {"instance_id":"counter","intent":"创建带显示和按钮的计数器",
+     "completion_criteria":[
+        {"type":"field_exists","path":"state.params.count","description":"计数器字段存在"},
+        {"type":"action_exists","path":"increment","description":"增加按钮存在"}
+     ]}
 
-        Check structure:
-            {"instance_id":"form","intent":"Should have one form block",
-             "completion_criteria":[
-                {"type":"block_count","count":1,"description":"Exactly one block"}]}
-
-    DECISION RULE: Agent should consider completion_ratio >= 1.0 as fully complete.
-                   Use detailed_results to identify what's missing or incorrect.
-
-    NOTE: Use get_schema before validation to understand current state.
+    检查表单:
+    {"instance_id":"form","intent":"创建用户注册表单",
+     "completion_criteria":[
+        {"type":"field_exists","path":"state.params.email","description":"Email字段存在"},
+        {"type":"field_value","path":"state.params.email","value":"","description":"Email为空"},
+        {"type":"block_count","count":1,"description":"有1个表单block"},
+        {"type":"action_exists","path":"submit","description":"提交按钮存在"}
+     ]}
     """
-    # 实现在tool_implements.py中
     from backend.mcp.tool_implements import validate_completion_impl
     return await validate_completion_impl(instance_id, intent, completion_criteria)
 
 
-# 启动MCP服务器的代码
 if __name__ == "__main__":
     print("🚀 Starting MCP Server for UI Patch Tool...")
     mcp.run(

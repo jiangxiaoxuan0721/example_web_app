@@ -101,14 +101,20 @@ export default function App() {
 
       if (instanceId && instanceId !== currentInstanceId) {
         // 切换到新实例
-        handleInstanceSwitch(instanceId);
+        if (!schema) {
+          // switch_to_instance 不返回 schema，直接调用 emitInstanceSwitch
+          console.log('[App] 触发实例切换:', instanceId);
+          emitInstanceSwitch(instanceId);
+        } else {
+          handleInstanceSwitch(instanceId);
+        }
       } else if (instanceId) {
         // schema 更新时也加载 patch 历史
         loadPatches(instanceId);
       }
     }
   );
-  
+
   // 处理实例切换
   const handleInstanceSwitch = (newInstanceId: string) => {
     emitInstanceSwitch(newInstanceId);

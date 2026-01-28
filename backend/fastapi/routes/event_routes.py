@@ -1,18 +1,17 @@
 """事件相关 API 路由"""
 
 from typing import Any
-
-
+from fastapi import FastAPI
+from backend.fastapi.services.websocket.handlers.manager import WebSocketManager
 from backend.core import SchemaManager, PatchHistoryManager
 from ..services import InstanceService
 
-
 def register_event_routes(
-    app,
+    app: FastAPI,
     schema_manager: SchemaManager,
     instance_service: InstanceService,
     patch_history: PatchHistoryManager,
-    ws_manager,
+    ws_manager: WebSocketManager,
     default_instance_id: str
 ):
     """注册事件相关的路由

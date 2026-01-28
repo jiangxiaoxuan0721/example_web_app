@@ -21,7 +21,7 @@ export function useSchema() {
 
   // 监听 localStorage 变化、URL 迁移和自定义事件
   useEffect(() => {
-    let debounceTimer: number | null = null;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
     // 监听 popstate（浏览器后退/前进，用于处理旧的URL）
     const handlePopState = () => {

@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from ..core import PatchHistoryManager, SchemaManager
-from .services.websocket import WebSocketManager
+from .services.websocket.handlers.manager import WebSocketManager
 from ..config import settings
 
 # 创建 FastAPI 应用
@@ -77,14 +77,14 @@ async def health_check():
 if __name__ == "__main__":
     import uvicorn
 
-    print(f"🚀 启动 Agent Programmable UI Runtime")
-    print(f"版本: 1.0.0")
-    print(f"前端: http://localhost:5173")
-    print(f"后端: http://localhost:{settings.port}")
+    print(f"Starting Agent Programmable UI Runtime")
+    print(f"Version: 1.0.0")
+    print(f"Frontend: http://localhost:5173")
+    print(f"Backend: http://localhost:{settings.port}")
     print()
-    print("架构：")
-    print("- 前端: 加载 Schema -> 渲染 -> 发射 Event")
-    print("- 后端: 保存 Schema Authority -> 接收 Event -> 返回 Patch")
+    print("Architecture:")
+    print("- Frontend: Load Schema -> Render -> Emit Event")
+    print("- Backend: Save Schema Authority -> Receive Event -> Return Patch")
 
     uvicorn.run(
         "backend.fastapi.main:app",

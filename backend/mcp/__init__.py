@@ -5,7 +5,7 @@ from .tool_definitions import (
     patch_ui_state,
     get_schema,
     list_instances,
-    access_instance,
+    switch_to_instance,
     validate_completion,
 )
 
@@ -14,6 +14,6 @@ __all__ = [
     "patch_ui_state", 
     "get_schema", 
     "list_instances",
-    "access_instance",
+    "switch_to_instance",
     "validate_completion",
 ]
