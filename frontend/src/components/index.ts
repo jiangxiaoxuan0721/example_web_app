@@ -10,6 +10,7 @@ export { default as ActionButton } from './ActionButton';
 export { default as PatchHistory } from './PatchHistory';
 export { default as DebugInfo } from './DebugInfo';
 export { default as Sidebar } from './Sidebar';
+export { default as DebugModal } from './DebugModal';
 
 // 新架构组件
 export { default as GenericFieldRenderer } from './GenericFieldRenderer';
@@ -23,6 +24,7 @@ export { default as TextArea } from './TextArea';
 export { default as Select } from './Select';
 export { default as CheckBox } from './CheckBox';
 export { default as RadioGroup } from './RadioGroup';
+export { default as MultiSelect } from './MultiSelect';
 
 // 其他 UI 组件
 export { default as Progress } from './Progress';

@@ -239,15 +239,13 @@
 /* ====== 主内容区域 ====== */
 
 .pta-content {
-  /* 可滚动的内容区域 */
+  /* 不可滚动的内容区域 */
   flex: 1 !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
+  overflow: hidden !important;
   min-height: 0 !important;
-  padding: 0 20px !important;
-  max-width: 1200px !important;
-  margin: 0 auto !important;
-  width: calc(100% - 40px) !important;
+  padding: 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 /* ====== Schema 容器 ====== */
@@ -259,6 +257,15 @@
   background-color: white !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
   text-align: left !important;
+  /* 自适应布局 - 占据空白部分 */
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  /* 内部可滚动，背景始终可见 */
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  position: relative !important;
 }
 
 /* ====== Actions 容器 ====== */
@@ -748,6 +755,12 @@
   border: 1px solid #e5e7eb !important;
   border-radius: 8px !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.pta-block--highlight {
+  transition: background-color 0.3s ease, box-shadow 0.3s ease !important;
+  background-color: #fff3cd !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
 }
 
 .pta-block__title {

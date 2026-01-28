@@ -55,12 +55,15 @@ const blockRenderers: Record<string, BlockRenderer> = {
         id={`block-${block.id}`}
         style={{
           marginBottom: '20px',
+          padding: '20px',
+          backgroundColor: '#ffffff',
+          border: '1px solid #e5e7eb',
+          borderRadius: '8px',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
           transition: 'background-color 0.3s ease, box-shadow 0.3s ease',
           ...(isHighlighted ? {
             backgroundColor: '#fff3cd',
-            borderRadius: '8px',
-            padding: '12px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
           } : {})
         }}
       >
@@ -83,9 +86,7 @@ const blockRenderers: Record<string, BlockRenderer> = {
               marginTop: '16px',
               display: 'flex',
               gap: '12px',
-              flexWrap: 'wrap',
-              paddingTop: '16px',
-              borderTop: '1px solid #e8e8e8'
+              flexWrap: 'wrap'
             }}
           >
             {allActions.map((action) => (
@@ -131,12 +132,15 @@ const blockRenderers: Record<string, BlockRenderer> = {
         id={`block-${block.id}`}
         style={{
           marginBottom: '20px',
+          padding: '20px',
+          backgroundColor: '#ffffff',
+          border: '1px solid #e5e7eb',
+          borderRadius: '8px',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
           transition: 'background-color 0.3s ease, box-shadow 0.3s ease',
           ...(isHighlighted ? {
             backgroundColor: '#fff3cd',
-            borderRadius: '8px',
-            padding: '12px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
           } : {})
         }}
       >

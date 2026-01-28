@@ -1,20 +1,19 @@
 /** 复选框组件 */
 
 import { FieldConfig } from '../types/schema';
-import { getFieldValue } from '../utils/patch';
 import type { UISchema } from '../types/schema';
 
-interface CheckBoxProps {
+export interface CheckBoxProps {
   field: FieldConfig;
   schema: UISchema;
   bindPath: string;
-  onChange?: (value: boolean) => void;
+  value: any;
+  onChange?: (value: any) => void;
   disabled?: boolean;
+  highlighted?: boolean;
 }
 
-export default function CheckBox({ field, schema, bindPath, onChange, disabled }: CheckBoxProps) {
-  const value = getFieldValue(schema, bindPath, field.key) ?? false;
-
+export default function CheckBox({ field, value, onChange, disabled }: CheckBoxProps) {
   return (
     <div style={{ marginBottom: '16px', display: 'flex', alignItems: 'center' }}>
       <input

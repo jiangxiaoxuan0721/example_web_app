@@ -141,6 +141,8 @@ export default function App() {
           <InstanceSelector
             currentInstanceId={currentInstanceId}
             onInstanceSwitch={handleInstanceSwitch}
+            patches={patches}
+            onReplay={replayPatch}
           />
         </div>
 
@@ -169,26 +171,6 @@ export default function App() {
                 />
               ))}
             </div>
-
-            {/* 调试信息 - 默认展开 */}
-            <details className="pta-details" open>
-              <summary className="pta-details__summary">
-                调试信息
-              </summary>
-              <div className="pta-details__content">
-                <DebugInfo instanceId={currentInstanceId} wsConnected={wsConnected} />
-              </div>
-            </details>
-
-            {/* Patch 历史记录 - 折叠式 */}
-            <details className="pta-details">
-              <summary className="pta-details__summary">
-                Patch 历史记录
-              </summary>
-              <div className="pta-details__content">
-                <PatchHistory patches={patches} onReplay={replayPatch} />
-              </div>
-            </details>
           </div>
         </div>
       </div>

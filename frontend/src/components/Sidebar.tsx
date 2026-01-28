@@ -96,17 +96,12 @@ export default function Sidebar({ }: SidebarProps) {
         block: 'center'
       });
 
-      // 添加高亮动画
-      element.style.transition = 'background-color 0.3s ease';
-      element.style.backgroundColor = '#fff3cd';
-      element.style.borderRadius = '4px';
-      element.style.padding = '8px';
+      // 添加高亮类
+      element.classList.add('pta-block--highlight');
 
       // 2秒后移除高亮
       setTimeout(() => {
-        element.style.backgroundColor = '';
-        element.style.borderRadius = '';
-        element.style.padding = '';
+        element.classList.remove('pta-block--highlight');
       }, 2000);
     }
   };

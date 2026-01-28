@@ -830,17 +830,22 @@ def register_patch_routes(
                     "instance_id": instance_id
                 }
 
-                # For add/remove operations, we need to send the entire schema since it was modified directly
-                # For set operations, we can send just the patches
-                if add_patches or remove_patches:
-                    # Send the entire updated schema after add operations
+                # For any operation that modifies schema (add/remove/set), always send the entire schema
+                # This ensures the frontend receives the complete updated state and can trigger highlights
+                # This is more reliable than trying to distinguish between add/remove/set operations
+                has_any_patches = patch_dict or add_patches or remove_patches
+
+                if has_any_patches:
+                    # Send the entire updated schema
                     # This ensures the frontend receives the complete updated state
                     print(f"[PatchRoutes] Sending schema_update for instance: {instance_id}")
                     print(f"[PatchRoutes] Current schema blocks count: {len(schema.blocks)}")
                     print(f"[PatchRoutes] Current schema actions count: {len(schema.actions)}")
 
-                    # Determine what to highlight based on add patches
+                    # Determine what to highlight based on all patches
                     highlight_info = None
+
+                    # Check add patches first (highest priority)
                     for add_patch in add_patches:
                         path = add_patch.get("path")
                         value = add_patch.get("value")
@@ -870,54 +875,29 @@ def register_patch_routes(
                                 }
                                 break
 
-                    schema_patch = {}
-                    for key, value in schema.__dict__.items():
-                        if hasattr(value, '__dict__'):
-                            # Convert dataclass objects to dict
-                            if key == 'meta' and hasattr(value, 'step') and hasattr(value.step, '__dict__'):
-                                # Special handling for meta.step to ensure proper serialization
-                                meta_dict = value.__dict__.copy()
-                                meta_dict['step'] = value.step.__dict__
-                                schema_patch[key] = meta_dict
-                            else:
-                                schema_patch[key] = value.__dict__
-                        elif isinstance(value, list):
-                            # Convert lists with dataclass/Pydantic objects
-                            converted_list = []
-                            for item in value:
-                                if hasattr(item, 'model_dump') or hasattr(item, '__dict__'):
-                                    # For Pydantic models, use model_dump() method
-                                    if hasattr(item, 'model_dump'):
-                                        item_dict = item.model_dump(by_alias=True)
+                    # If no highlight from add patches, check set patches for field additions
+                    if not highlight_info and patch_dict:
+                        for path, value in patch_dict.items():
+                            # Check if setting a field array (could be adding/replacing fields)
+                            if "blocks" in path and "props" in path and "fields" in path:
+                                if isinstance(value, list) or isinstance(value, dict):
+                                    # Extract field key from the new field(s)
+                                    if isinstance(value, dict):
+                                        fields_list = list(value.values()) if not isinstance(value, list) else value
                                     else:
-                                        item_dict = item.__dict__.copy()
+                                        fields_list = value
+                                    if fields_list and len(fields_list) > 0:
+                                        last_field = fields_list[-1]
+                                        if isinstance(last_field, dict) and "key" in last_field:
+                                            highlight_info = {
+                                                "type": "field",
+                                                "key": last_field["key"]
+                                            }
+                                            break
 
-                                    # Special handling for block.props with fields
-                                    if 'props' in item_dict and item_dict['props'] is not None:
-                                        if hasattr(item_dict['props'], 'model_dump'):
-                                            props_dict = item_dict['props'].model_dump(by_alias=True)
-                                        else:
-                                            props_dict = item_dict['props'].__dict__.copy() if hasattr(item_dict['props'], '__dict__') else item_dict['props']
-
-                                        if 'fields' in props_dict and isinstance(props_dict['fields'], list):
-                                            # Convert FieldConfig objects in fields list
-                                            fields_list = []
-                                            for field in props_dict['fields']:
-                                                if hasattr(field, 'model_dump'):
-                                                    fields_list.append(field.model_dump(by_alias=True))
-                                                elif hasattr(field, '__dict__'):
-                                                    fields_list.append(field.__dict__)
-                                                else:
-                                                    fields_list.append(field)
-                                            props_dict['fields'] = fields_list
-                                        item_dict['props'] = props_dict
-
-                                    converted_list.append(item_dict)
-                                else:
-                                    converted_list.append(item)
-                            schema_patch[key] = converted_list
-                        else:
-                            schema_patch[key] = value
+                    # Use Pydantic's model_dump() method to properly serialize the entire schema
+                    # This handles datetime objects and nested Pydantic models automatically
+                    schema_patch = schema.model_dump(by_alias=True, mode='json')
 
                     # Send a custom message directly using the dispatcher
                     message = {
@@ -927,9 +907,6 @@ def register_patch_routes(
                         "highlight": highlight_info
                     }
                     await ws_manager._dispatcher.send_to_instance(instance_id, message)
-                else:
-                    # Send only the patches for set operations
-                    await ws_manager.send_patch(instance_id, patch_dict, None)
 
                 print(f"[PatchRoutes] Patch 应用成功: {all_patches}")
                 print(f"[PatchRoutes] 实际应用的 patches: {applied_patches}")

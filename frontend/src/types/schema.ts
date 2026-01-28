@@ -105,6 +105,7 @@ export interface Block {
   id: string;
   type: string;
   bind: string;
+  title?: string;
   props?: BlockProps;
 }
 

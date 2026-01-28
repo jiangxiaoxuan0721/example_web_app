@@ -10,6 +10,10 @@ import { renderTemplate, renderFieldTemplate } from '../utils/template';
 import ImageRenderer from './ImageRenderer';
 import ImageModal from './ImageModal';
 import BlockRenderer from './BlockRenderer';
+import Select from './Select';
+import CheckBox from './CheckBox';
+import RadioGroup from './RadioGroup';
+import MultiSelect from './MultiSelect';
 
 // 字段渲染器接口
 export interface FieldRenderer {
@@ -114,7 +118,13 @@ const defaultRenderers: FieldRendererRegistry = {
 
     return (
       <div style={{ marginBottom: '16px' }}>
-        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+        <label style={{
+          display: 'block',
+          marginBottom: '8px',
+          fontWeight: '600',
+          fontSize: '14px',
+          color: '#333'
+        }}>
           {field.label}
         </label>
         <input
@@ -125,18 +135,29 @@ const defaultRenderers: FieldRendererRegistry = {
           placeholder={field.description}
           style={{
             width: '100%',
-            padding: '12px',
-            border: highlighted ? '3px solid #007bff' : '1px solid #ddd',
-            borderRadius: '4px',
-            background: '#fff',
-            fontSize: '16px',
+            padding: '10px 14px',
+            border: highlighted ? '2px solid #007bff' : '1px solid #e5e7eb',
+            borderRadius: '6px',
+            backgroundColor: '#ffffff',
+            fontSize: '14px',
+            lineHeight: '1.5',
+            color: '#333',
             boxSizing: 'border-box',
-            boxShadow: highlighted ? '0 0 8px rgba(0, 123, 255, 0.6)' : 'none',
-            transition: 'all 0.3s ease'
+            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+            transition: 'all 0.2s ease',
+            outline: 'none'
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = highlighted ? '#007bff' : '#007bff';
+            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0, 123, 255, 0.1)';
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = highlighted ? '#007bff' : '#e5e7eb';
+            e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
           }}
         />
         {field.description && (
-          <div style={{ marginTop: '4px', color: '#666', fontSize: '12px' }}>
+          <div style={{ marginTop: '6px', color: '#6b7280', fontSize: '12px', lineHeight: '1.4' }}>
             {field.description}
           </div>
         )}
@@ -146,7 +167,13 @@ const defaultRenderers: FieldRendererRegistry = {
 
   number: ({ field, value, onChange, disabled, highlighted }) => (
     <div style={{ marginBottom: '16px' }}>
-      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+      <label style={{
+        display: 'block',
+        marginBottom: '8px',
+        fontWeight: '600',
+        fontSize: '14px',
+        color: '#333'
+      }}>
         {field.label}
       </label>
       <input
@@ -157,14 +184,25 @@ const defaultRenderers: FieldRendererRegistry = {
         placeholder={field.description}
         style={{
           width: '100%',
-          padding: '12px',
-          border: highlighted ? '3px solid #007bff' : '1px solid #ddd',
-          borderRadius: '4px',
-          background: '#fff',
-          fontSize: '16px',
+          padding: '10px 14px',
+          border: highlighted ? '2px solid #007bff' : '1px solid #e5e7eb',
+          borderRadius: '6px',
+          backgroundColor: '#ffffff',
+          fontSize: '14px',
+          lineHeight: '1.5',
+          color: '#333',
           boxSizing: 'border-box',
-          boxShadow: highlighted ? '0 0 8px rgba(0, 123, 255, 0.6)' : 'none',
-          transition: 'all 0.3s ease'
+          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+          transition: 'all 0.2s ease',
+          outline: 'none'
+        }}
+        onFocus={(e) => {
+          e.currentTarget.style.borderColor = highlighted ? '#007bff' : '#007bff';
+          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0, 123, 255, 0.1)';
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = highlighted ? '#007bff' : '#e5e7eb';
+          e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
         }}
       />
     </div>
@@ -185,7 +223,13 @@ const defaultRenderers: FieldRendererRegistry = {
 
     return (
       <div style={{ marginBottom: '16px' }}>
-        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+        <label style={{
+          display: 'block',
+          marginBottom: '8px',
+          fontWeight: '600',
+          fontSize: '14px',
+          color: '#333'
+        }}>
           {field.label}
         </label>
         <textarea
@@ -196,17 +240,31 @@ const defaultRenderers: FieldRendererRegistry = {
           rows={4}
           style={{
             width: '100%',
-            padding: '12px',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            background: '#fff',
-            fontSize: '16px',
+            padding: '10px 14px',
+            border: '1px solid #e5e7eb',
+            borderRadius: '6px',
+            backgroundColor: '#ffffff',
+            fontSize: '14px',
+            lineHeight: '1.5',
+            color: '#333',
             boxSizing: 'border-box',
-            resize: 'vertical'
+            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+            transition: 'all 0.2s ease',
+            outline: 'none',
+            resize: 'vertical',
+            fontFamily: 'inherit'
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = '#007bff';
+            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0, 123, 255, 0.1)';
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = '#e5e7eb';
+            e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
           }}
         />
         {field.description && (
-          <div style={{ marginTop: '4px', color: '#666', fontSize: '12px' }}>
+          <div style={{ marginTop: '6px', color: '#6b7280', fontSize: '12px', lineHeight: '1.4' }}>
             {field.description}
           </div>
         )}
@@ -215,55 +273,28 @@ const defaultRenderers: FieldRendererRegistry = {
   },
 
   checkbox: ({ field, value, onChange, disabled }) => (
-    <div style={{ marginBottom: '16px' }}>
-      <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
-        <input
-          type="checkbox"
-          checked={Boolean(value)}
-          onChange={(e) => onChange(e.target.checked)}
-          disabled={disabled}
-          style={{ marginRight: '8px' }}
-        />
-        {field.label}
-      </label>
-      {field.description && (
-        <div style={{ marginLeft: '20px', color: '#666', fontSize: '14px' }}>
-          {field.description}
-        </div>
-      )}
-    </div>
+    <CheckBox
+      field={field}
+      schema={null as any}
+      bindPath=""
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+    />
   ),
 
   select: ({ field, value, onChange, disabled, highlighted }) => (
-    <div style={{ marginBottom: '16px' }}>
-      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-        {field.label}
-      </label>
-      <select
-        value={value !== undefined ? String(value) : ''}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        style={{
-          width: '100%',
-          padding: '12px',
-          border: highlighted ? '3px solid #007bff' : '1px solid #ddd',
-          borderRadius: '4px',
-          background: '#fff',
-          fontSize: '16px',
-          boxSizing: 'border-box',
-          boxShadow: highlighted ? '0 0 8px rgba(0, 123, 255, 0.6)' : 'none',
-          transition: 'all 0.3s ease'
-        }}
-      >
-        <option value="">请选择...</option>
-        {field.options?.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
+    <Select
+      field={field}
+      schema={null as any}
+      bindPath=""
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      highlighted={highlighted}
+    />
   ),
+
 
   json: ({ field, value, onChange, disabled, schema }) => {
     // 渲染 value 中的模板变量
@@ -338,29 +369,15 @@ const defaultRenderers: FieldRendererRegistry = {
   },
 
   radio: ({ field, value, onChange, disabled }) => (
-    <div style={{ marginBottom: '16px' }}>
-      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-        {field.label}
-      </label>
-      {field.options?.map((option) => (
-        <div key={option.value} style={{ marginBottom: '4px' }}>
-          <label style={{ display: 'flex', alignItems: 'center' }}>
-            <input
-              type="radio"
-              name={`radio-${field.key}`}
-              value={option.value}
-              checked={value === option.value}
-              onChange={() => onChange(option.value)}
-              disabled={disabled}
-              style={{ marginRight: '8px' }}
-            />
-            {option.label}
-          </label>
-        </div>
-      ))}
-    </div>
+    <RadioGroup
+      field={field}
+      schema={null as any}
+      bindPath=""
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+    />
   ),
-
   html: ({ field, value, schema }) => {
     // HTML字段是只读的，不支持编辑
     // 渲染 HTML 内容中的模板变量
@@ -397,60 +414,17 @@ const defaultRenderers: FieldRendererRegistry = {
     return renderImage({ field, value });
   },
 
-  multiselect: ({ field, value, onChange, disabled, highlighted }) => {
-    const selectedOptions = Array.isArray(value) ? value : [];
-
-    return (
-      <div style={{ marginBottom: '16px' }}>
-        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-          {field.label}
-        </label>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-          {field.options?.map((option) => {
-            const isSelected = selectedOptions.includes(option.value);
-            return (
-              <label
-                key={option.value}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '8px 12px',
-                  border: highlighted && isSelected ? '2px solid #007bff' : '1px solid #ddd',
-                  borderRadius: '4px',
-                  background: isSelected ? '#007bff' : '#fff',
-                  color: isSelected ? '#fff' : '#333',
-                  cursor: disabled ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s',
-                  opacity: disabled ? 0.6 : 1,
-                  boxShadow: highlighted && isSelected ? '0 0 8px rgba(0, 123, 255, 0.6)' : 'none'
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={() => {
-                    if (isSelected) {
-                      onChange(selectedOptions.filter((v: string) => v !== option.value));
-                    } else {
-                      onChange([...selectedOptions, option.value]);
-                    }
-                  }}
-                  disabled={disabled}
-                  style={{ marginRight: '8px' }}
-                />
-                {option.label}
-              </label>
-            );
-          })}
-        </div>
-        {field.description && (
-          <div style={{ marginTop: '8px', color: '#666', fontSize: '14px' }}>
-            {field.description}
-          </div>
-        )}
-      </div>
-    );
-  },
+  multiselect: ({ field, value, onChange, disabled, highlighted }) => (
+    <MultiSelect
+      field={field}
+      schema={null as any}
+      bindPath=""
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      highlighted={highlighted}
+    />
+  ),
 
   tag: ({ field, value }) => {
     const tags = Array.isArray(value) ? value : [];

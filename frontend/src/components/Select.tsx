@@ -1,19 +1,19 @@
 /** 下拉选择组件 */
 
 import { FieldConfig } from '../types/schema';
-import { getFieldValue } from '../utils/patch';
 import type { UISchema } from '../types/schema';
 
-interface SelectProps {
+export interface SelectProps {
   field: FieldConfig;
   schema: UISchema;
   bindPath: string;
-  onChange?: (value: string) => void;
+  value: any;
+  onChange?: (value: any) => void;
   disabled?: boolean;
+  highlighted?: boolean;
 }
 
-export default function Select({ field, schema, bindPath, onChange, disabled }: SelectProps) {
-  const value = getFieldValue(schema, bindPath, field.key) || '';
+export default function Select({ field, value, onChange, disabled }: SelectProps) {
   const options = field.options || [];
 
   return (

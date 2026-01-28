@@ -86,8 +86,8 @@ async def get_schema_from_fastapi(instance_id: str | None = None) -> dict[str, A
     try:
         async with httpx.AsyncClient() as client:
             url = f"{FASTAPI_BASE_URL}/ui/schema"
-            # 总是传递 params，即使 instance_id 为 None，让后端决定使用默认值
-            params = {"instance_id": instance_id} if instance_id is not None else None
+            # 使用驼峰命名 instanceId，与后端 Query(alias="instanceId") 保持一致
+            params = {"instanceId": instance_id} if instance_id is not None else None
 
             response = await client.get(url, params=params, timeout=10.0)
             
