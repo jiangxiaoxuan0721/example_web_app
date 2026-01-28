@@ -9,11 +9,20 @@ import { useEventEmitter } from '../utils/eventEmitter';
 import { renderTemplate, renderFieldTemplate } from '../utils/template';
 import ImageRenderer from './ImageRenderer';
 import BlockRenderer from './BlockRenderer';
+import InputField from './InputField';
+import NumberInput from './NumberInput';
+import TextArea from './TextArea';
 import Select from './Select';
 import CheckBox from './CheckBox';
 import RadioGroup from './RadioGroup';
 import MultiSelect from './MultiSelect';
 import Table from './Table';
+import Tag from './Tag';
+import Progress from './Progress';
+import Badge from './Badge';
+import JSONViewer from './JSONViewer';
+import RichContentRenderer from './RichContentRenderer';
+import Modal from './Modal';
 
 // 字段渲染器接口
 export interface FieldRenderer {
@@ -103,174 +112,37 @@ const renderImage = ({ field, value }: {
 
 // 默认渲染器注册表
 const defaultRenderers: FieldRendererRegistry = {
-  text: ({ field, value, onChange, disabled, highlighted, schema }) => {
-    // 渲染 value 中的模板变量
-    let displayValue: string;
-    if (typeof value === 'object' && value !== null) {
-      // 如果是对象，转换为 JSON 字符串
-      displayValue = JSON.stringify(value);
-    } else if (typeof value === 'string') {
-      // 如果是字符串，渲染模板
-      displayValue = schema ? renderTemplate(value, schema) : value;
-    } else {
-      displayValue = String(value ?? '');
-    }
-
-    return (
-      <div style={{ marginBottom: '16px' }}>
-        <label style={{
-          display: 'block',
-          marginBottom: '8px',
-          fontWeight: '600',
-          fontSize: '14px',
-          color: '#333'
-        }}>
-          {field.label}
-        </label>
-        <input
-          type="text"
-          value={displayValue}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          placeholder={field.description}
-          style={{
-            width: '100%',
-            padding: '10px 14px',
-            border: highlighted ? '2px solid #007bff' : '1px solid #e5e7eb',
-            borderRadius: '6px',
-            backgroundColor: '#ffffff',
-            fontSize: '14px',
-            lineHeight: '1.5',
-            color: '#333',
-            boxSizing: 'border-box',
-            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-            transition: 'all 0.2s ease',
-            outline: 'none'
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = highlighted ? '#007bff' : '#007bff';
-            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0, 123, 255, 0.1)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = highlighted ? '#007bff' : '#e5e7eb';
-            e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
-          }}
-        />
-        {field.description && (
-          <div style={{ marginTop: '6px', color: '#6b7280', fontSize: '12px', lineHeight: '1.4' }}>
-            {field.description}
-          </div>
-        )}
-      </div>
-    );
-  },
-
-  number: ({ field, value, onChange, disabled, highlighted }) => (
-    <div style={{ marginBottom: '16px' }}>
-      <label style={{
-        display: 'block',
-        marginBottom: '8px',
-        fontWeight: '600',
-        fontSize: '14px',
-        color: '#333'
-      }}>
-        {field.label}
-      </label>
-      <input
-        type="number"
-        value={value !== undefined ? String(value) : ''}
-        onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
-        disabled={disabled}
-        placeholder={field.description}
-        style={{
-          width: '100%',
-          padding: '10px 14px',
-          border: highlighted ? '2px solid #007bff' : '1px solid #e5e7eb',
-          borderRadius: '6px',
-          backgroundColor: '#ffffff',
-          fontSize: '14px',
-          lineHeight: '1.5',
-          color: '#333',
-          boxSizing: 'border-box',
-          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-          transition: 'all 0.2s ease',
-          outline: 'none'
-        }}
-        onFocus={(e) => {
-          e.currentTarget.style.borderColor = highlighted ? '#007bff' : '#007bff';
-          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0, 123, 255, 0.1)';
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.borderColor = highlighted ? '#007bff' : '#e5e7eb';
-          e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
-        }}
-      />
-    </div>
+  text: ({ field, value, onChange, disabled, highlighted }) => (
+    <InputField
+      field={field}
+      schema={null as any}
+      bindPath=""
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      highlighted={highlighted}
+    />
   ),
 
-  textarea: ({ field, value, onChange, disabled, schema }) => {
-    // 渲染 value 中的模板变量
-    let displayValue: string;
-    if (typeof value === 'object' && value !== null) {
-      // 如果是对象，转换为 JSON 字符串
-      displayValue = JSON.stringify(value);
-    } else if (typeof value === 'string') {
-      // 如果是字符串，渲染模板
-      displayValue = schema ? renderTemplate(value, schema) : value;
-    } else {
-      displayValue = String(value ?? '');
-    }
+  number: ({ field, onChange, disabled }) => (
+    <NumberInput
+      field={field}
+      schema={null as any}
+      bindPath=""
+      onChange={onChange}
+      disabled={disabled}
+    />
+  ),
 
-    return (
-      <div style={{ marginBottom: '16px' }}>
-        <label style={{
-          display: 'block',
-          marginBottom: '8px',
-          fontWeight: '600',
-          fontSize: '14px',
-          color: '#333'
-        }}>
-          {field.label}
-        </label>
-        <textarea
-          value={displayValue}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          placeholder={field.description}
-          rows={4}
-          style={{
-            width: '100%',
-            padding: '10px 14px',
-            border: '1px solid #e5e7eb',
-            borderRadius: '6px',
-            backgroundColor: '#ffffff',
-            fontSize: '14px',
-            lineHeight: '1.5',
-            color: '#333',
-            boxSizing: 'border-box',
-            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-            transition: 'all 0.2s ease',
-            outline: 'none',
-            resize: 'vertical',
-            fontFamily: 'inherit'
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = '#007bff';
-            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(0, 123, 255, 0.1)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = '#e5e7eb';
-            e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
-          }}
-        />
-        {field.description && (
-          <div style={{ marginTop: '6px', color: '#6b7280', fontSize: '12px', lineHeight: '1.4' }}>
-            {field.description}
-          </div>
-        )}
-      </div>
-    );
-  },
+  textarea: ({ field, onChange, disabled }) => (
+    <TextArea
+      field={field}
+      schema={null as any}
+      bindPath=""
+      onChange={onChange}
+      disabled={disabled}
+    />
+  ),
 
   checkbox: ({ field, value, onChange, disabled }) => (
     <CheckBox
@@ -295,15 +167,12 @@ const defaultRenderers: FieldRendererRegistry = {
     />
   ),
 
-
-  json: ({ field, value, onChange, disabled, schema }) => {
+  json: ({ field, value, schema }) => {
     // 渲染 value 中的模板变量
     let renderedValue: any;
     if (typeof value === 'object' && value !== null) {
-      // 如果是对象，直接使用
       renderedValue = value;
     } else if (typeof value === 'string') {
-      // 如果是字符串，尝试解析为 JSON 或渲染模板
       const templateRendered = schema ? renderTemplate(value, schema) : value;
       try {
         renderedValue = JSON.parse(templateRendered);
@@ -314,56 +183,13 @@ const defaultRenderers: FieldRendererRegistry = {
       renderedValue = value;
     }
 
-    const [jsonValue, setJsonValue] = useState(
-      typeof renderedValue === 'object' ? JSON.stringify(renderedValue, null, 2) : String(renderedValue || '{}')
-    );
-    const [isValid, setIsValid] = useState(true);
-
-    useEffect(() => {
-      const newJsonValue = typeof renderedValue === 'object' ? JSON.stringify(renderedValue, null, 2) : String(renderedValue || '{}');
-      setJsonValue(newJsonValue);
-    }, [renderedValue]);
-
-    const handleChange = (newValue: string) => {
-      setJsonValue(newValue);
-
-      try {
-        const parsed = JSON.parse(newValue);
-        setIsValid(true);
-        onChange(parsed);
-      } catch (e) {
-        setIsValid(false);
-      }
-    };
-
+    // 使用 JSONViewer 展示 JSON
     return (
       <div style={{ marginBottom: '16px' }}>
         <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
           {field.label}
         </label>
-        <textarea
-          value={jsonValue}
-          onChange={(e) => handleChange(e.target.value)}
-          disabled={disabled}
-          placeholder={field.description || '{"key": "value"}'}
-          rows={8}
-          style={{
-            width: '100%',
-            padding: '12px',
-            border: `1px solid ${isValid ? '#ddd' : '#ff4444'}`,
-            borderRadius: '4px',
-            background: '#f8f8f8',
-            fontSize: '14px',
-            fontFamily: 'Consolas, Monaco, "Courier New", monospace',
-            boxSizing: 'border-box',
-            resize: 'vertical'
-          }}
-        />
-        {!isValid && (
-          <div style={{ color: '#ff4444', fontSize: '12px', marginTop: '4px' }}>
-            无效的JSON格式
-          </div>
-        )}
+        <JSONViewer data={renderedValue} expandDepth={2} showLineNumbers={false} />
       </div>
     );
   },
@@ -378,37 +204,20 @@ const defaultRenderers: FieldRendererRegistry = {
       disabled={disabled}
     />
   ),
-  html: ({ field, value, schema }) => {
-    // HTML字段是只读的，不支持编辑
-    // 渲染 HTML 内容中的模板变量
-    const renderedHtml = renderTemplate(value, schema);
-    return (
-      <div style={{ marginBottom: '16px' }}>
-        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-          {field.label}
-        </label>
-        <div
-          style={{
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            padding: '12px',
-            backgroundColor: '#f9f9f9',
-            minHeight: '100px',
-            maxHeight: '400px',
-            overflow: 'auto'
-          }}
-          dangerouslySetInnerHTML={{ __html: renderedHtml }}
-        />
-        {field.description && (
-          <div style={{ marginTop: '4px', color: '#666', fontSize: '12px' }}>
-            {field.description}
-          </div>
-        )}
-      </div>
-    );
-  },
 
-
+  html: ({ field, value, schema }) => (
+    <div style={{ marginBottom: '16px' }}>
+      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+        {field.label}
+      </label>
+      <RichContentRenderer html={value} schema={schema} />
+      {field.description && (
+        <div style={{ marginTop: '4px', color: '#666', fontSize: '12px' }}>
+          {field.description}
+        </div>
+      )}
+    </div>
+  ),
 
   image: ({ field, value }) => {
     return renderImage({ field, value });
@@ -428,13 +237,6 @@ const defaultRenderers: FieldRendererRegistry = {
 
   tag: ({ field, value }) => {
     const tags = Array.isArray(value) ? value : [];
-    const typeStyles: Record<string, { background: string; color: string }> = {
-      default: { background: '#f0f0f0', color: '#333' },
-      success: { background: '#d4edda', color: '#155724' },
-      warning: { background: '#fff3cd', color: '#856404' },
-      error: { background: '#f8d7da', color: '#721c24' },
-      info: { background: '#e7f3ff', color: '#004085' }
-    };
 
     return (
       <div style={{ marginBottom: '16px' }}>
@@ -444,23 +246,12 @@ const defaultRenderers: FieldRendererRegistry = {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {tags.map((tag: any, index: number) => {
             const tagType = tag.type || 'default';
-            const styles = typeStyles[tagType] || typeStyles.default;
             return (
-              <span
+              <Tag
                 key={index}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  padding: '4px 12px',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  fontWeight: '500',
-                  background: styles.background,
-                  color: styles.color
-                }}
-              >
-                {tag.label || tag}
-              </span>
+                type={tagType}
+                label={tag.label || tag}
+              />
             );
           })}
           {(!tags || tags.length === 0) && (
@@ -475,52 +266,32 @@ const defaultRenderers: FieldRendererRegistry = {
     const current = value?.current || 0;
     const total = value?.total || 100;
     const showLabel = value?.showLabel !== false;
-    const percentage = total > 0 ? Math.round((current / total) * 100) : 0;
 
     return (
       <div style={{ marginBottom: '16px' }}>
         <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
           {field.label}
         </label>
-        {showLabel && (
-          <div style={{ marginBottom: '8px', fontSize: '14px', color: '#666' }}>
-            进度: {current} / {total} ({percentage}%)
-          </div>
-        )}
-        <div
-          style={{
-            width: '100%',
-            height: '8px',
-            background: '#e0e0e0',
-            borderRadius: '4px',
-            overflow: 'hidden'
-          }}
-        >
-          <div
-            style={{
-              width: `${percentage}%`,
-              height: '100%',
-              background: '#007bff',
-              transition: 'width 0.3s ease'
-            }}
-          />
-        </div>
+        <Progress current={current} total={total} showLabel={showLabel} />
       </div>
     );
   },
 
   badge: ({ field, value }) => {
     const badgeConfig = value || {};
-    const displayCount = badgeConfig.count !== undefined
-      ? (badgeConfig.count > (badgeConfig.max || 99) ? `${badgeConfig.max}+` : badgeConfig.count)
-      : undefined;
 
     return (
       <div style={{ marginBottom: '16px' }}>
         <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
           {field.label}
         </label>
-        <div style={{ position: 'relative', display: 'inline-block' }}>
+        <Badge
+          count={badgeConfig.count}
+          dot={badgeConfig.dot}
+          color={badgeConfig.color}
+          showZero={badgeConfig.showZero}
+          max={badgeConfig.max}
+        >
           <span
             style={{
               padding: '12px 24px',
@@ -532,31 +303,7 @@ const defaultRenderers: FieldRendererRegistry = {
           >
             {badgeConfig.label || '通知'}
           </span>
-          {(badgeConfig.dot || (displayCount !== undefined && (badgeConfig.showZero || displayCount !== 0))) && (
-            <span
-              style={{
-                position: 'absolute',
-                top: '-8px',
-                right: '-8px',
-                minWidth: badgeConfig.dot ? '8px' : '20px',
-                height: badgeConfig.dot ? '8px' : '20px',
-                borderRadius: '10px',
-                background: badgeConfig.color || '#f5222d',
-                color: '#fff',
-                fontSize: badgeConfig.dot ? '0' : '12px',
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: badgeConfig.dot ? '0' : '0 6px',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                zIndex: 10
-              }}
-            >
-              {badgeConfig.dot ? '' : displayCount}
-            </span>
-          )}
-        </div>
+        </Badge>
       </div>
     );
   },
@@ -564,133 +311,29 @@ const defaultRenderers: FieldRendererRegistry = {
   table: ({ field, value }) => (
     <Table field={field} value={value} />
   ),
-  
+
   modal: ({ value, onChange }) => {
     const modalState = value || { visible: false };
-    const visible = modalState.visible || false;
-    const childrenHtml = modalState.content || '';
 
     return (
-      <div style={{ marginBottom: '16px' }}>
-        {visible && (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0, 0, 0, 0.45)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000,
-              cursor: 'pointer'
-            }}
-            onClick={() => {
-              onChange({ ...modalState, visible: false });
-            }}
-          >
-            <div
-              style={{
-                background: '#fff',
-                borderRadius: '8px',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                width: modalState.width || 520,
-                maxWidth: '90vw',
-                maxHeight: '90vh',
-                display: 'flex',
-                flexDirection: 'column',
-                cursor: 'default'
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {modalState.title && (
-                <div
-                  style={{
-                    padding: '16px 24px',
-                    borderBottom: '1px solid #f0f0f0',
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}
-                >
-                  <span>{modalState.title}</span>
-                  <button
-                    onClick={() => {
-                      onChange({ ...modalState, visible: false });
-                    }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      fontSize: '20px',
-                      cursor: 'pointer',
-                      color: '#999',
-                      padding: 0,
-                      lineHeight: 1
-                    }}
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
-              <div
-                style={{
-                  padding: '24px',
-                  overflow: 'auto',
-                  flex: 1
-                }}
-                dangerouslySetInnerHTML={{ __html: childrenHtml }}
-              />
-              <div
-                style={{
-                  padding: '16px 24px',
-                  borderTop: '1px solid #f0f0f0',
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  gap: '12px'
-                }}
-              >
-                <button
-                  onClick={() => {
-                    onChange({ ...modalState, visible: false });
-                  }}
-                  style={{
-                    padding: '8px 24px',
-                    borderRadius: '4px',
-                    border: '1px solid #d9d9d9',
-                    background: '#fff',
-                    color: '#666',
-                    fontSize: '14px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {modalState.cancelText || '取消'}
-                </button>
-                <button
-                  onClick={() => {
-                    if (modalState.onOk) modalState.onOk();
-                    onChange({ ...modalState, visible: false });
-                  }}
-                  style={{
-                    padding: '8px 24px',
-                    borderRadius: '4px',
-                    border: 'none',
-                    background: '#007bff',
-                    color: '#fff',
-                    fontSize: '14px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {modalState.okText || '确定'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      <Modal
+        visible={modalState.visible || false}
+        title={modalState.title}
+        width={modalState.width || 520}
+        maskClosable={true}
+        onOk={() => {
+          if (modalState.onOk) modalState.onOk();
+          onChange({ ...modalState, visible: false });
+        }}
+        onCancel={() => {
+          onChange({ ...modalState, visible: false });
+        }}
+        okText={modalState.okText}
+        cancelText={modalState.cancelText}
+        footer={undefined}
+      >
+        <div dangerouslySetInnerHTML={{ __html: modalState.content || '' }} />
+      </Modal>
     );
   },
 
