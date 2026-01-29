@@ -76,8 +76,13 @@ class InstanceService:
                                 else:
                                     converted_fields.append(field)
                             props_copy['fields'] = converted_fields
-                            block_copy['props'] = props_copy
-                        converted_blocks.append(Block(**block_copy))  # type: ignore
+                        # Convert actions in props if present
+                        if 'actions' in props_copy and props_copy.get('actions') is not None:
+                            actions_data = props_copy.get('actions', []) or []
+                            converted_actions = [ActionConfig(**action) for action in actions_data]
+                            props_copy['actions'] = converted_actions
+                        block_copy['props'] = props_copy
+                    converted_blocks.append(Block(**block_copy))  # type: ignore
                 new_schema.blocks = converted_blocks
             elif path == "actions" and new_schema:
                 actions_data = value or []
@@ -330,7 +335,7 @@ class InstanceService:
         target_path: str
     ) -> dict[str, Any]:
         """
-        执行通用操作
+        执行通用操作（委托给 patch.py 中的实现）
 
         支持的操作：
         - append_to_list: 向列表添加元素
@@ -340,6 +345,7 @@ class InstanceService:
         - update_list_item: 更新列表中的某个元素
         - clear_all_params: 清空所有 params
         - append_block: 添加新块到 schema
+        - prepend_block: 在开头添加块
         - remove_block: 删除块
         - update_block: 更新块
         - merge: 合并对象
@@ -353,148 +359,8 @@ class InstanceService:
         Returns:
             Patch 字典
         """
-        print(f"[InstanceService] _execute_operation: operation={operation}, params={params}, target_path={target_path}")
-
-        patch = {}
-
-        if operation == "append_to_list":
-            # 向列表添加元素
-            current_list = self._get_nested_value(schema, target_path, [])
-            items = params.get("items", [])
-            # 渲染 items 中的模板变量
-            if isinstance(items, list):
-                items_to_add = []
-                for single_item in items:
-                    if isinstance(single_item, dict):
-                        items_to_add.append(self._render_dict_template(schema, single_item))
-                    else:
-                        items_to_add.append(single_item)
-                patch[target_path] = current_list + items_to_add
-            else:
-                # 兼容单个元素的情况（向后兼容）
-                if isinstance(items, dict):
-                    items = self._render_dict_template(schema, items)
-                patch[target_path] = current_list + [items]
-
-        elif operation == "prepend_to_list":
-            # 向列表开头添加元素
-            current_list = self._get_nested_value(schema, target_path, [])
-            items = params.get("items", [])
-            # 渲染 items 中的模板变量
-            if isinstance(items, list):
-                items_to_add = []
-                for single_item in items:
-                    if isinstance(single_item, dict):
-                        items_to_add.append(self._render_dict_template(schema, single_item))
-                    else:
-                        items_to_add.append(single_item)
-                patch[target_path] = items_to_add + current_list
-            else:
-                # 兼容单个元素的情况（向后兼容）
-                if isinstance(items, dict):
-                    items = self._render_dict_template(schema, items)
-                patch[target_path] = [items] + current_list
-
-        elif operation == "remove_from_list":
-            # 从列表中删除元素
-            current_list = self._get_nested_value(schema, target_path, [])
-            if isinstance(current_list, list):
-                item_key = params.get("key", "id")
-                item_value = params.get("value")
-
-                # 支持 index: -1 表示删除所有满足条件的项
-                if params.get("index") == -1 and item_value:
-                    # 删除所有满足条件的项（例如：删除所有 completed=True 的项）
-                    new_list = [item for item in current_list if not (item.get(item_key) == item_value)]
-                elif item_value:
-                    # 删除单个匹配项
-                    new_list = [item for item in current_list if str(item.get(item_key)) != str(item_value)]
-                else:
-                    # 没有指定删除条件，不做任何操作
-                    new_list = current_list
-
-                patch[target_path] = new_list
-
-        elif operation == "remove_last":
-            # 删除列表最后一项
-            current_list = self._get_nested_value(schema, target_path, [])
-            if isinstance(current_list, list) and len(current_list) > 0:
-                patch[target_path] = current_list[:-1]
-
-        elif operation == "update_list_item":
-            # 更新列表中的某个元素
-            current_list = self._get_nested_value(schema, target_path, [])
-            if isinstance(current_list, list):
-                item_key = params.get("key", "id")
-                item_value = params.get("value")
-                updates = params.get("updates", {})
-                # 渲染 updates 中的模板变量
-                if isinstance(updates, dict):
-                    updates = self._render_dict_template(schema, updates)
-                new_list = []
-                for item in current_list:
-                    if str(item.get(item_key)) == str(item_value):
-                        # 合并更新
-                        new_item = {**item, **updates}
-                        new_list.append(new_item)
-                    else:
-                        new_list.append(item)
-                patch[target_path] = new_list
-
-        elif operation == "clear_all_params":
-            # 清空所有 params 字段
-            current_params = self._get_nested_value(schema, "state.params", {})
-            for key in current_params.keys():
-                patch[f"state.params.{key}"] = ""
-
-        elif operation == "append_block":
-            # 添加新块到 schema
-            block_data = params.get("block")
-            if block_data:
-                new_blocks = list(schema.blocks) + [Block(**block_data)]
-                # 转换为字典以便 JSON 序列化
-                patch["blocks"] = [block.model_dump(by_alias=True) for block in new_blocks]
-
-        elif operation == "prepend_block":
-            # 在开头添加新块
-            block_data = params.get("block")
-            if block_data:
-                new_blocks = [Block(**block_data)] + list(schema.blocks)
-                # 转换为字典以便 JSON 序列化
-                patch["blocks"] = [block.model_dump(by_alias=True) for block in new_blocks]
-
-        elif operation == "remove_block":
-            # 删除块
-            block_id = params.get("block_id")
-            if block_id:
-                new_blocks = [block for block in schema.blocks if block.id != block_id]
-                # 转换为字典以便 JSON 序列化
-                patch["blocks"] = [block.model_dump(by_alias=True) for block in new_blocks]
-
-        elif operation == "update_block":
-            # 更新块
-            block_id = params.get("block_id")
-            updates = params.get("updates", {})
-            if block_id:
-                new_blocks = []
-                for block in schema.blocks:
-                    if block.id == block_id:
-                        # 创建更新后的 block
-                        block_dict = block.model_dump(by_alias=True)
-                        block_dict.update(updates)
-                        new_blocks.append(Block(**block_dict))
-                    else:
-                        new_blocks.append(block)
-                # 转换为字典以便 JSON 序列化
-                patch["blocks"] = [block.model_dump(by_alias=True) for block in new_blocks]
-
-        elif operation == "merge":
-            # 合并对象
-            current_value = self._get_nested_value(schema, target_path, {})
-            if isinstance(current_value, dict):
-                patch[target_path] = {**current_value, **params.get("data", {})}
-
-        return patch
+        from .patch import execute_operation
+        return execute_operation(schema, operation, params, target_path)
 
     def _get_nested_value(
         self,
@@ -503,7 +369,7 @@ class InstanceService:
         default: Any = None
     ) -> Any:
         """
-        从 schema 中获取嵌套值
+        从 schema 中获取嵌套值（委托给 patch.py 中的实现）
 
         Args:
             schema: UISchema 对象
@@ -513,30 +379,8 @@ class InstanceService:
         Returns:
             获取的值或默认值
         """
-        parts = path.split(".")
-        obj = schema
-
-        print(f"[InstanceService] _get_nested_value: path='{path}', parts={parts}")
-
-        try:
-            for i, part in enumerate(parts):
-                print(f"[InstanceService]  获取第 {i} 层: part='{part}', 当前obj类型={type(obj).__name__}")
-
-                if isinstance(obj, dict):
-                    obj = obj.get(part)
-                else:
-                    obj = getattr(obj, part)
-
-                print(f"[InstanceService]    获取结果: obj='{obj}'")
-
-                if obj is None:
-                    print(f"[InstanceService]    obj is None，返回默认值: default='{default}'")
-                    return default
-            print(f"[InstanceService] 最终返回: obj='{obj}'")
-            return obj
-        except (AttributeError, KeyError) as e:
-            print(f"[InstanceService] 异常: {e}，返回默认值: default='{default}'")
-            return default
+        from .patch import get_nested_value
+        return get_nested_value(schema, path, default)
 
     def _render_template(
         self,
@@ -544,7 +388,7 @@ class InstanceService:
         template: str
     ) -> str:
         """
-        渲染模板字符串，支持引用 state 的值
+        渲染模板字符串，支持引用 state 的值（委托给 patch.py 中的实现）
 
         示例: "表单已提交！姓名: ${state.params.name}"
 
@@ -555,24 +399,8 @@ class InstanceService:
         Returns:
             渲染后的字符串
         """
-        import re
-
-        result = template
-        print(f"[InstanceService] _render_template 开始: template='{template}'")
-
-        # 匹配 ${path} 格式的占位符
-        pattern = r'\$\{([^}]+)\}'
-
-        def replace_match(match):
-            path = match.group(1)
-            print(f"[InstanceService] 替换占位符: path='{path}'")
-            value = self._get_nested_value(schema, path, "")
-            print(f"[InstanceService] 获取到的值: value='{value}'")
-            return str(value)
-
-        result = re.sub(pattern, replace_match, result)
-        print(f"[InstanceService] _render_template 完成: result='{result}'")
-        return result
+        from .patch import render_template
+        return render_template(schema, template)
 
     def _handle_external_api(
         self,
@@ -739,7 +567,7 @@ class InstanceService:
         template_dict: dict[str, Any]
     ) -> dict[str, Any]:
         """
-        渲染字典中的模板值
+        渲染字典中的模板值（委托给 patch.py 中的实现）
 
         Args:
             schema: 当前 schema
@@ -748,22 +576,8 @@ class InstanceService:
         Returns:
             渲染后的字典
         """
-        result = {}
-        for key, value in template_dict.items():
-            if isinstance(value, str):
-                result[key] = self._render_template(schema, value)
-            elif isinstance(value, dict):
-                result[key] = self._render_dict_template(schema, value)
-            elif isinstance(value, list):
-                result[key] = [
-                    self._render_template(schema, item) if isinstance(item, str)
-                    else self._render_dict_template(schema, item) if isinstance(item, dict)
-                    else item
-                    for item in value
-                ]
-            else:
-                result[key] = value
-        return result
+        from .patch import render_dict_template
+        return render_dict_template(schema, template_dict)
 
     def _get_json_path_value(
         self,

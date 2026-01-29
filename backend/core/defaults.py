@@ -2,7 +2,7 @@
 
 from ..fastapi.models import (
     UISchema, MetaInfo, StateInfo, LayoutInfo, Block, ActionConfig,
-    StepInfo, BlockProps,  StatusType, LayoutType,
+    StepInfo, BlockProps,  StatusType, LayoutType, ActionType, HandlerType,
     BaseFieldConfig, SelectableFieldConfig, TableFieldConfig, ImageFieldConfig
 )
 
@@ -11,9 +11,10 @@ def get_default_instances() -> dict[str, UISchema]:
     """获取所有默认 Schema 实例"""
     return {
         "demo": _create_demo_schema(),
-        "counter": _create_counter_schema(),
         "rich_content": _create_rich_content_schema(),
         "block_actions_test": _create_block_actions_test_schema(),
+        "block_layouts_demo": _create_layouts_demo_schema(),
+        "top_layout_demo": _create_top_level_layouts_demo_schema(),
     }
 
 
@@ -66,15 +67,15 @@ def _create_demo_schema() -> UISchema:
                 id="overview_block",
                 type="form",
                 bind="state.params",
-                props=BlockProps(
+                props=BlockProps(  # pyright: ignore[reportCallIssue]
                     fields=[
-                        BaseFieldConfig(
+                        BaseFieldConfig(  # pyright: ignore[reportCallIssue]
                             label="系统消息",
                             key="message",
                             type="text",
                             description="系统状态消息"
                         ),
-                        BaseFieldConfig(
+                        BaseFieldConfig(  # pyright: ignore[reportCallIssue]
                             label="计数器",
                             key="counter",
                             type="text",
@@ -82,21 +83,21 @@ def _create_demo_schema() -> UISchema:
                         ),
                     ],
                     actions=[
-                        ActionConfig(
+                        ActionConfig(  # pyright: ignore[reportCallIssue]
                             id="increment_counter",
                             label="+1",
                             style="primary",
                             handler_type="increment",
                             patches={"state.params.counter": 1}
                         ),
-                        ActionConfig(
+                        ActionConfig(  # pyright: ignore[reportCallIssue]
                             id="decrement_counter",
                             label="-1",
                             style="secondary",
                             handler_type="decrement",
                             patches={"state.params.counter": 1}
                         ),
-                        ActionConfig(
+                        ActionConfig(  # pyright: ignore[reportCallIssue]
                             id="update_message",
                             label="更新消息",
                             style="secondary",
@@ -112,9 +113,9 @@ def _create_demo_schema() -> UISchema:
                 id="users_table_block",
                 type="form",
                 bind="state.params",
-                props=BlockProps(
+                props=BlockProps(  # pyright: ignore[reportCallIssue]
                     fields=[
-                        TableFieldConfig(
+                        TableFieldConfig(  # pyright: ignore[reportCallIssue]
                             label="用户列表",
                             key="users",
                             type="table",
@@ -135,7 +136,7 @@ def _create_demo_schema() -> UISchema:
                         )
                     ],
                     actions=[
-                        ActionConfig(
+                        ActionConfig(  # pyright: ignore[reportCallIssue]
                             id="add_user",
                             label="添加用户",
                             style="primary",
@@ -158,7 +159,7 @@ def _create_demo_schema() -> UISchema:
                                 }
                             }
                         ),
-                        ActionConfig(
+                        ActionConfig(  # pyright: ignore[reportCallIssue]
                             id="reset_users",
                             label="重置列表",
                             style="secondary",
@@ -180,27 +181,27 @@ def _create_demo_schema() -> UISchema:
                 id="template_demo_block",
                 type="form",
                 bind="state.params",
-                props=BlockProps(
+                props=BlockProps(  # pyright: ignore[reportCallIssue]
                     fields=[
-                        BaseFieldConfig(
+                        BaseFieldConfig(  # pyright: ignore[reportCallIssue]
                             label="姓名",
                             key="new_name",
                             type="text",
                             description="输入姓名后点击下方按钮添加到表格"
                         ),
-                        BaseFieldConfig(
+                        BaseFieldConfig(  # pyright: ignore[reportCallIssue]
                             label="邮箱",
                             key="new_email",
                             type="text",
                             description="输入邮箱后点击下方按钮添加到表格"
                         ),
-                        BaseFieldConfig(
+                        BaseFieldConfig(  # pyright: ignore[reportCallIssue]
                             label="下一个 ID",
                             key="next_id",
                             type="text",
                             description="下一个用户的 ID（自动递增）"
                         ),
-                        TableFieldConfig(
+                        TableFieldConfig(  # pyright: ignore[reportCallIssue]
                             label="动态数据表格",
                             key="dynamic_users",
                             type="table",
@@ -220,7 +221,7 @@ def _create_demo_schema() -> UISchema:
                         )
                     ],
                     actions=[
-                        ActionConfig(
+                        ActionConfig(  # pyright: ignore[reportCallIssue]
                             id="add_dynamic_user",
                             label="添加到表格",
                             style="primary",
@@ -242,7 +243,7 @@ def _create_demo_schema() -> UISchema:
                                 }
                             }
                         ),
-                        ActionConfig(
+                        ActionConfig(  # pyright: ignore[reportCallIssue]
                             id="clear_dynamic_users",
                             label="清空表格",
                             style="danger",
@@ -263,9 +264,9 @@ def _create_demo_schema() -> UISchema:
                 id="image_block",
                 type="form",
                 bind="state.params",
-                props=BlockProps(
+                props=BlockProps( # pyright: ignore[reportCallIssue]
                     fields=[
-                        ImageFieldConfig(
+                        ImageFieldConfig( # pyright: ignore[reportCallIssue]
                             label="示例图片",
                             key="demo_image",
                             type="image",
@@ -278,7 +279,7 @@ def _create_demo_schema() -> UISchema:
                         )
                     ],
                     actions=[
-                        ActionConfig(
+                        ActionConfig( # pyright: ignore[reportCallIssue]
                             id="refresh_image",
                             label="刷新图片",
                             style="primary",
@@ -293,21 +294,21 @@ def _create_demo_schema() -> UISchema:
         ],
         actions=[
             # 实例导航 actions
-            ActionConfig(
+            ActionConfig( # pyright: ignore[reportCallIssue]
                 id="to_counter",
                 label="计数器演示",
                 style="primary",
                 action_type="navigate",
                 target_instance="counter"
             ),
-            ActionConfig(
+            ActionConfig( # pyright: ignore[reportCallIssue]
                 id="to_rich_content",
                 label="富内容展示",
                 style="secondary",
                 action_type="navigate",
                 target_instance="rich_content"
             ),
-            ActionConfig(
+            ActionConfig( # pyright: ignore[reportCallIssue]
                 id="to_block_actions",
                 label="Block Actions",
                 style="secondary",
@@ -316,7 +317,7 @@ def _create_demo_schema() -> UISchema:
             ),
 
             # 全局操作 actions
-            ActionConfig(
+            ActionConfig( # pyright: ignore[reportCallIssue]
                 id="generate_block",
                 label="生成 Block",
                 style="primary",
@@ -345,7 +346,7 @@ def _create_demo_schema() -> UISchema:
                     }
                 }
             ),
-            ActionConfig(
+            ActionConfig( # pyright: ignore[reportCallIssue]
                 id="reset_all",
                 label="重置所有",
                 style="danger",
@@ -365,66 +366,6 @@ def _create_demo_schema() -> UISchema:
                 }
             )
         ]
-    )
-
-
-def _create_counter_schema() -> UISchema:
-    """创建计数器 Schema"""
-    return UISchema(
-        meta=MetaInfo(
-            pageKey="counter",
-            step=StepInfo(current=1, total=1),
-            status=StatusType.IDLE,
-            schemaVersion="1.0",
-            title=None,
-            description=None
-        ),
-        state=StateInfo(
-            params=dict(count=0),
-            runtime={}
-        ),
-        layout=LayoutInfo(type=LayoutType.SINGLE, columns=None, gap=None),
-        blocks=[
-            Block(
-                id="counter_block",
-                type="form",
-                bind="state.params",
-                props=BlockProps(  # pyright: ignore[reportCallIssue]
-                    fields=[
-                        BaseFieldConfig(  # pyright: ignore[reportCallIssue]
-                            label="计数器",
-                            key="count",
-                            type="text"
-                        )
-                    ],
-                    # Block 级别的 actions
-                    actions=[
-                        ActionConfig(  # pyright: ignore[reportCallIssue]
-                            id="increment",
-                            label="+1",
-                            style="primary",
-                            handler_type="increment",
-                            patches={"state.params.count": 1}
-                        ),
-                        ActionConfig(  # pyright: ignore[reportCallIssue]
-                            id="decrement",
-                            label="-1",
-                            style="secondary",
-                            handler_type="decrement",
-                            patches={"state.params.count": 1}
-                        ),
-                        ActionConfig(  # pyright: ignore[reportCallIssue]
-                            id="to_form",
-                            label="跳转到表单",
-                            style="secondary",
-                            action_type="navigate",
-                            target_instance="form"
-                        )
-                    ]
-                ) # type: ignore
-            )
-        ],
-        actions=[]
     )
 
 
@@ -484,7 +425,7 @@ def _create_rich_content_schema() -> UISchema:
             ),
             runtime={}
         ),
-        layout=LayoutInfo(type=LayoutType.SINGLE, columns=None, gap=None),
+        layout=LayoutInfo(type=LayoutType.FLEX, columns=None, gap=None),
         blocks=[
             Block(
                 id="rich_content_block",
@@ -707,5 +648,321 @@ def _create_block_actions_test_schema() -> UISchema:
                 action_type="navigate",
                 target_instance="demo"
             )
+        ]
+    )
+
+
+
+def _create_layouts_demo_schema() -> UISchema:
+    """创建布局演示 Schema - 展示所有布局类型"""
+    from datetime import datetime
+
+    return UISchema(
+        meta=MetaInfo(
+            pageKey="layouts_demo",
+            step=StepInfo(current=1, total=1),
+            status=StatusType.IDLE,
+            schemaVersion="1.0",
+            title="布局类型演示",
+            description="展示所有可用的布局类型",
+            created_at=datetime.now()
+        ),
+        state=StateInfo(
+            params=dict(
+                # Card 布局数据
+                card_name="张三",
+                card_email="zhangsan@example.com",
+                card_phone="13800138000",
+
+                # Grid 布局数据
+                col_first_name="张",
+                col_last_name="三",
+                col_gender="male",
+
+                # Tabs 布局数据
+                tab_username="demo_user",
+                tab_email="demo@example.com",
+                tab_password="password123",
+                tab_two_factor=False,
+                tab_language="zh",
+                tab_theme="light",
+
+                # Accordion 布局数据
+                acc_question1="如何注册账号？",
+                acc_answer1="点击右上角的注册按钮，填写必要信息即可完成注册。",
+                acc_question2="支持哪些支付方式？",
+                acc_answer2="我们支持支付宝、微信支付、银行卡等多种支付方式。",
+                acc_question3="如何联系客服？",
+                acc_answer3="可以通过网站在线客服、电话或邮件联系我们。",
+            ),
+            runtime={}
+        ),
+        layout=LayoutInfo(type=LayoutType.SINGLE, columns=None, gap=None),
+        blocks=[
+            # Block 1: Grid 布局
+            Block(
+                id="grid_layout",
+                type="grid",
+                bind="state.params",
+                props=BlockProps( # pyright: ignore[reportCallIssue]
+                    cols=2,
+                    gap="20px",
+                    fields=[
+                        BaseFieldConfig( # pyright: ignore[reportCallIssue]
+                            label="姓名",
+                            key="card_name",
+                            type="text",
+                            description="用户姓名"
+                        ),
+                        BaseFieldConfig( # pyright: ignore[reportCallIssue]
+                            label="邮箱",
+                            key="card_email",
+                            type="text",
+                            description="电子邮箱"
+                        ),
+                        BaseFieldConfig( # pyright: ignore[reportCallIssue]
+                            label="电话",
+                            key="card_phone",
+                            type="text",
+                            description="联系电话"
+                        ),
+                        BaseFieldConfig( # pyright: ignore[reportCallIssue]
+                            label="年龄",
+                            key="col_age",
+                            type="number",
+                            description="年龄"
+                        ),
+                    ]
+                )
+            ),
+
+            # Block 2: Grid 布局（多列）
+            Block(
+                id="grid_layout_multi",
+                type="grid",
+                bind="state.params",
+                props=BlockProps( # pyright: ignore[reportCallIssue]
+                    cols=2,
+                    gap="20px",
+                    fields=[
+                        BaseFieldConfig( # pyright: ignore[reportCallIssue]
+                            label="名",
+                            key="col_first_name",
+                            type="text",
+                            description="名字"
+                        ),
+                        BaseFieldConfig( # pyright: ignore[reportCallIssue]
+                            label="姓",
+                            key="col_last_name",
+                            type="text",
+                            description="姓氏"
+                        ),
+                        SelectableFieldConfig( # pyright: ignore[reportCallIssue]
+                            label="性别",
+                            key="col_gender",
+                            type="select",
+                            options=[
+                                {"label": "男", "value": "male"},
+                                {"label": "女", "value": "female"}
+                            ]
+                        ),
+                    ]
+                )
+            ),
+
+            # Block 3: Tabs 布局
+            Block(
+                id="tabs_layout",
+                type="tabs",
+                bind="state.params",
+                props=BlockProps( # pyright: ignore[reportCallIssue]
+                    tabs=[
+                        {
+                            "label": "基本信息",
+                            "fields": [
+                                {"label": "用户名", "key": "tab_username", "type": "text"},
+                                {"label": "邮箱", "key": "tab_email", "type": "text"}
+                            ]
+                        },
+                        {
+                            "label": "安全设置",
+                            "fields": [
+                                {"label": "密码", "key": "tab_password", "type": "text"},
+                                {"label": "启用两步验证", "key": "tab_two_factor", "type": "checkbox"}
+                            ]
+                        },
+                        {
+                            "label": "偏好设置",
+                            "fields": [
+                                {
+                                    "label": "语言",
+                                    "key": "tab_language",
+                                    "type": "select",
+                                    "options": [
+                                        {"label": "中文", "value": "zh"},
+                                        {"label": "English", "value": "en"}
+                                    ]
+                                },
+                                {
+                                    "label": "主题",
+                                    "key": "tab_theme",
+                                    "type": "select",
+                                    "options": [
+                                        {"label": "浅色", "value": "light"},
+                                        {"label": "深色", "value": "dark"}
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                )
+            ),
+
+            # Block 4: Accordion 布局
+            Block(
+                id="accordion_layout",
+                type="accordion",
+                bind="state.params",
+                props=BlockProps( # pyright: ignore[reportCallIssue]
+                    panels=[
+                        {
+                            "title": "账号问题",
+                            "fields": [
+                                {"label": "问题", "key": "acc_question1", "type": "text"},
+                                {"label": "答案", "key": "acc_answer1", "type": "textarea"}
+                            ]
+                        },
+                        {
+                            "title": "支付问题",
+                            "fields": [
+                                {"label": "问题", "key": "acc_question2", "type": "text"},
+                                {"label": "答案", "key": "acc_answer2", "type": "textarea"}
+                            ]
+                        },
+                        {
+                            "title": "技术支持",
+                            "fields": [
+                                {"label": "问题", "key": "acc_question3", "type": "text"},
+                                {"label": "答案", "key": "acc_answer3", "type": "textarea"}
+                            ]
+                        }
+                    ]
+                )
+            ),
+        ]
+    )
+
+
+def _create_top_level_layouts_demo_schema() -> UISchema:
+    """创建顶层布局演示 Schema - 展示 layout.type 的不同效果"""
+    from datetime import datetime
+
+    return UISchema(
+        meta=MetaInfo(
+            pageKey="top_level_layouts_demo",
+            step=StepInfo(current=1, total=1),
+            status=StatusType.IDLE,
+            schemaVersion="1.0",
+            title="顶层布局演示",
+            description="展示 layout.type 如何控制 blocks 和 actions 的排列",
+            created_at=datetime.now()
+        ),
+        state=StateInfo(
+            params=dict(
+                section1_content="这是第一个区块的内容",
+                section2_content="这是第二个区块的内容",
+                section3_content="这是第三个区块的内容",
+                section4_content="这是第四个区块的内容",
+            ),
+            runtime={}
+        ),
+        layout=LayoutInfo(
+            type=LayoutType.GRID,  # 修改为 GRID/FLEX/CARD/TABS 来查看不同效果
+            columns=2,
+            gap="20px"
+        ),
+        blocks=[
+            Block(
+                id="section1",
+                type="form",
+                bind="state.params",
+                order=0,
+                props=BlockProps( # pyright: ignore[reportCallIssue]
+                    fields=[
+                        BaseFieldConfig( # pyright: ignore[reportCallIssue]
+                            label="内容 1",
+                            key="section1_content",
+                            type="textarea",
+                            description="第一个区块的内容"
+                        ),
+                    ]
+                )
+            ),
+            Block(
+                id="section2",
+                type="form",
+                bind="state.params",
+                order=1,
+                props=BlockProps( # pyright: ignore[reportCallIssue]
+                    fields=[
+                        BaseFieldConfig( # pyright: ignore[reportCallIssue]
+                            label="内容 2",
+                            key="section2_content",
+                            type="textarea",
+                            description="第二个区块的内容"
+                        ),
+                    ]
+                )
+            ),
+            Block(
+                id="section3",
+                type="form",
+                bind="state.params",
+                order=2,
+                props=BlockProps( # pyright: ignore[reportCallIssue]
+                    fields=[
+                        BaseFieldConfig( # pyright: ignore[reportCallIssue]
+                            label="内容 3",
+                            key="section3_content",
+                            type="textarea",
+                            description="第三个区块的内容"
+                        ),
+                    ]
+                )
+            ),
+            Block(
+                id="section4",
+                type="form",
+                bind="state.params",
+                order=3,
+                props=BlockProps( # pyright: ignore[reportCallIssue]
+                    fields=[
+                        BaseFieldConfig( # pyright: ignore[reportCallIssue]
+                            label="内容 4",
+                            key="section4_content",
+                            type="textarea",
+                            description="第四个区块的内容"
+                        ),
+                    ]
+                )
+            ),
+        ],
+        actions=[
+            ActionConfig( # pyright: ignore[reportCallIssue]
+                id="save_all",
+                label="保存全部",
+                style="primary",
+                action_type=ActionType.API,
+                handler_type=HandlerType.SET,
+                patches={}
+            ),
+            ActionConfig( # pyright: ignore[reportCallIssue]
+                id="reset_all",
+                label="重置全部",
+                style="danger",
+                action_type=ActionType.API,
+                handler_type=HandlerType.SET,
+                patches={}
+            ),
         ]
     )

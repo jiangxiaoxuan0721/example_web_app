@@ -160,6 +160,49 @@ export const useSchemaStore = create<SchemaStore>()(
                     continue;
                 }
 
+                // 5.1 blocks.X.props.fields - 替换 block 的 fields 数组
+                if (keys.length >= 4 && keys[0] === 'blocks' && keys[2] === 'props' && keys[3] === 'fields') {
+                    const blockIndex = parseInt(keys[1]);
+                    if (!isNaN(blockIndex) && newSchema.blocks?.[blockIndex]) {
+                        const block = newSchema.blocks[blockIndex];
+                        affectedBlockId = block.id;
+
+                        // 收集新字段的 key（用于保留 state）
+                        const newFieldKeys = new Set<string>();
+                        if (Array.isArray(value)) {
+                            for (const field of value) {
+                                if (typeof field === 'object' && field?.key) {
+                                    newFieldKeys.add(field.key);
+                                }
+                            }
+                        }
+
+                        // 清理旧字段的 state（但保留新 fields 中存在的 key）
+                        const oldFields = block.props?.fields;
+                        if (Array.isArray(oldFields)) {
+                            for (const oldField of oldFields) {
+                                const oldKey = oldField?.key;
+                                if (oldKey && !newFieldKeys.has(oldKey)) {
+                                    if (oldKey in (newSchema.state.params || {})) {
+                                        delete newSchema.state.params[oldKey];
+                                        console.log(`[SchemaStore] 清理 state.params.${oldKey}`);
+                                    }
+                                    if (oldKey in (newSchema.state.runtime || {})) {
+                                        delete newSchema.state.runtime[oldKey];
+                                        console.log(`[SchemaStore] 清理 state.runtime.${oldKey}`);
+                                    }
+                                }
+                            }
+                        }
+
+                        // 替换 fields 数组
+                        block.props = block.props || {};
+                        block.props.fields = Array.isArray(value) ? value : [];
+                        console.log(`[SchemaStore] 替换 block fields: block ${blockIndex}, fields count: ${block.props.fields.length}`);
+                    }
+                    continue;
+                }
+
                 // 3. state.params.key 或 state.runtime.key
                 if (keys.length >= 3 && keys[0] === 'state') {
                     const targetSection = keys[1];
@@ -274,6 +317,67 @@ export const useSchemaStore = create<SchemaStore>()(
                                 console.log(`[SchemaStore] 修改字段属性 blocks[${blockIndex}].props.fields[${fieldIndex}].${fieldAttr} =`, value);
                             }
                         }
+                    }
+                    continue;
+                }
+
+                // 6. blocks.X - 替换整个 block
+                if (keys.length >= 2 && keys[0] === 'blocks' && !isNaN(parseInt(keys[1]))) {
+                    const blockIndex = parseInt(keys[1]);
+                    if (!isNaN(blockIndex) && newSchema.blocks?.[blockIndex]) {
+                        const oldBlock = newSchema.blocks[blockIndex];
+                        newSchema.blocks[blockIndex] = value;
+                        affectedBlockId = value.id || oldBlock.id;
+                        console.log(`[SchemaStore] 替换整个 block: block ${blockIndex}`);
+                    }
+                    continue;
+                }
+
+                // 7. layout.type, layout.columns, layout.gap 等 - 布局属性
+                if (keys.length >= 2 && keys[0] === 'layout') {
+                    const layoutAttr = keys[1];
+                    if (newSchema.layout && layoutAttr) {
+                        (newSchema.layout as any)[layoutAttr] = value;
+                        console.log(`[SchemaStore] 设置 layout.${layoutAttr} =`, value);
+                    }
+                    continue;
+                }
+
+                // 8. blocks.X.props.cols - 设置 grid 布局列数
+                if (keys.length >= 4 && keys[0] === 'blocks' && keys[2] === 'props' && keys[3] === 'cols') {
+                    const blockIndex = parseInt(keys[1]);
+                    if (!isNaN(blockIndex) && newSchema.blocks?.[blockIndex]) {
+                        const block = newSchema.blocks[blockIndex];
+                        affectedBlockId = block.id;
+                        block.props = block.props || {};
+                        block.props.cols = value;
+                        console.log(`[SchemaStore] 设置 block.${blockIndex}.props.cols =`, value);
+                    }
+                    continue;
+                }
+
+                // 9. blocks.X.props.tabs - 设置 tabs 布局的标签页
+                if (keys.length >= 4 && keys[0] === 'blocks' && keys[2] === 'props' && keys[3] === 'tabs') {
+                    const blockIndex = parseInt(keys[1]);
+                    if (!isNaN(blockIndex) && newSchema.blocks?.[blockIndex]) {
+                        const block = newSchema.blocks[blockIndex];
+                        affectedBlockId = block.id;
+                        block.props = block.props || {};
+                        block.props.tabs = Array.isArray(value) ? value : [];
+                        console.log(`[SchemaStore] 设置 block.${blockIndex}.props.tabs`);
+                    }
+                    continue;
+                }
+
+                // 10. blocks.X.props.panels - 设置 accordion 布局的面板
+                if (keys.length >= 4 && keys[0] === 'blocks' && keys[2] === 'props' && keys[3] === 'panels') {
+                    const blockIndex = parseInt(keys[1]);
+                    if (!isNaN(blockIndex) && newSchema.blocks?.[blockIndex]) {
+                        const block = newSchema.blocks[blockIndex];
+                        affectedBlockId = block.id;
+                        block.props = block.props || {};
+                        block.props.panels = Array.isArray(value) ? value : [];
+                        console.log(`[SchemaStore] 设置 block.${blockIndex}.props.panels`);
                     }
                     continue;
                 }

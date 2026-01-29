@@ -8,60 +8,21 @@
 
 ## 可用布局类型
 
-### 1. Card 布局 (card)
+### 1. Grid 布局 (grid)
 
-卡片式布局，使用 Card 组件包装字段，适合分组显示相关字段。
+网格布局，将字段按行列排列，适合大量字段的整齐排列。
 
 **使用示例：**
 
 ```json
 {
-  "id": "personal-info",
-  "type": "card",
-  "title": "个人信息",
+  "id": "user-details",
+  "type": "grid",
+  "title": "详细信息",
   "bind": "user",
   "props": {
-    "fields": [
-      {
-        "key": "name",
-        "type": "text",
-        "label": "姓名"
-      },
-      {
-        "key": "email",
-        "type": "text",
-        "label": "邮箱"
-      },
-      {
-        "key": "phone",
-        "type": "text",
-        "label": "电话"
-      }
-    ]
-  }
-}
-```
-
-**属性：**
-- `title`: 卡片标题（可选）
-- `fields`: 字段数组
-
----
-
-### 2. Columns 布局 (columns)
-
-多列布局，将字段分成指定数量的列，适合并排显示多个字段。
-
-**使用示例：**
-
-```json
-{
-  "id": "two-column",
-  "type": "columns",
-  "title": "基本信息",
-  "bind": "data",
-  "props": {
-    "columns": 2,
+    "cols": 2,
+    "gap": "20px",
     "fields": [
       {
         "key": "firstName",
@@ -72,6 +33,16 @@
         "key": "lastName",
         "type": "text",
         "label": "姓"
+      },
+      {
+        "key": "email",
+        "type": "text",
+        "label": "邮箱"
+      },
+      {
+        "key": "phone",
+        "type": "text",
+        "label": "电话"
       },
       {
         "key": "age",
@@ -94,12 +65,13 @@
 
 **属性：**
 - `title`: 区块标题（可选）
-- `columns`: 列数（默认 2）
-- `fields`: 字段数组（按顺序分配到各列）
+- `cols`: 列数（默认 2）
+- `gap`: 列间距（可选，默认 "20px"）
+- `fields`: 字段数组（按先行后列顺序排列）
 
 ---
 
-### 3. Tabs 布局 (tabs)
+### 2. Tabs 布局 (tabs)
 
 标签页布局，将字段分组到不同的标签页中。
 
@@ -179,66 +151,7 @@
 
 ---
 
-### 4. Grid 布局 (grid)
-
-网格布局，使用 CSS Grid 创建响应式网格，适合大量字段的展示。
-
-**使用示例：**
-
-```json
-{
-  "id": "form-grid",
-  "type": "grid",
-  "title": "详细表单",
-  "bind": "formData",
-  "props": {
-    "cols": 3,
-    "gap": "16px",
-    "fields": [
-      {
-        "key": "field1",
-        "type": "text",
-        "label": "字段 1"
-      },
-      {
-        "key": "field2",
-        "type": "text",
-        "label": "字段 2"
-      },
-      {
-        "key": "field3",
-        "type": "text",
-        "label": "字段 3"
-      },
-      {
-        "key": "field4",
-        "type": "text",
-        "label": "字段 4"
-      },
-      {
-        "key": "field5",
-        "type": "text",
-        "label": "字段 5"
-      },
-      {
-        "key": "field6",
-        "type": "text",
-        "label": "字段 6"
-      }
-    ]
-  }
-}
-```
-
-**属性：**
-- `title`: 区块标题（可选）
-- `cols`: 列数（默认 3）
-- `gap`: 网格间距（默认 "16px"）
-- `fields`: 字段数组
-
----
-
-### 5. Accordion 布局 (accordion)
+### 3. Accordion 布局 (accordion)
 
 折叠面板布局，将内容分组到可折叠的面板中，节省空间。
 
@@ -320,10 +233,11 @@
   "blocks": [
     {
       "id": "user-profile",
-      "type": "card",
+      "type": "grid",
       "title": "用户资料",
       "bind": "user",
       "props": {
+        "cols": 2,
         "fields": [
           {
             "key": "avatar",
@@ -334,18 +248,7 @@
             "key": "name",
             "type": "text",
             "label": "姓名"
-          }
-        ]
-      }
-    },
-    {
-      "id": "user-details",
-      "type": "columns",
-      "title": "详细信息",
-      "bind": "user",
-      "props": {
-        "columns": 2,
-        "fields": [
+          },
           {
             "key": "email",
             "type": "text",
@@ -355,20 +258,6 @@
             "key": "phone",
             "type": "text",
             "label": "电话"
-          },
-          {
-            "key": "age",
-            "type": "number",
-            "label": "年龄"
-          },
-          {
-            "key": "gender",
-            "type": "select",
-            "label": "性别",
-            "options": [
-              { "value": "male", "label": "男" },
-              { "value": "female", "label": "女" }
-            ]
           }
         ]
       }
@@ -475,8 +364,7 @@ registerBlockRenderer('myCustomLayout', ({ block, schema, disabled, highlightFie
 
 | 场景 | 推荐布局 | 原因 |
 |------|---------|------|
-| 单一组相关字段 | card | 视觉分组清晰 |
-| 需要并排显示 | columns | 节省垂直空间 |
+| 需要并排显示 | grid | 节省垂直空间，行列对齐好 |
 | 字段过多 | tabs | 分组管理，避免滚动 |
 | 大量表单字段 | grid | 高效利用空间 |
 | 内容需要折叠 | accordion | 节省空间，按需展开 |

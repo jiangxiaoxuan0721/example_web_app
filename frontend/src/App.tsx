@@ -29,6 +29,7 @@ import {
   DebugInfo,
   Sidebar
 } from './components';
+import SchemaLayoutRenderer from './components/SchemaLayoutRenderer';
 import "./index.css";
 
 
@@ -148,30 +149,14 @@ export default function App() {
 
         {/* 主要内容区域 - 可滚动 */}
         <div className="pta-content">
-          {/* Schema 渲染容器 */}
-          <div className="pta-schema-container">
-            {/* 渲染 Blocks */}
-            {storeSchema?.blocks?.map((block) => (
-              <BlockRenderer
-                key={block.id}
-                block={block}
-                highlightField={highlightFieldKey}
-                highlightBlockId={highlightBlockId}
-              />
-            ))}
-
-            {/* 渲染全局 Actions（保留向后兼容） */}
-            <div className="pta-actions-container">
-              {storeSchema?.actions?.map((action) => (
-                <ActionButton
-                  key={action.id}
-                  action={action}
-                  highlighted={action.id === highlightActionId}
-                  onNavigate={handleInstanceSwitch}
-                />
-              ))}
-            </div>
-          </div>
+          {/* 根据 layout.type 决定如何渲染 blocks 和 actions */}
+          <SchemaLayoutRenderer
+            schema={storeSchema}
+            onNavigate={handleInstanceSwitch}
+            highlightField={highlightFieldKey}
+            highlightBlockId={highlightBlockId}
+            highlightActionId={highlightActionId}
+          />
         </div>
       </div>
     </div>

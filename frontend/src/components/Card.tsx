@@ -1,7 +1,9 @@
 /** 卡片容器组件 */
 
+import React from 'react';
+
 interface CardProps {
-  title?: string;
+  title?: string | React.ReactNode;
   children: React.ReactNode;
   style?: React.CSSProperties;
 }

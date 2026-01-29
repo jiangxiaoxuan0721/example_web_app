@@ -69,6 +69,12 @@ class BlockProps(BaseModelWithConfig):
     collapsible: bool = Field(default=False, description="是否可折叠")
     collapsed: bool = Field(default=False, description="默认折叠")
 
+    # 布局类型相关属性
+    tabs: Optional[list[dict[str, Any]]] = Field(None, description="标签页配置(tabs布局)")
+    cols: Optional[int] = Field(None, ge=1, le=12, description="网格列数(grid布局)")
+    gap: Optional[str] = Field(None, description="网格间距(grid布局)")
+    panels: Optional[list[dict[str, Any]]] = Field(None, description="折叠面板配置(accordion布局)")
+
 
 class Block(BaseModelWithConfig):
     """Block配置"""

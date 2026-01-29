@@ -5,7 +5,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { UISchema } from '../types/schema';
 import { renderTemplate } from '../utils/template';
-import { Card } from './index';
 import ImageModal from './ImageModal';
 
 interface RichContentProps {
@@ -72,31 +71,28 @@ export default function RichContentRenderer({
 
   return (
     <>
-      <Card style={{
-        width,
-        marginBottom: '16px',
-        ...style
-      }}>
-        <div
-          ref={containerRef}
-          className={`rich-html-container ${className}`}
-          style={{
-            padding: '16px',
-            height,
-            maxHeight,
-            overflow: 'auto',
-            boxSizing: 'border-box',
-            // 确保内容不会溢出容器
-            wordWrap: 'break-word',
-            overflowWrap: 'break-word',
-            // 为表格等元素设置滚动
-            overflowX: 'auto',
-            // 设置最大宽度以防止内容溢出
-            maxWidth: '100%'
-          }}
-          dangerouslySetInnerHTML={{ __html: renderedHtml }}
-        />
-      </Card>
+      <div
+        ref={containerRef}
+        className={`rich-html-container ${className}`}
+        style={{
+          width,
+          padding: '16px',
+          height,
+          maxHeight,
+          overflow: 'auto',
+          boxSizing: 'border-box',
+          // 确保内容不会溢出容器
+          wordWrap: 'break-word',
+          overflowWrap: 'break-word',
+          // 为表格等元素设置滚动
+          overflowX: 'auto',
+          // 设置最大宽度以防止内容溢出
+          maxWidth: '100%',
+          marginBottom: '16px',
+          ...style
+        }}
+        dangerouslySetInnerHTML={{ __html: renderedHtml }}
+      />
       {/* 图片模态框 */}
       {currentImage && (
         <ImageModal

@@ -269,7 +269,12 @@ export default function Table({ field, value }: TableProps) {
                        trimmedSrc.indexOf('<') < trimmedSrc.indexOf('>') &&
                        trimmedSrc.indexOf('<') < 10);
 
-                    if (isComponentHtml) {
+                    // 检查是否为HTML链接
+                    const isHtmlLink = !isComponentHtml && (/\.(html?)(\?.*)?$/i.test(trimmedSrc) ||
+                      trimmedSrc.endsWith('.html') ||
+                      (trimmedSrc.includes('wave_') && trimmedSrc.includes('.html')));
+
+                    if (isComponentHtml || isHtmlLink) {
                       return (
                         <button
                           key={compIndex}
@@ -499,12 +504,17 @@ export default function Table({ field, value }: TableProps) {
           const trimmedSrc = imageSrc.trim();
           const isHtml = trimmedSrc.startsWith('<') || (trimmedSrc.includes('<') && trimmedSrc.includes('>') && trimmedSrc.indexOf('<') < trimmedSrc.indexOf('>') && trimmedSrc.indexOf('<') < 10);
 
-          if (isHtml) {
+          // 检查是否为HTML链接
+          const isHtmlLink = !isHtml && (/\.(html?)(\?.*)?$/i.test(trimmedSrc) ||
+            trimmedSrc.endsWith('.html') ||
+            (trimmedSrc.includes('wave_') && trimmedSrc.includes('.html')));
+
+          if (isHtml || isHtmlLink) {
             return (
               <>
                 <button
                   onClick={() => {
-                    setCurrentImage({ url: imageSrc, title: imageTitle || 'HTML 内容' });
+                    setCurrentImage({ url: imageSrc, title: imageTitle || 'HTML 内容', isHtml: true });
                     setImageModalOpen(true);
                   }}
                   style={{
@@ -535,7 +545,7 @@ export default function Table({ field, value }: TableProps) {
                     url={currentImage.url}
                     title={currentImage.title}
                     alt={imageTitle}
-                    isHtml={currentImage.isHtml || false}
+                    isHtml={true}
                     onClose={() => {
                       setImageModalOpen(false);
                       setCurrentImage(null);
@@ -600,7 +610,7 @@ export default function Table({ field, value }: TableProps) {
                     url={currentImage.url}
                     title={currentImage.title}
                     alt={imageTitle}
-                    isHtml={currentImage.isHtml || false}
+                    isHtml={false}
                     onClose={() => {
                       setImageModalOpen(false);
                       setCurrentImage(null);

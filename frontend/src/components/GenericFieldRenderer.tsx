@@ -49,8 +49,9 @@ const renderImage = ({ field, value }: {
   field: FieldConfig;
   value: any;
 }) => {
-  // 提取图片信息
-  const imageUrl = typeof value === 'string' ? value : (value?.url || '');
+  // 提取图片信息 - 优先使用 state 中的 value，否则使用 field.value
+  const stateImageUrl = typeof value === 'string' ? value : (value?.url || '');
+  const imageUrl = stateImageUrl || field.value || '';
   const imageTitle = typeof value === 'object' ? (value?.title || field.description) : field.description;
   const imageAlt = typeof value === 'object' ? (value?.alt || field.label) : field.label;
 
@@ -124,13 +125,13 @@ const defaultRenderers: FieldRendererRegistry = {
     />
   ),
 
-  number: ({ field, onChange, disabled }) => (
+  number: ({ field, value, onChange, disabled, highlighted }) => (
     <NumberInput
       field={field}
-      schema={null as any}
-      bindPath=""
+      value={value}
       onChange={onChange}
       disabled={disabled}
+      highlighted={highlighted}
     />
   ),
 
@@ -205,19 +206,27 @@ const defaultRenderers: FieldRendererRegistry = {
     />
   ),
 
-  html: ({ field, value, schema }) => (
-    <div style={{ marginBottom: '16px' }}>
-      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-        {field.label}
-      </label>
-      <RichContentRenderer html={value} schema={schema} />
-      {field.description && (
-        <div style={{ marginTop: '4px', color: '#666', fontSize: '12px' }}>
-          {field.description}
-        </div>
-      )}
-    </div>
-  ),
+  html: ({ field, value, schema }) => {
+    // 对于 html 类型，优先使用 field.value 作为默认值
+    // 如果 state 中有值，则使用 state 中的值（覆盖默认值）
+    const htmlContent = value !== undefined && value !== null && value !== '' ? value : field.value;
+
+    return (
+      <div>
+        {field.label && (
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+            {field.label}
+          </label>
+        )}
+        <RichContentRenderer html={htmlContent} schema={schema} style={{ marginBottom: '16px' }} />
+        {field.description && (
+          <div style={{ marginTop: '4px', color: '#666', fontSize: '12px' }}>
+            {field.description}
+          </div>
+        )}
+      </div>
+    );
+  },
 
   image: ({ field, value }) => {
     return renderImage({ field, value });

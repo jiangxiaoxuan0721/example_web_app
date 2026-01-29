@@ -117,7 +117,7 @@ const blockRenderers: Record<string, BlockRenderer> = {
     const isHighlighted = highlightBlockId === block.id;
 
     // 渲染 value 中的模板变量
-    let renderedValue;
+    let renderedValue: any;
     if (typeof value === 'object' && value !== null) {
       // 如果是对象，转换为 JSON 字符串
       renderedValue = JSON.stringify(value, null, 2);
@@ -159,118 +159,15 @@ const blockRenderers: Record<string, BlockRenderer> = {
     );
   },
 
-  // 布局类型 1: 卡片式布局 - 用 Card 组件包装字段
-  card: ({ block, schema, disabled, highlightField, highlightBlockId, actions }) => {
-    const isHighlighted = highlightBlockId === block.id;
-    let fields: any[] = [];
-    if (block.props?.fields) {
-      if (Array.isArray(block.props.fields)) {
-        fields = block.props.fields;
-      } else if (typeof block.props.fields === 'object') {
-        fields = Object.values(block.props.fields);
-      }
-    }
-
-    return (
-      <Card
-        key={block.id}
-        id={`block-${block.id}`}
-        title={block.title}
-        style={{
-          marginBottom: '20px',
-          ...(isHighlighted ? {
-            backgroundColor: '#fff3cd',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-          } : {})
-        }}
-      >
-        {fields.map((field) => (
-          <GenericFieldRenderer
-            key={field.key}
-            field={field}
-            schema={schema}
-            bindPath={block.bind}
-            disabled={disabled}
-            highlighted={field.key === highlightField}
-          />
-        ))}
-      </Card>
-    );
-  },
-
-  // 布局类型 2: 两列布局 - 左右分栏
-  columns: ({ block, schema, disabled, highlightField, highlightBlockId }) => {
-    const isHighlighted = highlightBlockId === block.id;
-    let fields: any[] = [];
-    if (block.props?.fields) {
-      if (Array.isArray(block.props.fields)) {
-        fields = block.props.fields;
-      } else if (typeof block.props.fields === 'object') {
-        fields = Object.values(block.props.fields);
-      }
-    }
-
-    const columns = block.props?.columns || 2;
-    const columnFields = fields.reduce((acc: any[][], field, index) => {
-      const colIndex = index % columns;
-      if (!acc[colIndex]) acc[colIndex] = [];
-      acc[colIndex].push(field);
-      return acc;
-    }, []);
-
-    return (
-      <div
-        key={block.id}
-        id={`block-${block.id}`}
-        style={{
-          marginBottom: '20px',
-          padding: '20px',
-          backgroundColor: '#ffffff',
-          border: '1px solid #e5e7eb',
-          borderRadius: '8px',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-          ...(isHighlighted ? {
-            backgroundColor: '#fff3cd',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-          } : {})
-        }}
-      >
-        {block.title && (
-          <h3 style={{ marginTop: 0, marginBottom: '20px', fontSize: '18px', color: '#333' }}>
-            {block.title}
-          </h3>
-        )}
-        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-          {columnFields.map((colFields, colIndex) => (
-            <div
-              key={colIndex}
-              style={{
-                flex: 1,
-                minWidth: `${100 / columns}%`,
-                boxSizing: 'border-box'
-              }}
-            >
-              {colFields.map((field) => (
-                <GenericFieldRenderer
-                  key={field.key}
-                  field={field}
-                  schema={schema}
-                  bindPath={block.bind}
-                  disabled={disabled}
-                  highlighted={field.key === highlightField}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  },
-
-  // 布局类型 3: 标签页布局 - 支持多个选项卡
+  // 布局类型 1: 标签页布局 - 支持多个选项卡
   tabs: ({ block, schema, disabled, highlightField, highlightBlockId }) => {
     const [activeTab, setActiveTab] = useState(0);
     const isHighlighted = highlightBlockId === block.id;
+    const instanceId = useSchemaStore((state) => state.instanceId);
+
+    const handleNavigate = (targetInstance: string) => {
+      window.location.hash = `#instance=${targetInstance}`;
+    };
 
     return (
       <div
@@ -326,13 +223,29 @@ const blockRenderers: Record<string, BlockRenderer> = {
             />
           ))}
         </div>
+
+        {/* 渲染 block 级别的 actions */}
+        {block.props?.actions && block.props.actions.length > 0 && (
+          <div style={{ marginTop: '16px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            {block.props.actions.map((action: ActionConfig) => (
+              <ActionButton
+                key={action.id}
+                action={action}
+                highlighted={false}
+                onNavigate={handleNavigate}
+                blockId={block.id}
+              />
+            ))}
+          </div>
+        )}
       </div>
     );
   },
 
-  // 布局类型 4: 网格布局 - 响应式网格
+  // 布局类型 2: 网格布局 - 响应式网格
   grid: ({ block, schema, disabled, highlightField, highlightBlockId }) => {
     const isHighlighted = highlightBlockId === block.id;
+    const instanceId = useSchemaStore((state) => state.instanceId);
     let fields: any[] = [];
     if (block.props?.fields) {
       if (Array.isArray(block.props.fields)) {
@@ -344,6 +257,10 @@ const blockRenderers: Record<string, BlockRenderer> = {
 
     const cols = block.props?.cols || 3;
     const gap = block.props?.gap || '16px';
+
+    const handleNavigate = (targetInstance: string) => {
+      window.location.hash = `#instance=${targetInstance}`;
+    };
 
     return (
       <div
@@ -386,14 +303,30 @@ const blockRenderers: Record<string, BlockRenderer> = {
             />
           ))}
         </div>
+
+        {/* 渲染 block 级别的 actions */}
+        {block.props?.actions && block.props.actions.length > 0 && (
+          <div style={{ marginTop: '16px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            {block.props.actions.map((action) => (
+              <ActionButton
+                key={action.id}
+                action={action}
+                highlighted={false}
+                onNavigate={handleNavigate}
+                blockId={block.id}
+              />
+            ))}
+          </div>
+        )}
       </div>
     );
   },
 
-  // 布局类型 5: 折叠面板布局
+  // 布局类型 3: 折叠面板布局
   accordion: ({ block, schema, disabled, highlightField, highlightBlockId }) => {
     const [openPanels, setOpenPanels] = useState<Set<number>>(new Set([0]));
     const isHighlighted = highlightBlockId === block.id;
+    const instanceId = useSchemaStore((state) => state.instanceId);
 
     const togglePanel = (index: number) => {
       const newPanels = new Set(openPanels);
@@ -403,6 +336,10 @@ const blockRenderers: Record<string, BlockRenderer> = {
         newPanels.add(index);
       }
       setOpenPanels(newPanels);
+    };
+
+    const handleNavigate = (targetInstance: string) => {
+      window.location.hash = `#instance=${targetInstance}`;
     };
 
     return (
@@ -422,41 +359,57 @@ const blockRenderers: Record<string, BlockRenderer> = {
             {block.title}
           </h3>
         )}
-        {block.props?.panels?.map((panel: any, index: number) => (
-          <Card
-            key={index}
-            style={{
-              marginBottom: index < (block.props?.panels?.length - 1) ? '12px' : 0,
-              cursor: 'pointer'
-            }}
-            title={
-              <div
-                onClick={() => togglePanel(index)}
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-              >
-                <span>{panel.title}</span>
-                <span style={{ fontSize: '20px', fontWeight: 'bold' }}>
-                  {openPanels.has(index) ? '−' : '+'}
-                </span>
-              </div>
-            }
-          >
-            {openPanels.has(index) && panel.fields?.map((field: any) => (
-              <GenericFieldRenderer
-                key={field.key}
-                field={field}
-                schema={schema}
-                bindPath={block.bind}
-                disabled={disabled}
-                highlighted={field.key === highlightField}
-              />
+        {block.props?.panels?.map((panel: any, index: number) => {
+          const panelsLength = block.props?.panels?.length || 0;
+          return (
+            <Card
+              key={index}
+              style={{
+                marginBottom: index < (panelsLength - 1) ? '12px' : 0,
+                cursor: 'pointer'
+              }}
+              title={
+                <div
+                  onClick={() => togglePanel(index)}
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <span>{panel.title}</span>
+                  <span style={{ fontSize: '20px', fontWeight: 'bold' }}>
+                    {openPanels.has(index) ? '−' : '+'}
+                  </span>
+                </div>
+              }
+            >
+              {openPanels.has(index) && panel.fields?.map((field: any) => (
+                <GenericFieldRenderer
+                  key={field.key}
+                  field={field}
+                  schema={schema}
+                  bindPath={block.bind}
+                  disabled={disabled}
+                  highlighted={field.key === highlightField}
+                />
             ))}
+            {/* 渲染 panel 级别的 actions */}
+            {panel.actions && panel.actions.length > 0 && (
+              <div style={{ marginTop: '12px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                {panel.actions.map((action) => (
+                  <ActionButton
+                    key={action.id}
+                    action={action}
+                    highlighted={false}
+                    onNavigate={handleNavigate}
+                    blockId={block.id}
+                  />
+                ))}
+              </div>
+            )}
           </Card>
-        ))}
+          );
+        })}
       </div>
     );
   }
-};
 };
 
 /**

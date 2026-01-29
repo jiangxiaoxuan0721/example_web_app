@@ -99,6 +99,24 @@ export interface BlockProps {
   showTable?: boolean;
   showCountInput?: boolean;
   showTaskId?: boolean;
+
+  // Tabs 布局属性
+  tabs?: Array<{
+    label: string;
+    fields?: FieldConfig[];
+    actions?: ActionConfig[];  // Tab 级别的操作按钮
+  }>;
+
+  // Grid 布局属性
+  cols?: number;
+  gap?: string;
+
+  // Accordion 布局属性
+  panels?: Array<{
+    title: string;
+    fields?: FieldConfig[];
+    actions?: ActionConfig[];  // Panel 级别的操作按钮
+  }>;
 }
 
 export interface Block {
@@ -137,7 +155,9 @@ export interface StateInfo {
 }
 
 export interface LayoutInfo {
-  type: string;
+  type: 'single' | 'grid' | 'flex' | 'tabs';
+  columns?: number;      // grid 布局列数（默认 2）
+  gap?: string;          // 间距（默认 "20px"）
 }
 
 export interface UISchema {

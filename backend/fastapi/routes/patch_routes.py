@@ -12,6 +12,39 @@ from ..models import (
 )
 
 
+def convert_field_config(value: dict[str, Any]) -> Any:
+    """根据字段类型将字典转换为正确的 FieldConfig 模型对象"""
+    from ..models.field_models import (
+        BaseFieldConfig,
+        SelectableFieldConfig,
+        ImageFieldConfig,
+        TableFieldConfig,
+        ComponentFieldConfig
+    )
+
+    field_type = value.get("type", "text")
+    
+    # 根据字段类型处理可能为 None 的数组属性
+    if field_type == "table":
+        # 确保 columns 不是 None
+        if 'columns' not in value or value['columns'] is None:
+            value['columns'] = []
+            print(f"[PatchRoutes] Auto-initialized columns to empty array for table field")
+        return TableFieldConfig(**value)
+    elif field_type in ["select", "radio", "multiselect"]:
+        # 确保 options 不是 None
+        if 'options' not in value or value['options'] is None:
+            value['options'] = []
+            print(f"[PatchRoutes] Auto-initialized options to empty array for {field_type} field")
+        return SelectableFieldConfig(**value)
+    elif field_type == "image":
+        return ImageFieldConfig(**value)
+    elif field_type == "component":
+        return ComponentFieldConfig(**value)
+    else:
+        return BaseFieldConfig(**value)
+
+
 def handle_remove_operation(schema: UISchema, path: str, value: Any):
     """
     Handle remove operation for arrays and objects in the schema
@@ -394,33 +427,63 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
             if block_index < len(schema.blocks):
                 block = schema.blocks[block_index]
                 if hasattr(block.props, "fields"):
+                    # Ensure fields is initialized to empty list if None
+                    current_fields = getattr(block.props, "fields")
+                    if current_fields is None:
+                        print(f"[PatchRoutes] Block {block_index} has fields=None, initializing to empty list")
+                        current_fields = []
+                        setattr(block.props, "fields", current_fields)
+                    
                     # Check if field with same key already exists
                     new_field_key = value.get("key") if isinstance(value, dict) else getattr(value, "key", None)
-                    if new_field_key:
-                        current_fields = getattr(block.props, "fields")
-                        if isinstance(current_fields, list):
-                            for existing_field in current_fields:
-                                field_key_check = getattr(existing_field, "key") if hasattr(existing_field, "key") else existing_field.get("key")
-                                if field_key_check == new_field_key:
-                                    print(f"[PatchRoutes] Field with key '{new_field_key}' already exists, skipping add")
-                                    return {"success": False, "reason": f"Field with key '{new_field_key}' already exists"}
-                        else:
-                            # fields is a dict
-                            for existing_field in current_fields.values():
-                                field_key_check = getattr(existing_field, "key") if hasattr(existing_field, "key") else existing_field.get("key")
-                                if field_key_check == new_field_key:
-                                    print(f"[PatchRoutes] Field with key '{new_field_key}' already exists, skipping add")
-                                    return {"success": False, "reason": f"Field with key '{new_field_key}' already exists"}
+                    if new_field_key and isinstance(current_fields, list):
+                        for existing_field in current_fields:
+                            field_key_check = getattr(existing_field, "key") if hasattr(existing_field, "key") else existing_field.get("key")
+                            if field_key_check == new_field_key:
+                                print(f"[PatchRoutes] Field with key '{new_field_key}' already exists, skipping add")
+                                return {"success": False, "reason": f"Field with key '{new_field_key}' already exists"}
 
                     # Convert current fields to a list if it's not already
-                    if not isinstance(getattr(block.props, "fields"), list):
-                        current_fields = list(getattr(block.props, "fields").values())
-                    else:
-                        current_fields = getattr(block.props, "fields")
+                    if not isinstance(current_fields, list):
+                        print(f"[PatchRoutes] Converting fields from {type(current_fields)} to list")
+                        current_fields = list(current_fields.values())
+                        setattr(block.props, "fields", current_fields)
 
                     # Convert the dict value to a FieldConfig object
                     if isinstance(value, dict):
-                        field_config = BaseFieldConfig(**value)
+                        field_type = value.get("type", "text")
+                        
+                        # 根据字段类型处理可能为 None 的数组属性
+                        if field_type == "table":
+                            # 确保 columns 不是 None
+                            if 'columns' not in value or value['columns'] is None:
+                                value['columns'] = []
+                                print(f"[PatchRoutes] Auto-initialized columns to empty array for table field")
+                        elif field_type in ['select', 'radio', 'multiselect']:
+                            # 确保 options 不是 None
+                            if 'options' not in value or value['options'] is None:
+                                value['options'] = []
+                                print(f"[PatchRoutes] Auto-initialized options to empty array for {field_type} field")
+                        
+                        # 根据字段类型选择正确的模型类
+                        from ..models.field_models import (
+                            BaseFieldConfig,
+                            SelectableFieldConfig,
+                            ImageFieldConfig,
+                            TableFieldConfig,
+                            ComponentFieldConfig
+                        )
+
+                        if field_type == "table":
+                            field_config = TableFieldConfig(**value)
+                        elif field_type in ["select", "radio", "multiselect"]:
+                            field_config = SelectableFieldConfig(**value)
+                        elif field_type == "image":
+                            field_config = ImageFieldConfig(**value)
+                        elif field_type == "component":
+                            field_config = ComponentFieldConfig(**value)
+                        else:
+                            field_config = BaseFieldConfig(**value)
                     else:
                         field_config = value
 
@@ -449,29 +512,27 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
             if block_index < len(schema.blocks):
                 block = schema.blocks[block_index]
                 if hasattr(block.props, "actions"):
+                    # Ensure actions is initialized to empty list if None
+                    current_actions = getattr(block.props, "actions")
+                    if current_actions is None:
+                        print(f"[PatchRoutes] Block {block_index} has actions=None, initializing to empty list")
+                        current_actions = []
+                        setattr(block.props, "actions", current_actions)
+                    
                     # Check if action with same id already exists
                     new_action_id = value.get("id") if isinstance(value, dict) else getattr(value, "id", None)
-                    if new_action_id:
-                        current_actions = getattr(block.props, "actions")
-                        if isinstance(current_actions, list):
-                            for existing_action in current_actions:
-                                action_id_check = getattr(existing_action, "id") if hasattr(existing_action, "id") else existing_action.get("id")
-                                if action_id_check == new_action_id:
-                                    print(f"[PatchRoutes] Action with id '{new_action_id}' already exists in block {block_index}, skipping add")
-                                    return {"success": False, "reason": f"Action with id '{new_action_id}' already exists in block {block_index}"}
-                        else:
-                            # actions is a dict
-                            for existing_action in current_actions.values():
-                                action_id_check = getattr(existing_action, "id") if hasattr(existing_action, "id") else existing_action.get("id")
-                                if action_id_check == new_action_id:
-                                    print(f"[PatchRoutes] Action with id '{new_action_id}' already exists in block {block_index}, skipping add")
-                                    return {"success": False, "reason": f"Action with id '{new_action_id}' already exists in block {block_index}"}
+                    if new_action_id and isinstance(current_actions, list):
+                        for existing_action in current_actions:
+                            action_id_check = getattr(existing_action, "id") if hasattr(existing_action, "id") else existing_action.get("id")
+                            if action_id_check == new_action_id:
+                                print(f"[PatchRoutes] Action with id '{new_action_id}' already exists in block {block_index}, skipping add")
+                                return {"success": False, "reason": f"Action with id '{new_action_id}' already exists in block {block_index}"}
 
                     # Convert current actions to a list if it's not already
-                    if not isinstance(getattr(block.props, "actions"), list):
-                        current_actions = list(getattr(block.props, "actions").values())
-                    else:
-                        current_actions = getattr(block.props, "actions")
+                    if not isinstance(current_actions, list):
+                        print(f"[PatchRoutes] Converting actions from {type(current_actions)} to list")
+                        current_actions = list(current_actions.values())
+                        setattr(block.props, "actions", current_actions)
 
                     # Convert dict value to an ActionConfig object
                     if isinstance(value, dict):
@@ -549,7 +610,7 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
         if isinstance(container, list):
             if isinstance(value, dict) and "key" in value and "label" in value:
                 # Convert dict to FieldConfig if it looks like a field
-                field_config = BaseFieldConfig(**value)
+                field_config = convert_field_config(value)
                 container.append(field_config)
             else:
                 container.append(value)
@@ -558,7 +619,7 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
             if isinstance(container.fields, list):
                 if isinstance(value, dict) and "key" in value and "label" in value:
                     # Convert dict to FieldConfig if it looks like a field
-                    field_config = BaseFieldConfig(**value)
+                    field_config = convert_field_config(value)
                     container.fields.append(field_config)
                 else:
                     container.fields.append(value)
@@ -567,7 +628,7 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
                 fields_list = list(container.fields.values())
                 if isinstance(value, dict) and "key" in value and "label" in value:
                     # Convert dict to FieldConfig if it looks like a field
-                    field_config = BaseFieldConfig(**value)
+                    field_config = convert_field_config(value)
                     fields_list.append(field_config)
                 else:
                     fields_list.append(value)
@@ -678,7 +739,12 @@ def register_patch_routes(
                                     fields_data = props_copy.get('fields', []) or []
                                     converted_fields = [BaseFieldConfig(**field) for field in fields_data]
                                     props_copy['fields'] = converted_fields
-                                    block_copy['props'] = props_copy
+                                # Convert actions in props if present
+                                if 'actions' in props_copy and props_copy.get('actions') is not None:
+                                    actions_data = props_copy.get('actions', []) or []
+                                    converted_actions = [ActionConfig(**action) for action in actions_data]
+                                    props_copy['actions'] = converted_actions
+                                block_copy['props'] = props_copy
                             converted_blocks.append(Block(**block_copy))
                         new_schema.blocks = converted_blocks
                     elif path == "actions" and new_schema:

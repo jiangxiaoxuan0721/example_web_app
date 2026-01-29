@@ -90,7 +90,6 @@ class LayoutType(str, Enum):
     SINGLE = "single"
     GRID = "grid"
     FLEX = "flex"
-    CARD = "card"
     TABS = "tabs"
 
 
