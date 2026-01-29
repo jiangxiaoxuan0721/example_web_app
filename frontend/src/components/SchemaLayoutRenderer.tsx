@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import type { UISchema, ActionConfig } from '../types/schema';
+import type { UISchema } from '../types/schema';
 import BlockRenderer from './BlockRenderer';
 import ActionButton from './ActionButton';
 
@@ -170,13 +170,22 @@ const TabsLayout = ({
   const [activeTab, setActiveTab] = useState(0);
 
   // 将 blocks 分配到不同标签页
-  // 使用 block 的 order 属性分组，或者平均分配
-  const tabCount = Math.min(schema.blocks?.length || 0, 3);
-  const tabs = Array.from({ length: tabCount }, (_, index) => {
-    const start = Math.floor((schema.blocks?.length || 0) * index / tabCount);
-    const end = Math.floor((schema.blocks?.length || 0) * (index + 1) / tabCount);
-    return schema.blocks?.slice(start, end) || [];
-  });
+  // 每个 block 独占一个标签页
+  const tabCount = schema.blocks?.length || 0;
+
+  // 为每个标签页生成更友好的名称
+  // 直接从 schema.blocks 获取最新数据，确保 patch 更新后能同步显示
+  const getTabLabel = (index: number) => {
+    const block = schema.blocks?.[index];
+    // 优先使用 block.title，其次使用 id，最后使用索引
+    if (block?.title) {
+      return block.title;
+    }
+    if (block?.id) {
+      return `Tab ${block.id}`;
+    }
+    return `Tab ${index + 1}`;
+  };
 
   return (
     <div className="pta-schema-container">
@@ -189,7 +198,7 @@ const TabsLayout = ({
           gap: '4px',
         }}
       >
-        {tabs.map((_, index) => (
+        {Array.from({ length: tabCount }).map((_, index) => (
           <button
             key={index}
             onClick={() => setActiveTab(index)}
@@ -205,14 +214,14 @@ const TabsLayout = ({
               transition: 'all 0.2s ease',
             }}
           >
-            Tab {index + 1}
+            {getTabLabel(index)}
           </button>
         ))}
       </div>
 
       {/* 当前标签页内容 */}
       <div>
-        {tabs[activeTab]?.map((block) => (
+        {schema.blocks?.slice(activeTab, activeTab + 1).map((block) => (
           <BlockRenderer
             key={block.id}
             block={block}
