@@ -1,9 +1,11 @@
 /** Block 渲染器 V2 - 使用通用渲染模板 */
 
+import { useState } from 'react';
 import type { Block, UISchema, ActionConfig } from '../types/schema';
 import { useSchemaStore } from '../store/schemaStore';
 import GenericFieldRenderer from './GenericFieldRenderer';
 import ActionButton from './ActionButton';
+import Card from './Card';
 import { renderTemplate } from '../utils/template';
 
 interface BlockRendererProps {
@@ -155,7 +157,306 @@ const blockRenderers: Record<string, BlockRenderer> = {
         </div>
       </div>
     );
+  },
+
+  // 布局类型 1: 卡片式布局 - 用 Card 组件包装字段
+  card: ({ block, schema, disabled, highlightField, highlightBlockId, actions }) => {
+    const isHighlighted = highlightBlockId === block.id;
+    let fields: any[] = [];
+    if (block.props?.fields) {
+      if (Array.isArray(block.props.fields)) {
+        fields = block.props.fields;
+      } else if (typeof block.props.fields === 'object') {
+        fields = Object.values(block.props.fields);
+      }
+    }
+
+    return (
+      <Card
+        key={block.id}
+        id={`block-${block.id}`}
+        title={block.title}
+        style={{
+          marginBottom: '20px',
+          ...(isHighlighted ? {
+            backgroundColor: '#fff3cd',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+          } : {})
+        }}
+      >
+        {fields.map((field) => (
+          <GenericFieldRenderer
+            key={field.key}
+            field={field}
+            schema={schema}
+            bindPath={block.bind}
+            disabled={disabled}
+            highlighted={field.key === highlightField}
+          />
+        ))}
+      </Card>
+    );
+  },
+
+  // 布局类型 2: 两列布局 - 左右分栏
+  columns: ({ block, schema, disabled, highlightField, highlightBlockId }) => {
+    const isHighlighted = highlightBlockId === block.id;
+    let fields: any[] = [];
+    if (block.props?.fields) {
+      if (Array.isArray(block.props.fields)) {
+        fields = block.props.fields;
+      } else if (typeof block.props.fields === 'object') {
+        fields = Object.values(block.props.fields);
+      }
+    }
+
+    const columns = block.props?.columns || 2;
+    const columnFields = fields.reduce((acc: any[][], field, index) => {
+      const colIndex = index % columns;
+      if (!acc[colIndex]) acc[colIndex] = [];
+      acc[colIndex].push(field);
+      return acc;
+    }, []);
+
+    return (
+      <div
+        key={block.id}
+        id={`block-${block.id}`}
+        style={{
+          marginBottom: '20px',
+          padding: '20px',
+          backgroundColor: '#ffffff',
+          border: '1px solid #e5e7eb',
+          borderRadius: '8px',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          ...(isHighlighted ? {
+            backgroundColor: '#fff3cd',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+          } : {})
+        }}
+      >
+        {block.title && (
+          <h3 style={{ marginTop: 0, marginBottom: '20px', fontSize: '18px', color: '#333' }}>
+            {block.title}
+          </h3>
+        )}
+        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+          {columnFields.map((colFields, colIndex) => (
+            <div
+              key={colIndex}
+              style={{
+                flex: 1,
+                minWidth: `${100 / columns}%`,
+                boxSizing: 'border-box'
+              }}
+            >
+              {colFields.map((field) => (
+                <GenericFieldRenderer
+                  key={field.key}
+                  field={field}
+                  schema={schema}
+                  bindPath={block.bind}
+                  disabled={disabled}
+                  highlighted={field.key === highlightField}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  },
+
+  // 布局类型 3: 标签页布局 - 支持多个选项卡
+  tabs: ({ block, schema, disabled, highlightField, highlightBlockId }) => {
+    const [activeTab, setActiveTab] = useState(0);
+    const isHighlighted = highlightBlockId === block.id;
+
+    return (
+      <div
+        key={block.id}
+        id={`block-${block.id}`}
+        style={{
+          marginBottom: '20px',
+          padding: '20px',
+          backgroundColor: '#ffffff',
+          border: '1px solid #e5e7eb',
+          borderRadius: '8px',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          ...(isHighlighted ? {
+            backgroundColor: '#fff3cd',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+          } : {})
+        }}
+      >
+        {block.title && (
+          <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', color: '#333' }}>
+            {block.title}
+          </h3>
+        )}
+        <div style={{ marginBottom: '16px', borderBottom: '1px solid #e5e7eb' }}>
+          {block.props?.tabs?.map((tab: any, index: number) => (
+            <button
+              key={index}
+              onClick={() => setActiveTab(index)}
+              style={{
+                padding: '8px 16px',
+                background: activeTab === index ? '#007bff' : 'transparent',
+                color: activeTab === index ? '#fff' : '#666',
+                border: 'none',
+                borderBottom: activeTab === index ? '2px solid #007bff' : 'none',
+                cursor: 'pointer',
+                fontSize: '14px',
+                marginRight: '8px'
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <div>
+          {block.props?.tabs?.[activeTab]?.fields?.map((field: any) => (
+            <GenericFieldRenderer
+              key={field.key}
+              field={field}
+              schema={schema}
+              bindPath={block.bind}
+              disabled={disabled}
+              highlighted={field.key === highlightField}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  },
+
+  // 布局类型 4: 网格布局 - 响应式网格
+  grid: ({ block, schema, disabled, highlightField, highlightBlockId }) => {
+    const isHighlighted = highlightBlockId === block.id;
+    let fields: any[] = [];
+    if (block.props?.fields) {
+      if (Array.isArray(block.props.fields)) {
+        fields = block.props.fields;
+      } else if (typeof block.props.fields === 'object') {
+        fields = Object.values(block.props.fields);
+      }
+    }
+
+    const cols = block.props?.cols || 3;
+    const gap = block.props?.gap || '16px';
+
+    return (
+      <div
+        key={block.id}
+        id={`block-${block.id}`}
+        style={{
+          marginBottom: '20px',
+          padding: '20px',
+          backgroundColor: '#ffffff',
+          border: '1px solid #e5e7eb',
+          borderRadius: '8px',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          ...(isHighlighted ? {
+            backgroundColor: '#fff3cd',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+          } : {})
+        }}
+      >
+        {block.title && (
+          <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', color: '#333' }}>
+            {block.title}
+          </h3>
+        )}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${cols}, 1fr)`,
+            gap: gap,
+            flexWrap: 'wrap'
+          }}
+        >
+          {fields.map((field) => (
+            <GenericFieldRenderer
+              key={field.key}
+              field={field}
+              schema={schema}
+              bindPath={block.bind}
+              disabled={disabled}
+              highlighted={field.key === highlightField}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  },
+
+  // 布局类型 5: 折叠面板布局
+  accordion: ({ block, schema, disabled, highlightField, highlightBlockId }) => {
+    const [openPanels, setOpenPanels] = useState<Set<number>>(new Set([0]));
+    const isHighlighted = highlightBlockId === block.id;
+
+    const togglePanel = (index: number) => {
+      const newPanels = new Set(openPanels);
+      if (newPanels.has(index)) {
+        newPanels.delete(index);
+      } else {
+        newPanels.add(index);
+      }
+      setOpenPanels(newPanels);
+    };
+
+    return (
+      <div
+        key={block.id}
+        id={`block-${block.id}`}
+        style={{
+          marginBottom: '20px',
+          ...(isHighlighted ? {
+            backgroundColor: '#fff3cd',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+          } : {})
+        }}
+      >
+        {block.title && (
+          <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', color: '#333' }}>
+            {block.title}
+          </h3>
+        )}
+        {block.props?.panels?.map((panel: any, index: number) => (
+          <Card
+            key={index}
+            style={{
+              marginBottom: index < (block.props?.panels?.length - 1) ? '12px' : 0,
+              cursor: 'pointer'
+            }}
+            title={
+              <div
+                onClick={() => togglePanel(index)}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              >
+                <span>{panel.title}</span>
+                <span style={{ fontSize: '20px', fontWeight: 'bold' }}>
+                  {openPanels.has(index) ? '−' : '+'}
+                </span>
+              </div>
+            }
+          >
+            {openPanels.has(index) && panel.fields?.map((field: any) => (
+              <GenericFieldRenderer
+                key={field.key}
+                field={field}
+                schema={schema}
+                bindPath={block.bind}
+                disabled={disabled}
+                highlighted={field.key === highlightField}
+              />
+            ))}
+          </Card>
+        ))}
+      </div>
+    );
   }
+};
 };
 
 /**
