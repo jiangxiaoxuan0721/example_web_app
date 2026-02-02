@@ -4,13 +4,14 @@
 工具描述会被注入到Agent上下文,必须完整、准确。
 """
 
+from fastmcp.server.server import FastMCP
+
+
 from typing import Any
 from fastmcp import FastMCP
 
-mcp = FastMCP("ui-patch-server")
+mcp: FastMCP[Any] = FastMCP(name="ui-patch-server")
 
-
-# ===== 万能修改工具(推荐使用)=====
 
 @mcp.tool()
 async def patch_ui_state(

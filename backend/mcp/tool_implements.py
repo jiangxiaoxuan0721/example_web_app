@@ -12,7 +12,7 @@ from typing import Any
 import httpx
 from backend.config import settings
 # FastAPI 后端地址（从环境变量读取，默认 localhost:8001）
-FASTAPI_BASE_URL = f"http://localhost:{settings.port}"
+FASTAPI_BASE_URL: str = f"http://localhost:{settings.port}"
 
 
 async def apply_patch_to_fastapi(
@@ -25,9 +25,9 @@ async def apply_patch_to_fastapi(
     try:
         async with httpx.AsyncClient() as client:
             # 调用 FastAPI 的 patch 接口
-            url = f"{FASTAPI_BASE_URL}/ui/patch"
+            url: str = f"{FASTAPI_BASE_URL}/ui/patch"
 
-            payload = {
+            payload: dict[str, str | list[dict[str, Any]]] = {
                 "instance_name": instance_name,
                 "patches": patches
             }
@@ -72,7 +72,7 @@ async def patch_ui_state_impl(
         }
 
     # 通过 HTTP API 调用 FastAPI 后端
-    result = await apply_patch_to_fastapi(instance_name, patches, new_instance_name, target_instance_name)
+    result: dict[str, Any] = await apply_patch_to_fastapi(instance_name, patches, new_instance_name, target_instance_name)
 
     print(f"[MCP] 调用 FastAPI patch: instance_name={instance_name}, patches={patches}")
     print(f"[MCP] FastAPI 响应: {result}")

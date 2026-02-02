@@ -1,5 +1,5 @@
-"""MCP Tools for Agent Programmable UI Runtime
-
+"""
+MCP Tools for Agent Programmable UI Runtime
 此文件现在作为入口点，导入并运行MCP工具。
 工具定义在tool_definitions.py中，实现在tool_implements.py中。
 """
