@@ -25,21 +25,21 @@ class PatchOperation(BaseModel):
 
 class PatchInput(BaseModel):
     """补丁输入接口"""
-    instance_id: str = Field(..., description="目标实例（如 'demo', 'counter', 'form'）")
+    instance_name: str = Field(..., description="目标实例（如 'demo', 'counter', 'form'）")
                                  # 使用 "__CREATE__" 创建新实例
                                  # 使用 "__DELETE__" 删除实例
-    new_instance_id: str | None = Field(None, description="当 instance_id == '__CREATE__' 时必需")
-    target_instance_id: str | None = Field(None, description="当 instance_id == '__DELETE__' 时必需")
+    new_instance_name: str | None = Field(None, description="当 instance_name == '__CREATE__' 时必需")
+    target_instance_name: str | None = Field(None, description="当 instance_name == '__DELETE__' 时必需")
     patches: list[PatchOperation] = Field(default_factory=list, description="补丁操作数组")
 
 # 扩展版本，包含字段操作快捷方式（已弃用，保留用于向后兼容）
 class PatchInputWithShortcuts(BaseModel):
     """带有字段操作快捷方式的补丁输入接口（已弃用，请使用 PatchInput）"""
-    instance_id: str = Field(..., description="目标实例（如 'demo', 'counter', 'form'）")
+    instance_name: str = Field(..., description="目标实例（如 'demo', 'counter', 'form'）")
                                  # 使用 "__CREATE__" 创建新实例
                                  # 使用 "__DELETE__" 删除实例
-    new_instance_id: str | None = Field(None, description="当 instance_id == '__CREATE__' 时必需")
-    target_instance_id: str | None = Field(None, description="当 instance_id == '__DELETE__' 时必需")
+    new_instance_name: str | None = Field(None, description="当 instance_name == '__CREATE__' 时必需")
+    target_instance_name: str | None = Field(None, description="当 instance_name == '__DELETE__' 时必需")
     patches: list[PatchOperation] = Field(default_factory=list, description="补丁操作数组（使用字段快捷方式时为可选）")
 
 class CompletionCriterion(BaseModel):
@@ -53,7 +53,7 @@ class CompletionCriterion(BaseModel):
 
 class ValidateCompletionInput(BaseModel):
     """验证完成输入"""
-    instance_id: str = Field(..., description="要验证的实例 ID")
+    instance_name: str = Field(..., description="要验证的实例 ID")
     intent: str = Field(..., description="UI 应完成的高级描述")
     completion_criteria: list[CompletionCriterion] = Field(..., description="要检查的标准列表")
 

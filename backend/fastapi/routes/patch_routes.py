@@ -1,13 +1,14 @@
 """Patch 相关 API 路由"""
 
+from backend.fastapi.models.field_models import BaseFieldConfig
 from fastapi import Query
 from typing import Any
 from ...core.history import PatchHistoryManager
 from ...core.manager import SchemaManager
 from ..services.patch import apply_patch_to_schema
 from ..models import (
-    UISchema, MetaInfo, StateInfo, LayoutInfo,
-    Block, FieldConfig, ActionConfig, StepInfo,
+    UISchema, StateInfo, LayoutInfo,
+    Block, FieldConfig, ActionConfig,
     BaseFieldConfig, LayoutType
 )
 
@@ -650,7 +651,8 @@ def register_patch_routes(
     app,
     schema_manager: SchemaManager,
     patch_history: PatchHistoryManager,
-    ws_manager
+    ws_manager,
+    instance_service
 ):
     """注册 Patch 相关的路由
 
@@ -667,30 +669,30 @@ def register_patch_routes(
         应用 Patch 到 Schema（供 MCP 工具调用）
 
         支持操作：
-        - 更新状态: {"instance_id": "counter", "patches": [{"op": "set", "path": "state.params.count", "value": 42}]}
-        - 创建实例: {"instance_id": "__CREATE__", "new_instance_id": "my_instance", "patches": [...]}
-        - 删除实例: {"instance_id": "__DELETE__", "target_instance_id": "my_instance", "patches": []}
+        - 更新状态: {"instance_name": "counter", "patches": [{"op": "set", "path": "state.params.count", "value": 42}]}
+        - 创建实例: {"instance_name": "__CREATE__", "new_instance_name": "my_instance", "patches": [...]}
+        - 删除实例: {"instance_name": "__DELETE__", "target_instance_name": "my_instance", "patches": []}
         """
-        instance_id = request.get("instance_id")
+        instance_name = request.get("instance_name")
         patches = request.get("patches", [])
-        new_instance_id = request.get("new_instance_id")
-        target_instance_id = request.get("target_instance_id")
+        new_instance_name = request.get("new_instance_name")
+        target_instance_name = request.get("target_instance_name")
 
-        print(f"[PatchRoutes] /ui/patch 收到请求: instance_id={instance_id}")
+        print(f"[PatchRoutes] /ui/patch 收到请求: instance_name={instance_name}")
 
         try:
             # Handle Create Instance
-            if instance_id == "__CREATE__":
-                if not new_instance_id:
+            if instance_name == "__CREATE__":
+                if not new_instance_name:
                     return {
                         "status": "error",
-                        "error": "new_instance_id is required when instanceId is '__CREATE__'"
+                        "error": "new_instance_name is required when instanceId is '__CREATE__'"
                     }
 
-                if schema_manager.exists(new_instance_id):
+                if schema_manager.exists(new_instance_name):
                     return {
                         "status": "error",
-                        "error": f"Instance '{new_instance_id}' already exists"
+                        "error": f"Instance '{new_instance_name}' already exists"
                     }
 
                 # Apply patches to create instance structure
@@ -706,13 +708,7 @@ def register_patch_routes(
                     if path == "meta":
                         meta_data = value
                         new_schema = UISchema(
-                            meta=MetaInfo(
-                                pageKey=meta_data.get("pageKey", new_instance_id),
-                                step=StepInfo(**meta_data.get("step", {"current": 1, "total": 1})),
-                                status=meta_data.get("status", "idle"),
-                                title=meta_data.get("title"),
-                                description=meta_data.get("description")
-                            ),
+                            page_key=meta_data.get("page_key", new_instance_name),
                             state=StateInfo(params={}, runtime={}),
                             layout=LayoutInfo(type=LayoutType.SINGLE),
                             blocks=[],
@@ -726,18 +722,18 @@ def register_patch_routes(
                         )
                     elif path == "blocks" and new_schema:
                         # Convert dict list to Block objects
-                        blocks_data = value or []
-                        converted_blocks = []
+                        blocks_data: Any | list[Any] = value or []
+                        converted_blocks: list[Any] = []
                         for block in blocks_data:
                             # Create a copy to avoid modifying original
-                            block_copy = dict(block)
+                            block_copy: dict[Any, Any] = dict(block)
 
                             # Convert fields in props if present
                             if 'props' in block_copy and block_copy.get('props') is not None:
-                                props_copy = dict(block_copy.get('props', {}))
+                                props_copy: dict[Any, Any] = dict(block_copy.get('props', {}))
                                 if 'fields' in props_copy and props_copy.get('fields') is not None:
-                                    fields_data = props_copy.get('fields', []) or []
-                                    converted_fields = [BaseFieldConfig(**field) for field in fields_data]
+                                    fields_data: Any | list[Any] = props_copy.get('fields', []) or []
+                                    converted_fields: list[BaseFieldConfig] = [BaseFieldConfig(**field) for field in fields_data]
                                     props_copy['fields'] = converted_fields
                                 # Convert actions in props if present
                                 if 'actions' in props_copy and props_copy.get('actions') is not None:
@@ -749,16 +745,16 @@ def register_patch_routes(
                         new_schema.blocks = converted_blocks
                     elif path == "actions" and new_schema:
                         # Convert dict list to ActionConfig objects
-                        actions_data = value or []
+                        actions_data: Any | list[Any] = value or []
                         new_schema.actions = [ActionConfig(**action) for action in actions_data]
 
                 if new_schema:
-                    schema_manager.set(new_instance_id, new_schema)
-                    print(f"[PatchRoutes] 实例 '{new_instance_id}' 创建成功")
+                    schema_manager.set(new_instance_name, new_schema)
+                    print(f"[PatchRoutes] 实例 '{new_instance_name}' 创建成功")
                     return {
                         "status": "success",
-                        "message": f"Instance '{new_instance_id}' created successfully",
-                        "instance_id": new_instance_id
+                        "message": f"Instance '{new_instance_name}' created successfully",
+                        "instance_name": new_instance_name
                     }
 
                 return {
@@ -767,39 +763,39 @@ def register_patch_routes(
                 }
 
             # Handle Delete Instance
-            if instance_id == "__DELETE__":
-                if not target_instance_id:
+            if instance_name == "__DELETE__":
+                if not target_instance_name:
                     return {
                         "status": "error",
-                        "error": "target_instance_id is required when instanceId is '__DELETE__'"
+                        "error": "target_instance_name is required when instanceId is '__DELETE__'"
                     }
 
-                if not schema_manager.exists(target_instance_id):
+                if not schema_manager.exists(target_instance_name):
                     return {
                         "status": "error",
-                        "error": f"Instance '{target_instance_id}' not found"
+                        "error": f"Instance '{target_instance_name}' not found"
                     }
 
-                schema_manager.delete(target_instance_id)
-                print(f"[PatchRoutes] 实例 '{target_instance_id}' 删除成功")
+                schema_manager.delete(target_instance_name)
+                print(f"[PatchRoutes] 实例 '{target_instance_name}' 删除成功")
                 return {
                     "status": "success",
-                    "message": f"Instance '{target_instance_id}' deleted successfully"
+                    "message": f"Instance '{target_instance_name}' deleted successfully"
                 }
 
             # Handle Normal Instance Operations
-            # 检查instance_id是否有效
-            if not instance_id:
+            # 检查instance_name是否有效
+            if not instance_name:
                 return {
                     "status": "error",
-                    "error": "instance_id is required for normal operations"
+                    "error": "instance_name is required for normal operations"
                 }
                 
-            schema = schema_manager.get(instance_id)
+            schema = schema_manager.get(instance_name)
             if not schema:
                 return {
                     "status": "error",
-                    "error": f"Instance '{instance_id}' not found",
+                    "error": f"Instance '{instance_name}' not found",
                     "available_instances": schema_manager.list_all()
                 }
 
@@ -808,9 +804,10 @@ def register_patch_routes(
             # Process patches
             add_patches = []  # Track add operations separately
             remove_patches = []  # Track remove operations separately
+            unified_patches = []  # Track unified patch operations (append_to_list, merge, etc.)
             applied_patches = []  # Track successfully applied patches
             skipped_patches = []  # Track skipped patches with reasons
-            
+
             for patch in patches:
                 op = patch.get("op")
                 path = patch.get("path")
@@ -850,17 +847,30 @@ def register_patch_routes(
                             "patch": patch,
                             "reason": reason
                         })
+                else:
+                    # Handle unified patch operations (append_to_list, merge, increment, etc.)
+                    result = instance_service.apply_unified_patch(schema, patch)
+                    unified_patches.append(patch)
+                    # Check result and add to applied or skipped
+                    if result and result.get("success", True):
+                        applied_patches.append(patch)
+                    else:
+                        reason = result.get("reason", "Unknown reason") if result else "Unknown reason"
+                        skipped_patches.append({
+                            "patch": patch,
+                            "reason": reason
+                        })
 
             # Apply set patches to schema
             if patch_dict:
                 apply_patch_to_schema(schema, patch_dict)
 
-            # If we have any patches (set, add, or remove), save to history and notify frontend
-            if patch_dict or add_patches or remove_patches:
+            # If we have any patches (set, add, remove, or unified ops), save to history and notify frontend
+            if patch_dict or add_patches or remove_patches or unified_patches:
                 # For set operations, use the patch_dict
-                # For add/remove operations, we need to create a special representation
+                # For add/remove/unified operations, we need to create a special representation
                 all_patches = patch_dict.copy()
-                
+
                 # 生成访问实例消息 - 在使用前定义
                 access_instance_message = None
                 if add_patches:
@@ -872,39 +882,44 @@ def register_patch_routes(
                                 # 创建访问实例的消息，带有高亮字段的参数
                                 access_instance_message = {
                                     "type": "access_instance",
-                                    "instance_id": instance_id,
+                                    "instance_name": instance_name,
                                     "highlight": field_key
                                 }
                                 break
-                    
+
                     # Create a representation of the add operations for history
                     for add_patch in add_patches:
                         # Store the add operation in a format that can be tracked
                         all_patches[f"add:{add_patch['path']}"] = add_patch['value']
-                
+
                 # Create a representation of the remove operations for history
                 for remove_patch in remove_patches:
                     # Store the remove operation in a format that can be tracked
                     all_patches[f"remove:{remove_patch['path']}"] = remove_patch['value']
-                
+
+                # Create a representation of unified patch operations for history
+                for unified_patch in unified_patches:
+                    # Store the unified operation in a format that can be tracked
+                    all_patches[f"{unified_patch['op']}:{unified_patch['path']}"] = unified_patch.get('value')
+
                 # 保存到历史记录
-                patch_history.save(instance_id, all_patches)
+                patch_history.save(instance_name, all_patches)
 
                 # 生成访问实例消息
                 access_instance_message = {
                     "type": "access_instance",
-                    "instance_id": instance_id
+                    "instance_name": instance_name
                 }
 
-                # For any operation that modifies schema (add/remove/set), always send the entire schema
+                # For any operation that modifies schema (add/remove/set/unified), always send the entire schema
                 # This ensures the frontend receives the complete updated state and can trigger highlights
-                # This is more reliable than trying to distinguish between add/remove/set operations
-                has_any_patches = patch_dict or add_patches or remove_patches
+                # This is more reliable than trying to distinguish between different operation types
+                has_any_patches = patch_dict or add_patches or remove_patches or unified_patches
 
                 if has_any_patches:
                     # Send the entire updated schema
                     # This ensures the frontend receives the complete updated state
-                    print(f"[PatchRoutes] Sending schema_update for instance: {instance_id}")
+                    print(f"[PatchRoutes] Sending schema_update for instance: {instance_name}")
                     print(f"[PatchRoutes] Current schema blocks count: {len(schema.blocks)}")
                     print(f"[PatchRoutes] Current schema actions count: {len(schema.actions)}")
 
@@ -968,11 +983,11 @@ def register_patch_routes(
                     # Send a custom message directly using the dispatcher
                     message = {
                         "type": "schema_update",
-                        "instance_id": instance_id,
+                        "instance_name": instance_name,
                         "schema": schema_patch,
                         "highlight": highlight_info
                     }
-                    await ws_manager._dispatcher.send_to_instance(instance_id, message)
+                    await ws_manager._dispatcher.send_to_instance(instance_name, message)
 
                 print(f"[PatchRoutes] Patch 应用成功: {all_patches}")
                 print(f"[PatchRoutes] 实际应用的 patches: {applied_patches}")
@@ -982,28 +997,28 @@ def register_patch_routes(
                     return {
                         "status": "success",
                         "message": "No patches were applied (all operations were skipped)",
-                        "instance_id": instance_id,
+                        "instance_name": instance_name,
                         "patches_applied": [],
                         "skipped_patches": skipped_patches
                     }
-                
+
                 result = {
                     "status": "success",
                     "message": "Patch applied successfully",
-                    "instance_id": instance_id,
+                    "instance_name": instance_name,
                     "patches_applied": applied_patches
                 }
-                
+
                 # Add skipped_patches to result if there are any skipped patches
                 if skipped_patches:
                     result["skipped_patches"] = skipped_patches
-                
+
                 return result
 
             return {
                 "status": "success",
                 "message": "No patches to apply",
-                "instance_id": instance_id
+                "instance_name": instance_name
             }
 
         except Exception as e:
@@ -1017,7 +1032,7 @@ def register_patch_routes(
             }
 
     @app.get("/ui/patches")
-    async def get_patches(instance_id: str | None = Query(None, alias="instanceId")):
+    async def get_patches(instance_name: str | None = Query(None, alias="instanceId")):
         """
         获取所有 Patch 历史记录
         支持 Patch 重放
@@ -1025,19 +1040,19 @@ def register_patch_routes(
         - /ui/patches              -> 返回默认实例的历史
         - /ui/patches?instanceId=xxx -> 返回指定实例的历史
         """
-        if not instance_id:
-            instance_id = "demo"
+        if not instance_name:
+            instance_name = "demo"
 
-        patches = patch_history.get_all(instance_id)
+        patches = patch_history.get_all(instance_name)
 
         return {
             "status": "success",
-            "instance_id": instance_id,
+            "instance_name": instance_name,
             "patches": patches
         }
 
     @app.get("/ui/patches/replay/{patch_id}")
-    async def replay_patch(patch_id: int, instance_id: str | None = Query(None, alias="instanceId")):
+    async def replay_patch(patch_id: int, instance_name: str | None = Query(None, alias="instanceId")):
         """
         重放指定 Patch
 
@@ -1047,22 +1062,22 @@ def register_patch_routes(
         ✅ Patch 能独立重放 - 是（此接口）
         ✅ 去掉前端缓存能恢复 - 是
         """
-        if not instance_id:
-            instance_id = "demo"
+        if not instance_name:
+            instance_name = "demo"
 
         # 找到对应的 Patch
-        patch_record = patch_history.get_by_id(instance_id, patch_id)
+        patch_record = patch_history.get_by_id(instance_name, patch_id)
 
         if not patch_record:
             return {
                 "status": "error",
-                "message": f"Patch {patch_id} 在实例 '{instance_id}' 中不存在"
+                "message": f"Patch {patch_id} 在实例 '{instance_name}' 中不存在"
             }
 
-        print(f"[PatchRoutes] 重放 Patch {patch_id} (instance: {instance_id}): {patch_record['patch']}")
+        print(f"[PatchRoutes] 重放 Patch {patch_id} (instance: {instance_name}): {patch_record['patch']}")
 
         # 应用到当前 Schema
-        schema = schema_manager.get(instance_id)
+        schema = schema_manager.get(instance_name)
         if schema:
             patch_data = patch_record["patch"]
             if not isinstance(patch_data, dict):
@@ -1070,11 +1085,13 @@ def register_patch_routes(
             apply_patch_to_schema(schema, patch_data)
 
             # WebSocket 推送
-            await ws_manager.send_patch(instance_id, patch_data, None)
+            await ws_manager.send_patch(instance_name, patch_data, None)
 
         return {
             "status": "success",
-            "instance_id": instance_id,
+            "instance_name": instance_name,
             "patch_id": patch_id,
             "patch": patch_record["patch"]
         }
+
+

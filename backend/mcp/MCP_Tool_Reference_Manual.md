@@ -1,76 +1,29 @@
 # MCP 工具完整参考手册
 
-> **面向开发者**：本手册提供了所有 MCP 工具的完整技术细节，包括参数、返回值、错误处理和内部实现。
-
 ## 目录
 
-- [架构概述](#架构概述)
 - [工具索引](#工具索引)
 - [工具详细文档](#工具详细文档)
   - [1. patch_ui_state](#1-patch_ui_state)
   - [2. get_schema](#2-get_schema)
   - [3. list_instances](#3-list_instances)
   - [4. validate_completion](#4-validate_completion)
-  - [5. access_instance](#5-access_instance)
+  - [5. switch_to_instance](#5-switch_to_instance)
 - [数据模型](#数据模型)
 - [Action Handler 详解](#action-handler-详解)
 - [错误代码参考](#错误代码参考)
 - [内部实现细节](#内部实现细节)
 
----
-
-## 架构概述
-
-### 系统组件
-
-```
-┌─────────────────────────────────────────────┐
-│              Claude Desktop / Agent         │
-│            (MCP Client)                     │
-└──────────────────────┬──────────────────────┘
-                       │ JSON-RPC
-                       ▼
-┌─────────────────────────────────────────────┐
-│         MCP Tool Server (FastMCP)           │
-│  ┌──────────────────────────────────────┐   │
-│  │  tool_definitions.py (工具定义)       │   │
-│  │  - 装饰器和参数文档                   │   │
-│  │  - 类型安全                           │   │
-│  └──────────────────────────────────────┘   │
-│  ┌──────────────────────────────────────┐   │
-│  │  tool_implements.py (工具实现)        │   │
-│  │  - 业务逻辑                           │   │
-│  │  - 数据验证                           │   │
-│  └──────────────────────────────────────┘   │
-│         │                                   │
-│         │ HTTP / WebSocket                  │
-│         ▼                                   │
-│  ┌──────────────────────────────────────┐   │
-│  │  InstanceService                     │   │
-│  │  - Schema 管理                       │   │
-│  │  - Action 处理                       │   │
-│  │  - Patch 应用                        │   │
-│  └──────────────────────────────────────┘   │
-└─────────────────────────────────────────────┘
-```
-
-### 数据流
-
-1. **读取流程**: Agent → MCP Tool → SchemaManager → 返回 Schema
-2. **修改流程**: Agent → MCP Tool → InstanceService → Patch 应用 → WebSocket 推送
-3. **验证流程**: Agent → MCP Tool → Schema 解析 → 返回评估数据
-
----
 
 ## 工具索引
 
-|| 工具名 | 功能 | 使用场景 |
-||--------|------|----------|
-|| `patch_ui_state` | 应用结构化补丁修改 UI | 创建实例、修改结构、更新状态、删除实例 |
-|| `get_schema` | 获取实例的完整 Schema | 检查当前状态、分析结构、验证修改 |
-|| `list_instances` | 列出所有可用实例 | 浏览实例、发现资源 |
-|| `validate_completion` | 验证完成标准 | 评估进度、确定下一步、质量检查 |
-|| `access_instance` | 访问并激活实例 | 切换上下文、标记活动实例 |
+| 工具名 | 功能 | 使用场景 |
+|--------|------|----------|
+| `patch_ui_state` | 应用结构化补丁修改 UI | 创建实例、修改结构、更新状态、删除实例 |
+| `get_schema` | 获取实例的完整 Schema | 检查当前状态、分析结构、验证修改 |
+| `list_instances` | 列出所有可用实例 | 浏览实例、发现资源 |
+| `validate_completion` | 验证完成标准 | 评估进度、确定下一步、质量检查 |
+| `switch_to_instance` | 访问并激活实例 | 切换上下文、标记活动实例 |
 
 ---
 
@@ -84,33 +37,33 @@
 
 ```python
 async def patch_ui_state(
-    instance_id: str,
+    instance_name: str,
     patches: list[dict[str, Any]] = [],
-    new_instance_id: str | None = None,
-    target_instance_id: str | None = None
+    new_instance_name: str | None = None,
+    target_instance_name: str | None = None
 ) -> dict[str, Any]
 ```
 
 #### 参数详解
 
-|| 参数名 | 类型 | 必需 | 默认值 | 说明 |
-||--------|------|------|--------|------|
-|| `instance_id` | string | ✅ | - | 目标实例 ID。<br>• `"__CREATE__"` - 创建新实例<br>• `"__DELETE__"` - 删除实例<br>• 其他 - 修改现有实例 |
-|| `patches` | array | ❌ | `[]` | 补丁操作数组（见下方[操作类型](#操作类型）） |
-|| `new_instance_id` | string | 条件必需 | `null` | 创建实例时必须提供新实例 ID |
-|| `target_instance_id` | string | 条件必需 | `null` | 删除实例时必须提供目标实例 ID |
-|| `field_key` | string | ❌ | `null` | 字段操作快捷方式：指定要更新/删除的字段键 |
-|| `updates` | object | ❌ | `null` | 字段操作快捷方式：要更新的字段属性 |
-|| `remove_field` | boolean | ❌ | `false` | 字段操作快捷方式：如果为 `true` 则删除指定字段 |
-|| `block_index` | integer | ❌ | `0` | 指定要操作的 form block 索引（默认第一个） |
+| 参数名 | 类型 | 必需 | 默认值 | 说明 |
+|--------|------|------|--------|------|
+| `instance_name` | string | ✅ | - | 目标实例 ID。<br>• `"__CREATE__"` - 创建新实例<br>• `"__DELETE__"` - 删除实例<br>• 其他 - 修改现有实例 |
+| `patches` | array | ❌ | `[]` | 补丁操作数组（见下方[操作类型](#操作类型）） |
+| `new_instance_name` | string | 条件必需 | `null` | 创建实例时必须提供新实例 ID |
+| `target_instance_name` | string | 条件必需 | `null` | 删除实例时必须提供目标实例 ID |
+| `field_key` | string | ❌ | `null` | 字段操作快捷方式：指定要更新/删除的字段键 |
+| `updates` | object | ❌ | `null` | 字段操作快捷方式：要更新的字段属性 |
+| `remove_field` | boolean | ❌ | `false` | 字段操作快捷方式：如果为 `true` 则删除指定字段 |
+| `block_index` | integer | ❌ | `0` | 指定要操作的 form block 索引（默认第一个） |
 
 #### 操作类型
 
-|| Op 类型 | 行为 | 允许的路径格式 | 必需字段 |
-||---------|------|----------------|----------|
-|| `set` | 设置路径值（如缺失则创建） | 任意路径（如 `state.params.count`） | `path`, `value` |
-|| `add` | 在数组末尾添加元素 | **数组路径**（如 `blocks`, `actions`, `blocks.0.props.fields`） | `path`, `value` |
-|| `remove` | 从数组中删除元素（按值匹配） | **数组路径**（如 `blocks`, `actions`, `blocks.0.props.fields`） | `path`, `value` |
+| Op 类型 | 行为 | 允许的路径格式 | 必需字段 |
+|---------|------|----------------|----------|
+| `set` | 设置路径值（如缺失则创建） | 任意路径（如 `state.params.count`） | `path`, `value` |
+| `add` | 在数组末尾添加元素 | **数组路径**（如 `blocks`, `actions`, `blocks.0.props.fields`） | `path`, `value` |
+| `remove` | 从数组中删除元素（按值匹配） | **数组路径**（如 `blocks`, `actions`, `blocks.0.props.fields`） | `path`, `value` |
 
 #### 支持的路径模式
 
@@ -140,7 +93,7 @@ interface PatchResponse {
   status: "success" | "error";
   message?: string;
   error?: string;
-  instance_id?: string;
+  instance_name?: string;
   patches_applied?: Array<patch>;      // 实际应用的补丁列表
   skipped_patches?: Array<{              // 被跳过的补丁及原因
     patch: patch;
@@ -159,11 +112,12 @@ interface PatchResponse {
 interface ActionConfig {
   id: string;                    // 必需: 唯一 action ID
   label: string;                 // 必需: action 按钮标签
-  style: "primary" | "secondary" | "danger";  // 必需: 按钮样式
+  style: "primary" | "secondary" | "danger" | "warning" | "success";  // 必需: 按钮样式
   action_type?: "api" | "navigate";            // 可选: 默认 "api"
   target_instance?: string;        // 可选: 目标实例 ID (navigate 时使用)
   handler_type?: HandlerType;     // 可选: 处理器类型
   patches?: Record<string, any>; // 可选: patch 映射
+  disabled?: boolean;            // 可选: 是否禁用 (默认 false)
 }
 
 type HandlerType = "set" | "increment" | "decrement" | "toggle" | "template" | "external";
@@ -176,17 +130,31 @@ interface Block {
   id: string;                 // 必需: 唯一 block ID
   type: string;                // 必需: block 类型 (form)
   bind: string;                // 必需: 绑定路径 (默认 "state.params")
+  title?: string;              // 可选: 标题
   props?: BlockProps;          // 可选: block 属性
 }
 
 interface BlockProps {
   fields?: FieldConfig[];      // form 类型必需
-  showProgress?: boolean;
-  showStatus?: boolean;
-  showImages?: boolean;
-  showTable?: boolean;
-  showCountInput?: boolean;
-  showTaskId?: boolean;
+  actions?: ActionConfig[];    // Block 级别的操作按钮
+
+  // Tabs 布局属性
+  tabs?: Array<{
+    label: string;
+    fields?: FieldConfig[];
+    actions?: ActionConfig[];
+  }>;
+
+  // Grid 布局属性
+  cols?: number;
+  gap?: string;
+
+  // Accordion 布局属性
+  panels?: Array<{
+    title: string;
+    fields?: FieldConfig[];
+    actions?: ActionConfig[];
+  }>;
 }
 ```
 
@@ -197,7 +165,6 @@ interface FieldConfig {
   label: string;               // 必需: 字段标签
   key: string;                 // 必需: 字段键
   type: string;                // 必需: 字段类型
-  rid?: string;                // 可选: 资源 ID
   value?: any;                 // 可选: 默认值
   description?: string;        // 可选: 字段描述
   options?: Array<{ label: string; value: string }>;  // select/radio 必需
@@ -256,14 +223,14 @@ interface FieldConfig {
 
 ### Handler 类型总览
 
-|| Handler | 说明 | patches 格式 | 使用场景 |
-||---------|------|--------------|----------|
-|| `set` | 直接设置值 | `{"路径": "值"}` | 清空表单、设置固定状态 |
-|| `increment` | 数值增加 | `{"路径": 增量}` | 计数器增加、步进器 |
-|| `decrement` | 数值减少 | `{"路径": 减量}` | 计数器减少、步退器 |
-|| `toggle` | 布尔值切换 | `{"路径": true}` | 开关、复选框 |
-|| `template` | 模板渲染 | `{"路径": "模板字符串"}` | 动态消息、状态提示 |
-|| `external` | 调用外部 API | 配置对象 | 获取数据、提交表单、远程操作 |
+| Handler | 说明 | patches 格式 | 使用场景 |
+|---------|------|--------------|----------|
+| `set` | 直接设置值 | `{"路径": "值"}` | 清空表单、设置固定状态 |
+| `increment` | 数值增加 | `{"路径": 增量}` | 计数器增加、步进器 |
+| `decrement` | 数值减少 | `{"路径": 减量}` | 计数器减少、步退器 |
+| `toggle` | 布尔值切换 | `{"路径": true}` | 开关、复选框 |
+| `template` | 模板渲染 | `{"路径": "模板字符串"}` | 动态消息、状态提示 |
+| `external` | 调用外部 API | 配置对象 | 获取数据、提交表单、远程操作 |
 
 ### 1. set 处理器
 
@@ -326,12 +293,18 @@ interface FieldConfig {
 **操作对象格式**:
 ```json
 {
+  "mode": "operation",
   "operation": "操作名称",
   "params": {
     "参数名": "参数值"
   }
 }
 ```
+
+**字段说明**:
+- `mode`: 固定值 `"operation"`，标识这是一个操作对象
+- `operation`: 操作类型（见下方支持的操作类型）
+- `params`: 操作参数（根据操作类型不同而不同）
 
 **支持的操作类型**:
 
@@ -579,16 +552,16 @@ interface FieldConfig {
 
 #### 配置结构
 
-|| 字段 | 类型 | 必需 | 说明 |
-||------|------|------|------|
-|| `url` | string | ✅ | API 端点 URL（支持模板变量） |
-|| `method` | string | ❌ | HTTP 方法，默认 "POST" |
-|| `headers` | dict | ❌ | 请求头（支持模板变量） |
-|| `body_template` | dict | ❌ | 请求体模板（支持模板变量） |
-|| `body_template_type` | string | ❌ | 请求体类型：`json`（默认）或 `form` |
-|| `timeout` | number | ❌ | 超时时间（秒），默认 30 |
-|| `response_mappings` | dict | ❌ | 成功响应映射 |
-|| `error_mapping` | dict | ❌ | 错误响应映射 |
+| 字段 | 类型 | 必需 | 说明 |
+|------|------|------|------|
+| `url` | string | ✅ | API 端点 URL（支持模板变量） |
+| `method` | string | ❌ | HTTP 方法，默认 "POST" |
+| `headers` | dict | ❌ | 请求头（支持模板变量） |
+| `body_template` | dict | ❌ | 请求体模板（支持模板变量） |
+| `body_template_type` | string | ❌ | 请求体类型：`json`（默认）或 `form` |
+| `timeout` | number | ❌ | 超时时间（秒），默认 30 |
+| `response_mappings` | dict | ❌ | 成功响应映射 |
+| `error_mapping` | dict | ❌ | 错误响应映射 |
 
 #### 支持的 HTTP 方法
 
@@ -694,14 +667,14 @@ interface FieldConfig {
 
 | 错误代码 | HTTP 状态 | 描述 | 解决方案 |
 |-----------|-----------|------|----------|
-| `INVALID_INSTANCE` | 404 | 实例不存在 | 检查 `instance_id` |
+| `INVALID_INSTANCE` | 404 | 实例不存在 | 检查 `instance_name` |
 | `INVALID_OP` | 400 | 未知的操作类型 | 使用有效的 op: set, add, remove |
 | `INVALID_PATH` | 400 | 路径语法错误 | 使用有效的路径模式 |
 | `PATH_NOT_FOUND` | 404 | 无法解析路径 | 确保路径存在或可创建 |
 | `SCHEMA_MUTATION` | 403 | 不可变字段修改 | 检查允许的字段 |
 | `MISSING_VALUE` | 400 | 缺少必需的值 | 提供 `value` 字段 |
 | `DUPLICATE_ID` | 409 | ID 已存在 | 使用唯一的 ID |
-| `INSTANCE_EXISTS` | 409 | 实例 ID 冲突 | 使用不同的 `instance_id` |
+| `INSTANCE_EXISTS` | 409 | 实例 ID 冲突 | 使用不同的 `instance_name` |
 | `INVALID_STRUCTURE` | 400 | 无效的 block/action 结构 | 验证 UISchema 格式 |
 
 ### 验证错误代码

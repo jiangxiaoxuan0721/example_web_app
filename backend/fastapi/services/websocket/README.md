@@ -20,16 +20,16 @@ services/websocket/
 **职责**：管理所有 WebSocket 连接的存储
 
 **核心方法**：
-- `add(websocket, instance_id)` - 添加连接
-- `remove(websocket, instance_id)` - 移除连接
-- `get_all(instance_id)` - 获取实例的所有连接
-- `has_instance(instance_id)` - 检查实例是否有连接
-- `count(instance_id)` - 获取连接数
-- `clear(instance_id)` - 清空连接
+- `add(websocket, instance_name)` - 添加连接
+- `remove(websocket, instance_name)` - 移除连接
+- `get_all(instance_name)` - 获取实例的所有连接
+- `has_instance(instance_name)` - 检查实例是否有连接
+- `count(instance_name)` - 获取连接数
+- `clear(instance_name)` - 清空连接
 
 **特点**：
 - 使用 Set 存储，自动去重
-- 按 instance_id 分组管理
+- 按 instance_name 分组管理
 - 支持实例级和全局清理
 
 ### 2. MessageDispatcher (message_dispatcher.py)
@@ -37,8 +37,8 @@ services/websocket/
 **职责**：处理向 WebSocket 连接发送消息的逻辑
 
 **核心方法**：
-- `send_to_instance(instance_id, message)` - 向实例发送消息
-- `send_patch(instance_id, patch, patch_id, base_version)` - 发送 Patch
+- `send_to_instance(instance_name, message)` - 向实例发送消息
+- `send_patch(instance_name, patch, patch_id, base_version)` - 发送 Patch
 - `broadcast(message)` - 向所有实例广播
 
 **特点**：
@@ -52,7 +52,7 @@ services/websocket/
 
 **核心方法**：
 - `get_stats()` - 获取统计信息
-- `get_instance_stats(instance_id)` - 获取实例统计
+- `get_instance_stats(instance_name)` - 获取实例统计
 - `health_check()` - 健康检查
 - `list_active_instances()` - 列出活跃实例
 
@@ -68,16 +68,16 @@ services/websocket/
 **核心方法**：
 ```python
 # 连接管理
-async def connect(websocket, instance_id) - 接受连接
-def disconnect(websocket, instance_id) - 断开连接
+async def connect(websocket, instance_name) - 接受连接
+def disconnect(websocket, instance_name) - 断开连接
 
 # 消息发送
-async def send_patch(instance_id, patch, patch_id, base_version) - 发送 Patch
-async def send_message(instance_id, message) - 发送自定义消息
+async def send_patch(instance_name, patch, patch_id, base_version) - 发送 Patch
+async def send_message(instance_name, message) - 发送自定义消息
 async def broadcast(message) - 广播消息
 
 # 监控统计
-def get_connection_count(instance_id) - 获取连接数
+def get_connection_count(instance_name) - 获取连接数
 def get_total_connections() - 获取总连接数
 def get_stats() - 获取统计信息
 def health_check() - 健康检查
@@ -96,10 +96,10 @@ def health_check() - 健康检查
 from backend.fastapi.services.websocket import manager
 
 # 接受连接
-await manager.connect(websocket, instance_id)
+await manager.connect(websocket, instance_name)
 
 # 断开连接
-manager.disconnect(websocket, instance_id)
+manager.disconnect(websocket, instance_name)
 
 # 发送 Patch
 await manager.send_patch("counter", {"state.params.count": 42}, patch_id=1)
@@ -137,8 +137,8 @@ stats = monitor.get_stats()
 from backend.fastapi.websocket_manager import manager
 
 # 旧版 API 完全兼容
-await manager.connect(websocket, instance_id)
-await manager.send_patch(instance_id, patch, patch_id)
+await manager.connect(websocket, instance_name)
+await manager.send_patch(instance_name, patch, patch_id)
 ```
 
 新版代码：
@@ -146,8 +146,8 @@ await manager.send_patch(instance_id, patch, patch_id)
 from backend.fastapi.services.websocket import manager
 
 # API 完全相同，无需修改
-await manager.connect(websocket, instance_id)
-await manager.send_patch(instance_id, patch, patch_id)
+await manager.connect(websocket, instance_name)
+await manager.send_patch(instance_name, patch, patch_id)
 ```
 
 ## 设计优势

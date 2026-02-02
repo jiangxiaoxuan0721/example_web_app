@@ -34,11 +34,11 @@ schema_manager = SchemaManager()
 instance_service = InstanceService(schema_manager)
 patch_history = PatchHistoryManager()
 ws_manager = WebSocketManager()
-default_instance_id = "demo"
+default_instance_name = "demo"
 
 # 初始化默认实例
-for instance_id, schema in get_default_instances().items():
-    schema_manager.set(instance_id, schema)
+for instance_name, schema in get_default_instances().items():
+    schema_manager.set(instance_name, schema)
 
 # 将WebSocket管理器存储到应用状态中，以便在路由中访问
 app.state.ws_manager = ws_manager
@@ -49,9 +49,9 @@ from .routes.patch_routes import register_patch_routes
 from .routes.schema_routes import register_schema_routes
 from .routes.websocket_routes import register_websocket_routes
 
-register_event_routes(app, schema_manager, instance_service, patch_history, ws_manager, default_instance_id)
-register_patch_routes(app, schema_manager, patch_history, ws_manager)
-register_schema_routes(app, schema_manager, default_instance_id, ws_manager)
+register_event_routes(app, schema_manager, instance_service, patch_history, ws_manager, default_instance_name)
+register_patch_routes(app, schema_manager, patch_history, ws_manager, instance_service)
+register_schema_routes(app, schema_manager, default_instance_name, ws_manager)
 register_websocket_routes(app, ws_manager, schema_manager)
 
 

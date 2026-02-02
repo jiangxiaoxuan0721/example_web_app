@@ -13,8 +13,10 @@ interface BlockRendererProps {
   disabled?: boolean;
   highlightField?: string | null;
   highlightBlockId?: string | null;
-  actions?: ActionConfig[];  // 可选的 block 级别 actions
+  actions?: ActionConfig[];
 }
+
+const bindPath = 'state.params';
 
 /**
  * 块渲染器注册表接口
@@ -31,6 +33,7 @@ export interface BlockRenderer {
 const blockRenderers: Record<string, BlockRenderer> = {
   form: ({ block, schema, disabled, highlightField, highlightBlockId, actions }) => {
     const isHighlighted = highlightBlockId === block.id;
+    // 默认 bindPath 为 state.params
     // 确保 fields 始终是数组，处理各种可能的格式
     let fields: any[] = [];
     if (block.props?.fields) {
@@ -75,7 +78,7 @@ const blockRenderers: Record<string, BlockRenderer> = {
             key={field.key}
             field={field}
             schema={schema}
-            bindPath={block.bind}
+            bindPath={bindPath}
             disabled={disabled}
             highlighted={field.key === highlightField}
           />
@@ -107,13 +110,14 @@ const blockRenderers: Record<string, BlockRenderer> = {
   },
 
   display: ({ block, schema, highlightBlockId }) => {
-    // 获取绑定路径的值
+    // 获取绑定路径的值（默认 state.params）
     const getValue = (path: string) => {
       const keys = path.split('.');
       return keys.reduce((obj: any, key: string) => obj?.[key], schema);
     };
 
-    const value = getValue(block.bind);
+    const bindPath = 'state.params';
+    const value = getValue(bindPath);
     const isHighlighted = highlightBlockId === block.id;
 
     // 渲染 value 中的模板变量
@@ -165,9 +169,13 @@ const blockRenderers: Record<string, BlockRenderer> = {
     const isHighlighted = highlightBlockId === block.id;
     const instanceId = useSchemaStore((state) => state.instanceId);
 
+
     const handleNavigate = (targetInstance: string) => {
       window.location.hash = `#instance=${targetInstance}`;
     };
+
+    // 默认 bindPath 为 state.params
+    const bindPath = 'state.params';
 
     return (
       <div
@@ -217,7 +225,7 @@ const blockRenderers: Record<string, BlockRenderer> = {
               key={field.key}
               field={field}
               schema={schema}
-              bindPath={block.bind}
+              bindPath={bindPath}
               disabled={disabled}
               highlighted={field.key === highlightField}
             />
@@ -262,6 +270,9 @@ const blockRenderers: Record<string, BlockRenderer> = {
       window.location.hash = `#instance=${targetInstance}`;
     };
 
+    // 默认 bindPath 为 state.params
+    const bindPath = 'state.params';
+
     return (
       <div
         key={block.id}
@@ -297,7 +308,7 @@ const blockRenderers: Record<string, BlockRenderer> = {
               key={field.key}
               field={field}
               schema={schema}
-              bindPath={block.bind}
+              bindPath={bindPath}
               disabled={disabled}
               highlighted={field.key === highlightField}
             />
@@ -385,7 +396,7 @@ const blockRenderers: Record<string, BlockRenderer> = {
                   key={field.key}
                   field={field}
                   schema={schema}
-                  bindPath={block.bind}
+                  bindPath={bindPath}
                   disabled={disabled}
                   highlighted={field.key === highlightField}
                 />
@@ -431,7 +442,7 @@ export const getRegisteredBlockTypes = (): string[] => {
  */
 export default function BlockRenderer({ block, disabled, highlightField, highlightBlockId, actions }: BlockRendererProps) {
   const schema = useSchemaStore((state) => state.schema);
-  const renderer = blockRenderers[block.type];
+  const renderer = blockRenderers[block.layout];
 
   if (!schema) {
     console.warn('[BlockRenderer] Schema not available in store');
@@ -439,7 +450,7 @@ export default function BlockRenderer({ block, disabled, highlightField, highlig
   }
 
   if (!renderer) {
-    console.warn(`[BlockRenderer] Unknown block type: ${block.type}`);
+    console.warn(`[BlockRenderer] Unknown block type: ${block.layout}`);
     return null;
   }
 

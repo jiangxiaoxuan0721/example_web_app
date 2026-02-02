@@ -127,7 +127,7 @@ const handleFieldChange = async (
       // 清除定时器记录
       delete debounceTimers[timerKey];
     }
-  }, 750);
+  }, 300);
 };
 
 /**
@@ -142,10 +142,6 @@ const handleActionClick = async (
 
   console.log('[EventEmitter] handleActionClick 被调用');
   console.log('[EventEmitter] 完整 schema:', schema);
-  console.log('[EventEmitter] schema.state:', schema.state);
-  console.log('[EventEmitter] schema.state.params:', schema.state?.params);
-  console.log('[EventEmitter] params 参数:', params);
-  console.log('[EventEmitter] blockId 参数:', blockId);
 
   try {
     // 如果前端没有传 params，则从 schema 中获取所有 params

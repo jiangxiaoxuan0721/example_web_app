@@ -60,17 +60,22 @@ export interface TableColumn {
 
 /** 字段配置接口 */
 export interface FieldConfig extends PictureConfig {
+  type: string;
   label: string;
   key: string;
-  type: string;
-  rid?: string;
   value?: any;
   description?: string;
   options?: Array<{ label: string; value: string }>;
-  
+
+  // 字段控制属性
+  editable?: boolean;  // 是否可编辑（默认 true）
+  required?: boolean;  // 是否必填（默认 false）
+  disabled?: boolean;  // 是否禁用（默认 false）
+  placeholder?: string;  // 占位符文本
+
   // 多选框属性
   selectedValues?: string[];
-  
+
   // 表格属性
   columns?: TableColumn[];
   rowKey?: string;
@@ -85,20 +90,13 @@ export interface FieldConfig extends PictureConfig {
   maxHeight?: string;
   compact?: boolean;
 
-  // 嵌入渲染属性
-  targetInstance?: string;  // 目标实例ID
-  targetBlock?: string;     // 目标block ID
+  // 组件嵌入：渲染一个嵌套的 Block 配置
+  blockConfig?: Block;  // 要渲染的嵌套 Block 配置
 }
 
 export interface BlockProps {
   fields?: FieldConfig[];
   actions?: ActionConfig[];  // Block 级别的操作按钮
-  showProgress?: boolean;
-  showStatus?: boolean;
-  showImages?: boolean;
-  showTable?: boolean;
-  showCountInput?: boolean;
-  showTaskId?: boolean;
 
   // Tabs 布局属性
   tabs?: Array<{
@@ -121,8 +119,7 @@ export interface BlockProps {
 
 export interface Block {
   id: string;
-  type: string;
-  bind: string;
+  layout: string;
   title?: string;
   props?: BlockProps;
 }
@@ -133,8 +130,8 @@ export interface ActionConfig {
   style: string;
   action_type?: string;  // 'api'（默认）或 'navigate'
   target_instance?: string;  // 目标实例ID（当action_type=navigate时使用）
-  handler_type?: string;  // 处理器类型：set/increment/decrement/toggle/custom
-  patches?: Record<string, any>;  // 要应用的 patch 映射（key为路径，value为值或操作配置）
+  patches?: UnifiedPatch[];  // patch 数组，统一格式
+  disabled?: boolean;  // 是否禁用
 }
 
 export interface StepInfo {
@@ -142,17 +139,20 @@ export interface StepInfo {
   total: number;
 }
 
-export interface MetaInfo {
-  pageKey: string;
-  step: StepInfo;
-  status: string;
-  schemaVersion: string;
-}
-
 export interface StateInfo {
   params: Record<string, any>;
   runtime: Record<string, any>;
 }
+
+/** 统一 Patch 类型 */
+export interface UnifiedPatch {
+  op: 'set' | 'add' | 'remove' | 'append_to_list' | 'prepend_to_list' |
+      'update_list_item' | 'remove_last' | 'merge' | 'increment' | 'decrement' | 'toggle';
+  path: string;
+  value?: any;
+  index?: number;  // 仅 update_list_item 使用
+}
+
 
 export interface LayoutInfo {
   type: 'single' | 'grid' | 'flex' | 'tabs';
@@ -161,7 +161,7 @@ export interface LayoutInfo {
 }
 
 export interface UISchema {
-  meta: MetaInfo;
+  page_key: string;
   state: StateInfo;
   layout: LayoutInfo;
   blocks: Block[];

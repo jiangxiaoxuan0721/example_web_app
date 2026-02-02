@@ -112,6 +112,7 @@ def execute_operation(
     - remove_from_list: 从列表中删除元素（支持 index: -1 批量删除所有匹配项）
     - remove_last: 删除列表最后一项
     - update_list_item: 更新列表中的某个元素
+    - filter_list: 过滤列表元素（根据条件保留元素）
     - clear_all_params: 清空所有 params
     - append_block: 添加新块到 schema
     - prepend_block: 在开头添加块
@@ -279,41 +280,103 @@ def execute_operation(
             merge_data = params.get("data", {})
             patch[target_path] = {**current_obj, **merge_data}
 
+    elif operation == "increment":
+        # 增量更新
+        current_value = get_nested_value(schema, target_path, 0)
+        delta = params.get("delta", 1)
+        try:
+            patch[target_path] = current_value + int(delta)
+        except (ValueError, TypeError):
+            print(f"[PatchService] increment error: current_value={current_value}, delta={delta}")
+            patch[target_path] = current_value
+
+    elif operation == "decrement":
+        # 减量更新
+        current_value = get_nested_value(schema, target_path, 0)
+        delta = params.get("delta", 1)
+        try:
+            patch[target_path] = current_value - int(delta)
+        except (ValueError, TypeError):
+            print(f"[PatchService] decrement error: current_value={current_value}, delta={delta}")
+            patch[target_path] = current_value
+
+    elif operation == "toggle":
+        # 切换布尔值
+        current_value = get_nested_value(schema, target_path, False)
+        patch[target_path] = not current_value
+
+    elif operation == "filter_list":
+        # 过滤列表元素
+        current_list = get_nested_value(schema, target_path, [])
+        if isinstance(current_list, list):
+            # 渲染 params 中的模板变量
+            rendered_params = render_dict_template(schema, params)
+
+            # 支持两种过滤方式：
+            # 1. filter: {"key": "completed", "value": true} - 保留 key 等于 value 的元素
+            # 2. filter: {"key": "completed", "operator": "!=", "value": true} - 使用操作符过滤
+            filter_key = rendered_params.get("key")
+            filter_value = rendered_params.get("value")
+            operator = rendered_params.get("operator", "==")
+
+            print(f"[PatchService] filter_list: key={filter_key}, value={filter_value}, operator={operator}")
+
+            if filter_key is not None:
+                filtered_list = []
+                for item in current_list:
+                    if not isinstance(item, dict):
+                        # 非字典元素，保留
+                        filtered_list.append(item)
+                        continue
+
+                    item_value = item.get(filter_key)
+
+                    # 根据操作符判断
+                    if operator == "==":
+                        keep = item_value == filter_value
+                    elif operator == "!=":
+                        keep = item_value != filter_value
+                    elif operator == ">":
+                        keep = (item_value > filter_value) if isinstance(item_value, (int, float)) and isinstance(filter_value, (int, float)) else False
+                    elif operator == "<":
+                        keep = (item_value < filter_value) if isinstance(item_value, (int, float)) and isinstance(filter_value, (int, float)) else False
+                    elif operator == ">=":
+                        keep = (item_value >= filter_value) if isinstance(item_value, (int, float)) and isinstance(filter_value, (int, float)) else False
+                    elif operator == "<=":
+                        keep = (item_value <= filter_value) if isinstance(item_value, (int, float)) and isinstance(filter_value, (int, float)) else False
+                    else:
+                        keep = True  # 未知操作符，保留
+
+                    if keep:
+                        filtered_list.append(item)
+
+                patch[target_path] = filtered_list
+            else:
+                # 没有指定过滤条件，返回空列表
+                patch[target_path] = []
+
     return patch
 
 
-def apply_patch_to_schema(schema: UISchema, patch: dict[str, Any]) -> None:
+def apply_patch_to_schema(schema: UISchema, patch: dict[str, object]) -> None:
     """将 Patch 应用到 Schema
+
+    注意：此函数接收的 patch 是操作执行后的结果格式 {"path": value}，不是用户的统一格式。
+    
+    完整流程：
+    1. 用户输入：SchemaPatch {"op": "...", "path": "...", "value": ..., "index": ...}
+    2. apply_unified_patch 处理，调用 execute_operation
+    3. execute_operation 返回：{"path": value} (简化格式)
+    4. apply_patch_to_schema 将 {"path": value} 应用到 schema
 
     Args:
         schema: 目标 Schema
-        patch: Patch 数据字典，格式为 {"path": value} 或 {"path": {"mode": "operation", "operation": "xxx", "params": {...}}}
+        patch: 操作结果字典，格式为 {"path": value}，例如 {"state.params.name": "value"}
     """
     print(f"[PatchService] apply_patch_to_schema 被调用，patch keys: {list(patch.keys())}")
 
-    # 首先处理所有操作类型的 patches
-    operation_patches = {}
-    direct_patches = {}
-
-    for path, value in patch.items():
-        if isinstance(value, dict) and value.get("mode") == "operation":
-            # 操作类型的 patch
-            operation = value.get("operation")
-            params = value.get("params", {})
-            print(f"[PatchService] 检测到操作 patch: path={path}, operation={operation}")
-            if operation:
-                operation_result = execute_operation(schema, operation, params, path)
-                # 将操作结果合并到 direct_patches 中
-                direct_patches.update(operation_result)
-        else:
-            # 直接赋值类型的 patch
-            direct_patches[path] = value
-
-    print(f"[PatchService] 操作 patches: {operation_patches}")
-    print(f"[PatchService] 直接 patches: {list(direct_patches.keys())}")
-
     # 处理直接赋值类型的 patches
-    for path, value in direct_patches.items():
+    for path, value in patch.items():
         keys = path.split('.')
         print(f"[PatchService] 处理路径: {path}, keys: {keys}")
 
@@ -351,8 +414,12 @@ def apply_patch_to_schema(schema: UISchema, patch: dict[str, Any]) -> None:
                     # 如果是 dict，转换为 ActionConfig 对象
                     if isinstance(value, dict):
                         new_action = ActionConfig(**value)
-                    else:
+                    elif isinstance(value, ActionConfig):
                         new_action = value
+                    else:
+                        # 忽略不支持的类型
+                        print(f"[PatchService] Unsupported value type for action: {type(value)}")
+                        return
 
                     # 替换 action
                     schema.actions[action_index] = new_action
@@ -406,8 +473,12 @@ def apply_patch_to_schema(schema: UISchema, patch: dict[str, Any]) -> None:
                         from ..models import Block
                         if isinstance(value, dict):
                             new_block = Block(**value)
-                        else:
+                        elif isinstance(value, Block):
                             new_block = value
+                        else:
+                            # 忽略不支持的类型
+                            print(f"[PatchService] Unsupported value type for block: {type(value)}")
+                            return
                         schema.blocks[block_index] = new_block
                         print(f"[PatchService] Replaced block at blocks[{block_index}]")
                 else:
@@ -529,9 +600,13 @@ def apply_patch_to_schema(schema: UISchema, patch: dict[str, Any]) -> None:
                                             elif field_type in ['select', 'radio', 'multiselect'] and ('options' not in field or field['options'] is None):
                                                 field['options'] = []
                                                 print(f"[PatchService] Auto-initialized options to empty array in {field_type} field")
-                                new_props = BlockProps(**value)
-                            else:
+                                new_props: BlockProps = BlockProps(**value)
+                            elif isinstance(value, BlockProps):
                                 new_props = value
+                            else:
+                                # 忽略不支持的类型
+                                print(f"[PatchService] Unsupported value type for props: {type(value)}")
+                                return
                             block.props = new_props
                             print(f"[PatchService] Replaced props at blocks[{block_index}].props")
                 else:
@@ -644,12 +719,12 @@ def apply_patch_to_schema(schema: UISchema, patch: dict[str, Any]) -> None:
                                 # 更新字段属性
                                 setattr(field, field_attr, new_key)
 
-                                # 更新 state
-                                if old_key and new_key and old_key != new_key:
-                                    if old_key in schema.state.params:
-                                        schema.state.params[new_key] = schema.state.params.pop(old_key)
-                                    if old_key in schema.state.runtime:
-                                        schema.state.runtime[new_key] = schema.state.runtime.pop(old_key)
+                                # 更新 state（确保键是字符串）
+                                if isinstance(old_key, str) and isinstance(new_key, str) and old_key != new_key:
+                                    if old_key in (schema.state.params or {}):
+                                        (schema.state.params or {})[new_key] = (schema.state.params or {}).pop(old_key)
+                                    if old_key in (schema.state.runtime or {}):
+                                        (schema.state.runtime or {})[new_key] = (schema.state.runtime or {}).pop(old_key)
                             else:
                                 # 修改其他属性
                                 setattr(field, field_attr, value)

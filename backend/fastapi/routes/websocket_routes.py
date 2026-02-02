@@ -13,10 +13,10 @@ def register_websocket_routes(app, ws_manager: WebSocketManager, schema_manager)
         schema_manager: Schema 管理器
     """
 
-    @app.websocket("/ui/ws/{instance_id}")
-    async def websocket_endpoint(websocket: WebSocket, instance_id: str):
+    @app.websocket("/ui/ws/{instance_name}")
+    async def websocket_endpoint(websocket: WebSocket, instance_name: str):
         """WebSocket 连接端点"""
-        await ws_manager.connect(websocket, instance_id)
+        await ws_manager.connect(websocket, instance_name)
         try:
             while True:
                 # 等待客户端消息
@@ -26,7 +26,7 @@ def register_websocket_routes(app, ws_manager: WebSocketManager, schema_manager)
                 # 例如：处理客户端发送的特定指令或状态更新
                 
         except WebSocketDisconnect:
-            ws_manager.disconnect(websocket, instance_id)
+            ws_manager.disconnect(websocket, instance_name)
 
     @app.get("/ui/ws/stats")
     async def get_websocket_stats():

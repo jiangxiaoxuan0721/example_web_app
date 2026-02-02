@@ -12,7 +12,7 @@ def register_event_routes(
     instance_service: InstanceService,
     patch_history: PatchHistoryManager,
     ws_manager: WebSocketManager,
-    default_instance_id: str
+    default_instance_name: str
 ):
     """注册事件相关的路由
 
@@ -22,7 +22,7 @@ def register_event_routes(
         instance_service: 实例服务
         patch_history: Patch 历史管理器
         ws_manager: WebSocket 管理器
-        default_instance_id: 默认实例 ID
+        default_instance_name: 默认实例 ID
     """
 
     @app.post("/ui/event")
@@ -32,18 +32,18 @@ def register_event_routes(
         """
         event_type = event.get("type")
         action_id = event.get("payload", {}).get("actionId")
-        instance_id = event.get("pageKey", default_instance_id)
+        instance_name = event.get("pageKey", default_instance_name)
         params = event.get("payload", {}).get("params", {})
         block_id = event.get("payload", {}).get("blockId")  # 接收 blockId
 
-        print(f"[EventRoutes] 收到事件: {event_type}, actionId: {action_id}, instanceId: {instance_id}, params={params}, blockId={block_id}")
+        print(f"[EventRoutes] 收到事件: {event_type}, actionId: {action_id}, instanceId: {instance_name}, params={params}, blockId={block_id}")
 
         # 获取当前实例的 Schema
-        schema = schema_manager.get(instance_id)
+        schema = schema_manager.get(instance_name)
         if not schema:
             return {
                 "status": "error",
-                "error": f"实例 '{instance_id}' 不存在"
+                "error": f"实例 '{instance_name}' 不存在"
             }
 
         # 处理字段变化事件
@@ -55,18 +55,18 @@ def register_event_routes(
                 patch = {f"state.params.{field_key}": field_value}
 
                 # 保存到历史记录
-                patch_id = patch_history.save(instance_id, patch)
+                patch_id = patch_history.save(instance_name, patch)
 
                 # 应用到 schema
                 from ..services.patch import apply_patch_to_schema
                 apply_patch_to_schema(schema, patch)
 
                 # WebSocket 推送
-                await ws_manager.send_patch(instance_id, patch, patch_id)
+                await ws_manager.send_patch(instance_name, patch, patch_id)
 
                 return {
                     "status": "success",
-                    "instance_id": instance_id,
+                    "instance_name": instance_name,
                     "patch_id": patch_id,
                     "patch": {}
                 }
@@ -76,34 +76,81 @@ def register_event_routes(
             # 调用 InstanceService 处理 action
             # 注意：不再在这里同步前端传来的 params，让 InstanceService 来处理
             print(f"[EventRoutes] 调用 instance_service.handle_action")
-            result = instance_service.handle_action(instance_id, action_id, params, block_id)
+            result = instance_service.handle_action(instance_name, action_id, params, block_id)
             print(f"[EventRoutes] instance_service.handle_action 返回: {result}")
 
             if result.get("status") == "success" and result.get("patch"):
                 patch = result["patch"]
 
                 # 注意：schema 已在 handle_action 中通过 apply_patch_to_schema 更新
-                # 由于 schema 是引用类型，schema_manager._instances[instance_id] 中的对象已被修改
+                # 由于 schema 是引用类型，schema_manager._instances[instance_name] 中的对象已被修改
                 # 因此不需要再调用 schema_manager.set()
 
                 # 保存到历史记录
-                patch_id = patch_history.save(instance_id, patch)
+                patch_id = patch_history.save(instance_name, patch)
 
                 # WebSocket 推送（此时 schema.state.runtime 已更新）
-                await ws_manager.send_patch(instance_id, patch, patch_id)
+                await ws_manager.send_patch(instance_name, patch, patch_id)
 
                 return {
                     "status": "success",
-                    "instance_id": instance_id,
+                    "instance_name": instance_name,
                     "patch_id": patch_id,
                     "patch": {}
                 }
 
             return result
 
+        # 处理表格内按钮点击事件
+        if event_type == "table:button:click":
+            button_id = params.get("buttonId")
+            button_action_id = params.get("actionId") or params.get("_actionId")
+            table_field_key = params.get("fieldKey")
+
+            print(f"[EventRoutes] 处理 table:button:click: button_id={button_id}, actionId={button_action_id}, fieldKey={table_field_key}, params={params}")
+
+            # 调用 InstanceService 处理表格按钮（复用 action 处理逻辑）
+            result = instance_service.handle_table_button(
+                instance_name,
+                button_id,
+                button_action_id,
+                params,
+                block_id,
+                table_field_key
+            )
+            print(f"[EventRoutes] instance_service.handle_table_button 返回: {result}")
+
+            if result.get("status") == "success" and result.get("patch"):
+                patch = result["patch"]
+
+                # 注意：schema 已在 handle_table_button 中通过 apply_patch_to_schema 更新
+                # 保存到历史记录
+                patch_id = patch_history.save(instance_name, patch)
+
+                # WebSocket 推送
+                await ws_manager.send_patch(instance_name, patch, patch_id)
+
+                return {
+                    "status": "success",
+                    "instance_name": instance_name,
+                    "patch_id": patch_id,
+                    "patch": {},
+                    "message": result.get("message"),
+                    "navigate_to": result.get("navigate_to")
+                }
+
+            # 如果有错误信息，也返回
+            if result.get("error"):
+                return {
+                    "status": "error",
+                    "error": result.get("error")
+                }
+
+            return result
+
         return {
             "status": "success",
-            "instance_id": instance_id,
+            "instance_name": instance_name,
             "patch_id": None,
             "patch": {}
         }

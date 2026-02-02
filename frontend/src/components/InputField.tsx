@@ -14,27 +14,41 @@ export interface InputFieldProps {
 }
 
 export default function InputField({ field, value, onChange, disabled, highlighted }: InputFieldProps) {
+  // editable 为 false 时禁用编辑（但 disabled 优先级更高）
+  const isDisabled = disabled || field.editable === false;
+  // required 属性用于表单验证
+  const isRequired = field.required === true;
+  const isEditable = field.editable !== false;
+
   return (
     <div style={{ marginBottom: '16px' }}>
       <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
         {field.label}
+        {isRequired && <span style={{ color: 'red', marginLeft: '4px' }}>*</span>}
       </label>
       <input
         type={field.type}
         value={String(value)}
         onChange={(e) => onChange?.(e.target.value)}
-        disabled={disabled}
+        disabled={isDisabled}
+        required={isRequired}
         placeholder={field.description}
         style={{
           width: '100%',
           padding: '12px',
           border: highlighted ? '2px solid #007bff' : '1px solid #ddd',
           borderRadius: '4px',
-          background: '#fff',
+          background: isDisabled ? '#f5f5f5' : '#fff',
           fontSize: '16px',
+          cursor: isDisabled ? 'not-allowed' : 'auto',
           boxSizing: 'border-box'
         }}
       />
+      {!isEditable && !disabled && (
+        <div style={{ marginTop: '4px', color: '#999', fontSize: '12px' }}>
+          此字段不可编辑
+        </div>
+      )}
     </div>
   );
 }

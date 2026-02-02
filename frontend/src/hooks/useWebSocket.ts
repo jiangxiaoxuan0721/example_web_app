@@ -10,7 +10,7 @@ import { useSchema } from './useSchema';
 interface WSMessage {
   highlight: any;
   type: 'patch' | 'switch_instance' | 'schema_update' | 'access_instance';
-  instance_id: string;
+  instance_name: string;
   patch_id?: number;
   patch?: Record<string, any>;
   schema?: Record<string, any> & { highlight?: any };
@@ -88,17 +88,17 @@ export function useWebSocket(onPatch: (patch: Record<string, any>) => void, onSw
             console.log('[WS] 跳转到:', message.redirect_url);
             window.location.href = message.redirect_url;
           }
-        } else if (message.type === 'switch_instance' && message.instance_id) {
-          console.log('[WS] 切换实例到:', message.instance_id);
+        } else if (message.type === 'switch_instance' && message.instance_name) {
+          console.log('[WS] 切换实例到:', message.instance_name);
           if (onSwitchInstanceRef.current) {
             // switch_instance 不再返回 schema，前端需要通过 API 获取
-            onSwitchInstanceRef.current(message.instance_id, undefined);
+            onSwitchInstanceRef.current(message.instance_name, undefined);
           }
-        } else if (message.type === 'access_instance' && message.instance_id) {
-          console.log('[WS] 访问实例:', message.instance_id);
+        } else if (message.type === 'access_instance' && message.instance_name) {
+          console.log('[WS] 访问实例:', message.instance_name);
           // 构建URL
           const url = new URL(window.location.href);
-          url.searchParams.set('instanceId', message.instance_id);
+          url.searchParams.set('instanceId', message.instance_name);
           window.location.href = url.toString();
         }
       } catch (err) {

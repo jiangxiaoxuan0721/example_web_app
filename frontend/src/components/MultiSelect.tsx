@@ -15,6 +15,9 @@ export interface MultiSelectProps {
 
 export default function MultiSelect({ field, value, onChange, disabled }: MultiSelectProps) {
   const selectedOptions = Array.isArray(value) ? value : [];
+  const isDisabled = disabled || field.editable === false;
+  const isRequired = field.required === true;
+  const isEditable = field.editable !== false;
 
   return (
     <div style={{ marginBottom: '16px' }}>
@@ -26,6 +29,7 @@ export default function MultiSelect({ field, value, onChange, disabled }: MultiS
         color: '#374151'
       }}>
         {field.label}
+        {isRequired && <span style={{ color: 'red', marginLeft: '4px' }}>*</span>}
       </label>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
         {field.options?.map((option) => {
@@ -40,21 +44,21 @@ export default function MultiSelect({ field, value, onChange, disabled }: MultiS
                 padding: '8px 16px',
                 border: isSelected ? '2px solid #6366f1' : '2px solid #e5e7eb',
                 borderRadius: '8px',
-                backgroundColor: isSelected ? '#eef2ff' : 'white',
-                color: isSelected ? '#4f46e5' : '#374151',
-                cursor: disabled ? 'not-allowed' : 'pointer',
+                backgroundColor: isDisabled ? '#f9fafb' : (isSelected ? '#eef2ff' : 'white'),
+                color: isDisabled ? '#9ca3af' : (isSelected ? '#4f46e5' : '#374151'),
+                cursor: isDisabled ? 'not-allowed' : 'pointer',
                 transition: 'all 0.2s ease',
                 userSelect: 'none',
-                opacity: disabled ? 0.6 : 1
+                opacity: isDisabled ? 0.7 : 1
               }}
               onMouseEnter={(e) => {
-                if (!disabled && !isSelected) {
+                if (!isDisabled && !isSelected) {
                   e.currentTarget.style.borderColor = '#a5b4fc';
                   e.currentTarget.style.backgroundColor = '#fafafa';
                 }
               }}
               onMouseLeave={(e) => {
-                if (!disabled && !isSelected) {
+                if (!isDisabled && !isSelected) {
                   e.currentTarget.style.borderColor = '#e5e7eb';
                   e.currentTarget.style.backgroundColor = 'white';
                 }
@@ -70,12 +74,13 @@ export default function MultiSelect({ field, value, onChange, disabled }: MultiS
                     onChange?.([...selectedOptions, option.value]);
                   }
                 }}
-                disabled={disabled}
+                disabled={isDisabled}
+                required={isRequired}
                 style={{
                   width: '16px',
                   height: '16px',
                   marginRight: '8px',
-                  cursor: disabled ? 'not-allowed' : 'pointer',
+                  cursor: isDisabled ? 'not-allowed' : 'pointer',
                   accentColor: '#6366f1'
                 }}
               />
@@ -89,6 +94,11 @@ export default function MultiSelect({ field, value, onChange, disabled }: MultiS
           );
         })}
       </div>
+      {!isEditable && !disabled && (
+        <div style={{ marginTop: '4px', color: '#999', fontSize: '12px' }}>
+          此字段不可编辑
+        </div>
+      )}
       {field.description && (
         <div style={{ marginTop: '8px', color: '#666', fontSize: '14px' }}>
           {field.description}

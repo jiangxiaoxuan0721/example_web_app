@@ -6,7 +6,7 @@ import DebugModal from './DebugModal';
 import PatchHistory from './PatchHistory';
 
 interface Instance {
-  instance_id: string;
+  instance_name: string;
   title?: string;
   description?: string;
   blocks_count?: number;
@@ -34,7 +34,7 @@ export default function InstanceSelector({ currentInstanceId, onInstanceSwitch, 
   const [showPatchHistory, setShowPatchHistory] = useState(false);
 
   // 获取 WebSocket 连接状态（仅用于显示）
-  const { connected: wsConnected } = useWebSocket(() => {}, () => {});
+  const { connected: wsConnected } = useWebSocket(() => { }, () => { });
 
   useEffect(() => {
     // 从后端获取实例列表
@@ -57,9 +57,9 @@ export default function InstanceSelector({ currentInstanceId, onInstanceSwitch, 
     if (instanceId === currentInstanceId) {
       return; // 不切换到当前实例
     }
-    
+
     setSwitching(true);
-    
+
     try {
       if (onInstanceSwitch) {
         await onInstanceSwitch(instanceId);
@@ -157,15 +157,15 @@ export default function InstanceSelector({ currentInstanceId, onInstanceSwitch, 
       <div style={{ marginTop: '5px' }}>
         快速切换:
         {instances.map((instance, index) => (
-          <React.Fragment key={instance.instance_id}>
+          <React.Fragment key={instance.instance_name}>
             <button
-              onClick={() => handleInstanceClick(instance.instance_id)}
-              disabled={instance.instance_id === currentInstanceId || switching}
+              onClick={() => handleInstanceClick(instance.instance_name)}
+              disabled={instance.instance_name === currentInstanceId || switching}
               style={{
-                background: instance.instance_id === currentInstanceId ? '#007bff' : 'none',
+                background: instance.instance_name === currentInstanceId ? '#007bff' : 'none',
                 border: '1px solid #007bff',
-                color: instance.instance_id === currentInstanceId ? 'white' : '#007bff',
-                cursor: instance.instance_id === currentInstanceId || switching ? 'not-allowed' : 'pointer',
+                color: instance.instance_name === currentInstanceId ? 'white' : '#007bff',
+                cursor: instance.instance_name === currentInstanceId || switching ? 'not-allowed' : 'pointer',
                 textDecoration: 'none',
                 borderRadius: '3px',
                 padding: '2px 6px',
@@ -174,7 +174,7 @@ export default function InstanceSelector({ currentInstanceId, onInstanceSwitch, 
                 opacity: switching ? 0.6 : 1
               }}
             >
-              {instance.instance_id}
+              {instance.instance_name}
             </button>
           </React.Fragment>
         ))}
@@ -190,7 +190,7 @@ export default function InstanceSelector({ currentInstanceId, onInstanceSwitch, 
           borderRadius: '8px',
           boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
         }}>
-          <PatchHistory patches={patches} onReplay={onReplay || (() => {})} />
+          <PatchHistory patches={patches} onReplay={onReplay || (() => { })} />
         </div>
       )}
 

@@ -1,63 +1,54 @@
 """Patch 相关模型模块
 
-包含直接赋值、操作、外部 API 调用等 Patch 模型定义
+统一 Patch 范式 - 所有 patch 使用相同的格式（op/path/value）
+
+支持的操作类型：
+- set: 设置值（原有）
+- add: 添加元素到数组（原有）
+- remove: 删除元素（原有）
+- append_to_list: 追加元素到列表末尾
+- prepend_to_list: 在列表开头插入元素
+- update_list_item: 更新列表中的某个元素
+- remove_last: 删除列表最后一项
+- merge: 合并对象
+- increment: 增量更新
+- decrement: 减量更新
+- toggle: 切换布尔值
 """
 
-from typing import Any, Union, Literal, Optional
-import re
-from pydantic import BaseModel, Field, field_validator
-
+from pydantic import Field
+from .enums import PatchOperationType
 from .base import BaseModelWithConfig
-from .enums import OperationType, HTTPMethod, BodyTemplateType
 
 
-class DirectValuePatch(BaseModelWithConfig):
-    """直接赋值 Patch"""
-    mode: Literal["direct"] = "direct"
-    value: Any = Field(..., description="要设置的值")
+class SchemaPatch(BaseModelWithConfig):
+    """统一 Patch 范式
 
+    所有 patch 使用相同的格式，无论是全局 patch 还是 action patch
 
-class OperationPatch(BaseModelWithConfig):
-    """操作对象 Patch"""
-    mode: Literal["operation"] = "operation"
-    operation: OperationType = Field(..., description="操作类型")
-    params: dict[str, Any] = Field(default_factory=dict, description="操作参数")
+    格式：
+    {
+        "op": "set" | "add" | "remove" | "append_to_list" | "prepend_to_list" | "update_list_item" | "remove_last" | "merge" | "increment" | "decrement" | "toggle",
+        "path": "state.params.xxx",
+        "value": any  # 根据不同 op，value 的含义不同
+    }
 
+    操作说明：
+    - set: 直接设置值
+    - add: 添加到数组（原有语义，用于 schema 结构变更）
+    - remove: 从数组删除（原有语义，用于 schema 结构变更）
+    - append_to_list: 追加元素到列表末尾（用于数据操作）
+    - prepend_to_list: 在列表开头插入元素（用于数据操作）
+    - update_list_item: 更新列表指定索引的元素（用于数据操作）
+    - remove_last: 删除列表最后一项（用于数据操作）
+    - merge: 合并对象到目标路径（用于数据操作）
+    - increment: 数字值增加（value 为增量）
+    - decrement: 数字值减少（value 为减量）
+    - toggle: 切换布尔值（value 可选，默认切换）
+    """
+    op: PatchOperationType = Field(..., description="操作类型")
+    path: str = Field(..., description="目标路径")
+    value: object = Field(default=None, description="操作值（根据 op 类型不同含义不同）")
 
-class ExternalApiPatch(BaseModelWithConfig):
-    """外部 API 调用 Patch"""
-    mode: Literal["external"] = "external"
-    url: str = Field(..., description="API端点URL（支持模板变量）")
-    method: HTTPMethod = Field(default=HTTPMethod.POST, description="HTTP方法")
-    headers: dict[str, str] = Field(default_factory=dict, description="请求头")
-    body_template: Optional[dict[str, Any]] = Field(None, description="请求体模板")
-    body_template_type: BodyTemplateType = Field(default=BodyTemplateType.JSON, description="请求体类型")
-    timeout: int = Field(default=30, ge=1, le=300, description="超时时间（秒）")
-    response_mappings: dict[str, str] = Field(
-        default_factory=dict,
-        description="响应映射（JSONPath表达式）"
-    )
-    error_mapping: dict[str, str] = Field(
-        default_factory=dict,
-        description="错误响应映射"
-    )
-    
-    @field_validator("url")
-    @classmethod
-    def validate_url(cls, v):
-        """验证URL格式"""
-        url_pattern = re.compile(
-            r'^(https?://)?'  # http:// or https://
-            r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|'  # domain...
-            r'localhost|'  # localhost...
-            r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
-            r'(?::\d+)?'  # optional port
-            r'(?:/?|[/?]\S+)$', re.IGNORECASE)
-        
-        if not url_pattern.match(v):
-            raise ValueError("URL格式不正确")
-        return v
-
-
-# Patch 值的类型联合
-PatchValue = Union[DirectValuePatch, OperationPatch, ExternalApiPatch, Any]
+    # 用于 update_list_item 的可选参数
+    index: int | None = Field(default=None, description="目标索引（仅 update_list_item 使用）")

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 
 interface Instance {
-  instance_id: string;
+  instance_name: string;
   title?: string;
   description?: string;
   blocks_count?: number;
@@ -77,7 +77,7 @@ export default function ErrorState({ error }: ErrorStateProps) {
           justifyContent: 'center'
         }}>
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 8V12M12 16H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M12 8V12M12 16H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
 
@@ -150,8 +150,8 @@ export default function ErrorState({ error }: ErrorStateProps) {
             }}>
               {instances.map((instance) => (
                 <button
-                  key={instance.instance_id}
-                  onClick={() => handleInstanceClick(instance.instance_id)}
+                  key={instance.instance_name}
+                  onClick={() => handleInstanceClick(instance.instance_name)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -185,7 +185,7 @@ export default function ErrorState({ error }: ErrorStateProps) {
                       color: '#1f2937',
                       marginBottom: '4px'
                     }}>
-                      {instance.instance_id}
+                      {instance.instance_name}
                     </div>
                     {instance.title && (
                       <div style={{

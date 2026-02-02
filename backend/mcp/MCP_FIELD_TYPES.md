@@ -758,9 +758,125 @@
 | `buttonStyle` | string | 按钮样式: "primary", "secondary", "danger" |
 | `buttonSize` | string | 按钮尺寸: "small", "medium", "large" |
 | `actionType` | string | 操作类型（用于 button 类型） |
+| `actionId` | string | 关联的 Action ID（用于 button 类型触发事件） |
 | `actionData` | any | 操作数据（用于 button 类型） |
 | `width` | string | spacer 宽度（用于 spacer 类型） |
 | `margin` | string | 元素左边距 |
+
+#### 表格按钮事件处理 ⭐
+
+**重要**: 表格中的按钮必须通过 `actionId` 关联到一个已定义的 Action 配置，点击后会触发对应的事件。
+
+**按钮触发流程:**
+1. 用户点击表格中的按钮
+2. 前端发送 `table:button:click` 事件到后端
+3. 后端根据 `actionId` 查找对应的 Action 配置
+4. 执行 Action 的 `patches` 配置（与普通 Action 处理方式一致）
+
+**Action 配置示例:**
+
+```python
+# 在创建实例时添加 Action 配置
+await create_ui_instance(
+    instance_name="my_instance",
+    patches=[
+        # ... 其他 patches ...
+        {
+            "op": "set",
+            "path": "actions",
+            "value": [
+                {
+                    "id": "edit_user",
+                    "label": "编辑用户",
+                    "style": "primary",
+                    "action_type": "patch",
+                    "patches": [
+                        {
+                            "op": "set",
+                            "path": "state.params.edit_user_id",
+                            "value": "${params.rowData.id}"
+                        }
+                    ]
+                },
+                {
+                    "id": "delete_user",
+                    "label": "删除用户",
+                    "style": "danger",
+                    "action_type": "patch",
+                    "patches": [
+                        {
+                            "op": "remove",
+                            "path": "state.params.users",
+                            "value": "${params.rowData}"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+)
+```
+
+**表格列配置示例（使用 actionId）:**
+
+```json
+{
+  "key": "actions",
+  "label": "操作",
+  "renderType": "mixed",
+  "components": [
+    {
+      "type": "button",
+      "buttonLabel": "编辑",
+      "buttonStyle": "primary",
+      "buttonSize": "small",
+      "actionId": "edit_user"
+    },
+    {
+      "type": "spacer",
+      "width": "8px"
+    },
+    {
+      "type": "button",
+      "buttonLabel": "删除",
+      "buttonStyle": "danger",
+      "buttonSize": "small",
+      "actionId": "delete_user",
+      "confirmMessage": "确定要删除此用户吗？"
+    }
+  ]
+}
+```
+
+**事件传递的参数:**
+当按钮点击时，以下参数会自动传递给 Action：
+- `rowData`: 当前行数据对象
+- `rowIndex`: 行索引
+- `fieldKey`: 表格字段 key（标识是哪个表格）
+- `params`: 按钮配置中自定义的参数
+- `_actionId`: 关联的 Action ID
+
+**在 Action 的 patches 中使用这些参数:**
+
+```python
+{
+    "id": "edit_user",
+    "label": "编辑用户",
+    "patches": [
+        # 使用 ${params.rowData.id} 获取当前行的 id
+        {
+            "op": "set",
+            "path": "state.params.selected_user",
+            "value": "${params.rowData}"
+        },
+        {
+            "op": "set",
+            "path": "state.params.mode",
+            "value": "edit"
+        }
+    ]
+}
+```
 
 **场景示例 1: 状态标签 + 操作按钮**
 
@@ -1063,8 +1179,8 @@
 
 ```json
 {
-  "instance_id": "__CREATE__",
-  "new_instance_id": "example_instance",
+  "instance_name": "__CREATE__",
+  "new_instance_name": "example_instance",
   "patches": [
     {
       "op": "set",
@@ -1307,8 +1423,8 @@ from backend.mcp.tool_definitions import patch_ui_state
 
 # 创建仪表板实例，包含一个带 mixed 渲染的表格
 await patch_ui_state(
-    instance_id="__CREATE__",
-    new_instance_id="user_dashboard",
+    instance_name="__CREATE__",
+    new_instance_name="user_dashboard",
     patches=[
         # 设置元数据
         {"op": "set", "path": "meta", "value": {"pageKey": "dashboard", "step": {"current": 1, "total": 1}}},
@@ -1444,7 +1560,7 @@ await patch_ui_state(
 ```python
 # 在现有实例中添加一个任务列表表格
 await patch_ui_state(
-    instance_id="my_instance",
+    instance_name="my_instance",
     patches=[
         {"op": "set", "path": "state.params.tasks", "value": [
             {
@@ -1493,7 +1609,7 @@ await patch_ui_state(
 ```python
 # 更新现有表格的数据
 await patch_ui_state(
-    instance_id="user_dashboard",
+    instance_name="user_dashboard",
     patches=[
         {"op": "set", "path": "state.params.users", "value": [
             {
@@ -1520,7 +1636,7 @@ await patch_ui_state(
 ```python
 # 添加一个任务详情表格，使用 mixed 类型组合多个元素
 await patch_ui_state(
-    instance_id="task_manager",
+    instance_name="task_manager",
     patches=[
         {"op": "set", "path": "state.params.detailed_tasks", "value": [
             {
@@ -1580,8 +1696,8 @@ async def test_mcp_tools():
 
     # 2. 创建测试实例
     await patch_ui_state(
-        instance_id="__CREATE__",
-        new_instance_id="test_mixed_table",
+        instance_name="__CREATE__",
+        new_instance_name="test_mixed_table",
         patches=[
             {"op": "set", "path": "meta", "value": {"pageKey": "test", "step": {"current": 1, "total": 1}}},
             {"op": "set", "path": "state", "value": {"params": {}, "runtime": {}}},
@@ -1597,7 +1713,7 @@ async def test_mcp_tools():
 
     # 3. 添加 mixed 表格
     await patch_ui_state(
-        instance_id="test_mixed_table",
+        instance_name="test_mixed_table",
         patches=[
             {"op": "set", "path": "state.params.data", "value": [
                 {"id": 1, "name": "张三", "status": "active"},

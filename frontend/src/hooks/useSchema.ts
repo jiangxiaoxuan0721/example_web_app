@@ -120,7 +120,7 @@ export function useSchema() {
             const instancesData = await instancesResponse.json();
             if (instancesData.status === 'success' && instancesData.instances) {
               const instanceIds = instancesData.instances
-                .map((inst: any) => inst.instance_id)
+                .map((inst: any) => inst.instance_name)
                 .filter((id: string) => id !== currentInstanceId);
 
               // 预加载其他实例（不等待完成）

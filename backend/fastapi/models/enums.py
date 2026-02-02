@@ -14,37 +14,33 @@ class EventType(str, Enum):
     CONFIRM_STEP = "confirm_step"
     PAGE_LOAD = "page_load"
 
-
-class HandlerType(str, Enum):
-    """处理器类型枚举"""
-    SET = "set"
-    INCREMENT = "increment"
-    DECREMENT = "decrement"
-    TOGGLE = "toggle"
-    TEMPLATE = "template"
-    TEMPLATE_ALL = "template:all"
-    TEMPLATE_STATE = "template:state"
-    EXTERNAL = "external"
-
-
 class ActionType(str, Enum):
     """操作类型枚举"""
     API = "api"
     NAVIGATE = "navigate"
+    MODAL = "modal"
+    PATCH = "apply_patch"
 
 
-class OperationType(str, Enum):
+class PatchOperationType(str, Enum):
     """操作类型枚举"""
+    # Schema 操作
+    SET = "set"
+    ADD = "add"
+    REMOVE = "remove"
+    # 列表操作
     APPEND_TO_LIST = "append_to_list"
     PREPEND_TO_LIST = "prepend_to_list"
     REMOVE_FROM_LIST = "remove_from_list"
     UPDATE_LIST_ITEM = "update_list_item"
-    CLEAR_ALL_PARAMS = "clear_all_params"
-    APPEND_BLOCK = "append_block"
-    PREPEND_BLOCK = "prepend_block"
-    REMOVE_BLOCK = "remove_block"
-    UPDATE_BLOCK = "update_block"
+    FILTER_LIST = "filter_list"
+    REMOVE_LAST = "remove_last"
     MERGE = "merge"
+    # 参数操作
+    INCREMENT = "increment"
+    DECREMENT = "decrement"
+    TOGGLE = "toggle"
+    
 
 
 class HTTPMethod(str, Enum):
@@ -91,12 +87,3 @@ class LayoutType(str, Enum):
     GRID = "grid"
     FLEX = "flex"
     TABS = "tabs"
-
-
-class StatusType(str, Enum):
-    """状态类型枚举"""
-    IDLE = "idle"
-    LOADING = "loading"
-    SUCCESS = "success"
-    ERROR = "error"
-    WARNING = "warning"

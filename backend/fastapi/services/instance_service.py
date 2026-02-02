@@ -1,8 +1,9 @@
 """实例服务 - 处理实例的创建、删除和操作"""
 
+from re import Match
+from backend.fastapi.models import ActionConfig, UISchema, PatchOperationType, StateInfo, LayoutInfo, Block, FieldConfig, LayoutType, SchemaPatch
 import httpx
-from typing import Any
-from ..models import UISchema, MetaInfo, StateInfo, LayoutInfo, Block, ActionConfig, StepInfo, FieldConfig, LayoutType
+from typing import Any, Callable
 from backend.core.manager import SchemaManager
 from .patch import apply_patch_to_schema
 
@@ -10,13 +11,13 @@ from .patch import apply_patch_to_schema
 class InstanceService:
     """实例服务"""
 
-    def __init__(self, schema_manager: SchemaManager):
-        self.schema_manager = schema_manager
+    def __init__(self, schema_manager: SchemaManager) -> None:
+        self.schema_manager: SchemaManager = schema_manager
 
     def create_instance(
         self,
-        instance_id: str,
-        patches: list[dict[str, Any]]
+        instance_name: str,
+        patches: list[SchemaPatch]
     ) -> tuple[bool, str | None]:
         """
         创建新实例
@@ -24,52 +25,48 @@ class InstanceService:
         返回: (是否成功, 错误消息)
         """
         # 检查实例是否已存在
-        if self.schema_manager.exists(instance_id):
-            return False, f"Instance '{instance_id}' already exists"
+        if self.schema_manager.exists(instance_name):
+            return False, f"Instance '{instance_name}' already exists"
 
         # 应用 patches 创建实例
-        new_schema = None
+        new_schema: UISchema = None   # pyright: ignore[reportAssignmentType]
         for patch in patches:
-            op = patch.get("op")
-            path = patch.get("path")
-            value = patch.get("value")
+            op: PatchOperationType = patch.op
+            path: str = patch.path
+            value: object = patch.value
 
             if op != "set":
                 continue
 
             if path == "meta":
-                meta_data = value
-                new_schema = UISchema(
-                    meta=MetaInfo(  # pyright: ignore[reportCallIssue]
-                        pageKey=getattr(meta_data, "pageKey", instance_id),
-                        step=StepInfo(**getattr(meta_data, "step", {"current": 1, "total": 1})),
-                        status=getattr(meta_data, "status", "idle")
-                    ),
+                meta_data: object = value
+                new_schema: UISchema = UISchema(
+                    page_key=getattr(meta_data, "page_key", instance_name),
                     state=StateInfo(params={}, runtime={}),
                     layout=LayoutInfo(type=LayoutType.SINGLE, columns=None, gap=None),
                     blocks=[],
                     actions=[]
                 )
             elif path == "state" and new_schema:
-                state_data = value
+                state_data: object = value
                 new_schema.state = StateInfo(
                     params=getattr(state_data, "params", {}),
                     runtime=getattr(state_data, "runtime", {})
                 )
             elif path == "blocks" and new_schema:
-                blocks_data = value or []
-                converted_blocks = []
+                blocks_data: list[Any] = value if isinstance(value, list) else []
+                converted_blocks: list[Any] = []
                 for block in blocks_data:
-                    block_copy = dict(block)
+                    block_copy: dict[Any, Any] = dict(block)
 
                     if 'props' in block_copy and block_copy.get('props') is not None:
                         props_copy = dict(block_copy.get('props', {}))
                         if 'fields' in props_copy and props_copy.get('fields') is not None:
-                            fields_data = props_copy.get('fields', []) or []
+                            fields_data: Any | list[Any] = props_copy.get('fields', []) or []
                             # FieldConfig 是 Union 类型，使用 TypeAdapter 进行转换
-                            converted_fields = []
+                            converted_fields: list[Any] = []
                             from pydantic import TypeAdapter
-                            field_adapter = TypeAdapter(FieldConfig)
+                            field_adapter: TypeAdapter[Any] = TypeAdapter(FieldConfig)
                             for field in fields_data:
                                 if isinstance(field, dict):
                                     converted_fields.append(field_adapter.validate_python(field))
@@ -78,40 +75,36 @@ class InstanceService:
                             props_copy['fields'] = converted_fields
                         # Convert actions in props if present
                         if 'actions' in props_copy and props_copy.get('actions') is not None:
-                            actions_data = props_copy.get('actions', []) or []
-                            converted_actions = [ActionConfig(**action) for action in actions_data]
+                            actions_data: Any | list[Any] = props_copy.get('actions', []) or []
+                            converted_actions: list[ActionConfig] = [ActionConfig(**action) for action in actions_data]
                             props_copy['actions'] = converted_actions
                         block_copy['props'] = props_copy
                     converted_blocks.append(Block(**block_copy))  # type: ignore
                 new_schema.blocks = converted_blocks
             elif path == "actions" and new_schema:
-                actions_data = value or []
+                actions_data: Any | list[Any] = value or []
                 new_schema.actions = [ActionConfig(**action) for action in actions_data]
 
         if new_schema:
-            self.schema_manager.set(instance_id, new_schema)
-            return True, f"Instance '{instance_id}' created successfully"
-
-        return False, "Failed to create instance: Invalid patches"
+            self.schema_manager.set(instance_name, new_schema)
+            return True, f"Instance '{instance_name}' created successfully"
 
     def delete_instance(
         self,
-        instance_id: str
+        instance_name: str
     ) -> tuple[bool, str | None]:
         """
         删除实例
-
         返回: (是否成功, 错误消息)
         """
-        if not self.schema_manager.exists(instance_id):
-            return False, f"Instance '{instance_id}' not found"
-
-        self.schema_manager.delete(instance_id)
-        return True, f"Instance '{instance_id}' deleted successfully"
+        if not self.schema_manager.exists(instance_name):
+            return False, f"Instance '{instance_name}' not found"
+        _ = self.schema_manager.delete(instance_name)
+        return True, f"Instance '{instance_name}' deleted successfully"
 
     def handle_action(
         self,
-        instance_id: str,
+        instance_name: str,
         action_id: str,
         params: dict[str, Any],
         block_id: str | None = None
@@ -120,33 +113,44 @@ class InstanceService:
         处理实例的 action 操作（通用化处理）
 
         Args:
-            instance_id: 实例 ID
+            instance_name: 实例 ID
             action_id: 操作 ID
             params: 参数
             block_id: Block ID（可选，用于 block 级别的 actions）
 
         返回: Patch 数据字典
         """
-        print(f"[InstanceService] handle_action 被调用: instance_id={instance_id}, action_id={action_id}, params={params}, block_id={block_id}")
+        print(f"[InstanceService] handle_action 被调用: instance_name={instance_name}, action_id={action_id}, params={params}, block_id={block_id}")
 
-        schema = self.schema_manager.get(instance_id)
+        schema: UISchema | None = self.schema_manager.get(instance_name)
         if not schema:
-            print(f"[InstanceService] 实例 '{instance_id}' 不存在")
+            print(f"[InstanceService] 实例 '{instance_name}' 不存在")
             return {
                 "status": "error",
-                "error": f"Instance '{instance_id}' not found"
+                "error": f"Instance '{instance_name}' not found"
             }
 
-        # 先同步前端传来的 params（排除 blockId 参数）
-        if params and isinstance(params, dict):
-            # 过滤掉非 schema 状态参数（如 blockId）
-            filtered_params = {k: v for k, v in params.items() if k != "blockId"}
-            params_patch = {f"state.params.{k}": v for k, v in filtered_params.items()}
-            print(f"[InstanceService] 同步前端 params: {params_patch}")
-            apply_patch_to_schema(schema, params_patch)
+        # 更新 runtime.timestamp 为当前时间（确保模板表达式能获取到最新时间）
+        from datetime import datetime
+        if schema.state and schema.state.runtime is not None:
+            schema.state.runtime["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"[InstanceService] 已更新 runtime.timestamp: {schema.state.runtime['timestamp']}")
+
+        # 将前端传来的 params 同步到 schema.state.params
+        # 这样模板表达式 ${state.params.xxx} 就能获取到最新的用户输入
+        if params and schema.state and schema.state.params is not None:
+            for key, value in params.items():
+                # 对于 rowData，临时存储到 temp_rowData，供模板使用
+                if key == "rowData":
+                    schema.state.params["temp_rowData"] = value
+                    print(f"[InstanceService] 已同步 temp_rowData: {value}")
+                # 只同步在 state.params 中已存在的字段，避免添加未知字段
+                elif key in schema.state.params:
+                    schema.state.params[key] = value
+                    print(f"[InstanceService] 已同步 params: {key} = {value}")
 
         # 查找对应的 action 配置
-        action_config = None
+        action_config: ActionConfig | None = None
 
         # 优先在指定的 block 中查找 action
         if block_id:
@@ -169,7 +173,7 @@ class InstanceService:
                     break
 
         if not action_config:
-            available_actions = [a.id for a in schema.actions]
+            available_actions: list[str] = [a.id for a in schema.actions]
             for block in schema.blocks:
                 if block.props and block.props.actions:
                     for action in block.props.actions:
@@ -180,7 +184,9 @@ class InstanceService:
                 "patch": {}
             }
 
-        print(f"[InstanceService] 找到 action: {action_config.id}, handler_type={getattr(action_config, 'handler_type', None)}")
+        # action_config 现在保证不是 None
+        assert action_config is not None
+        print(f"[InstanceService] 找到 action: {action_config.id}")
 
         # 处理 navigate 类型的 action
         if action_config.action_type == "navigate":
@@ -194,146 +200,339 @@ class InstanceService:
         # 对于其他类型的 action，不主动同步 params
         # params 应该已经在 action handler 执行前通过 field:change 事件更新过了
         print(f"[InstanceService] 开始执行 action handler")
-        patch = self._execute_action_handler(schema, action_config)
-        print(f"[InstanceService] Action handler 返回的 patch: {patch}")
 
-        # 应用 patch 到 schema
-        if patch:
-            apply_patch_to_schema(schema, patch)
-            print(f"[InstanceService] Patch 已应用到 schema")
-        else:
-            print(f"[InstanceService] Patch 为空，不应用")
+        # 获取 action patches
+        unified_patches = self._get_action_patches(action_config)
+        print(f"[InstanceService] 统一格式的 patches: {unified_patches}")
+
+        # 记录已处理的 patch 索引
+        skip_indices = set()
+
+        # 预处理特殊的表达式操作
+        # 对于包含 JavaScript 表达式的 value，在服务端先计算结果
+        for idx, patch_item in enumerate(unified_patches):
+            if patch_item.op == "set" and patch_item.value:
+                value = patch_item.value
+                if isinstance(value, str) and ".filter(" in value:
+                    # 这是一个过滤操作，需要服务端处理
+                    print(f"[InstanceService] 检测到过滤表达式: {value}")
+                    # 通用解析表达式: "${xxx.filter(y => y.z !== abc)}"
+                    import re
+                    # 匹配整个过滤表达式
+                    full_match = re.match(r'\$\{([^}]+)\}', value)
+                    if full_match:
+                        expression = full_match.group(1)
+                        print(f"[InstanceService] 解析表达式: {expression}")
+
+                        # 尝试提取列表路径: state.params.list_name
+                        list_path_match = re.match(r'(state\.params\.[\w_]+)\.filter\(', expression)
+                        if list_path_match:
+                            list_path = list_path_match.group(1)
+                            print(f"[InstanceService] 列表路径: {list_path}")
+
+                            # 获取当前列表
+                            current_list = self._get_nested_value(schema, list_path)
+                            if not isinstance(current_list, list):
+                                print(f"[InstanceService] {list_path} 不是列表，跳过处理")
+                                continue
+
+                            # 解析过滤条件，支持多种格式:
+                            # 1. item => item.field !== state.params.xxx.yyy (箭头函数格式)
+                            # 2. item.field !== params.temp_rowData.id
+                            # 其中 item 可以是任意变量名（emp, row, item 等）
+                            filter_body: str = re.sub(r'^.*?\.filter\((.+)\)$', r'\1', expression)
+                            print(f"[InstanceService] 过滤条件: {filter_body}")
+
+                            # 提取变量名和比较表达式
+                            # 匹配箭头函数格式: variable => variable.field !== state.path.value
+                            # 或者简单格式: variable.field !== params.temp_rowData.id
+                            arrow_match: Match[str] | None = re.match(r'(\w+)\s*=>\s*(\w+)\.(\w+)\s*(===|!==)\s*(.+)', filter_body)
+                            simple_match: Match[str] | None = re.match(r'(\w+)\.(\w+)\s*(===|!==)\s*(.+)', filter_body)
+
+                            print(f"[InstanceService] 箭头函数匹配结果: {arrow_match}, 简单匹配结果: {simple_match}")
+
+                            if arrow_match:
+                                var_name, var_name2, list_field, operator, right_expr = arrow_match.groups()
+                                print(f"[InstanceService] 箭头函数: 变量={var_name}, 字段={list_field}, 操作符={operator}, 右边表达式={right_expr}")
+
+                                # 如果右边是 state 或 params 路径，解析其值
+                                target_value = None
+                                if right_expr.startswith('state.') or right_expr.startswith('params.') or right_expr.startswith('${'):
+                                    # 去掉可能的外层 ${}
+                                    right_expr = re.sub(r'^\$\{|\}$', '', right_expr)
+                                    target_value = self._get_nested_value(schema, right_expr)
+                                    print(f"[InstanceService] 从 {right_expr} 获取到值: {target_value}")
+                                else:
+                                    # 处理字面量: true, false, 数字, 字符串
+                                    right_expr_stripped = right_expr.strip()
+                                    if right_expr_stripped == 'true':
+                                        target_value = True
+                                    elif right_expr_stripped == 'false':
+                                        target_value = False
+                                    elif right_expr_stripped == 'null' or right_expr_stripped == 'undefined':
+                                        target_value = None
+                                    elif right_expr_stripped.isdigit():
+                                        target_value = int(right_expr_stripped)
+                                    elif right_expr_stripped.startswith('"') and right_expr_stripped.endswith('"'):
+                                        target_value = right_expr_stripped[1:-1]
+                                    elif right_expr_stripped.startswith("'") and right_expr_stripped.endswith("'"):
+                                        target_value = right_expr_stripped[1:-1]
+                                    else:
+                                        # 尝试直接使用
+                                        target_value = right_expr_stripped
+                                    print(f"[InstanceService] 字面量值: {target_value}")
+
+                                if target_value is not None:
+                                    # 执行过滤
+                                    if operator == '!==':
+                                        filtered_list: list[Any] = [item for item in current_list if item.get(list_field) != target_value]
+                                    elif operator == '===':
+                                        filtered_list: list[Any] = [item for item in current_list if item.get(list_field) == target_value]
+                                    else:
+                                        # 不等比较
+                                        filtered_list: list[Any] = [item for item in current_list if item.get(list_field) != target_value]
+
+                                    print(f"[InstanceService] 过滤后的列表: {len(filtered_list)} 个元素")
+
+                                    # 生成 patch 并应用到 schema
+                                    from .patch import apply_patch_to_schema
+                                    operation_patch: dict[str, object] = self._execute_operation(schema, operation="set", params={"value": filtered_list}, target_path=list_path)
+                                    print(f"[InstanceService] 已在服务端执行过滤: {len(current_list)} -> {len(filtered_list)}, 操作结果: {operation_patch}")
+
+                                    # 立即应用 patch 到 schema
+                                    if operation_patch:
+                                        apply_patch_to_schema(schema, operation_patch)
+                                        print(f"[InstanceService] 已应用 patch 到 schema")
+
+                                    # 验证更新是否成功
+                                    updated_list = self._get_nested_value(schema, list_path)
+                                    print(f"[InstanceService] 验证更新后的列表: 长度={len(updated_list) if isinstance(updated_list, list) else 'not a list'}")
+
+                                    # 标记这个 patch 已处理
+                                    skip_indices.add(idx)
+                                else:
+                                    print(f"[InstanceService] 无法获取目标值 (target_value={target_value})，跳过过滤操作")
+                            elif simple_match:
+                                var_name, list_field, operator, right_expr = simple_match.groups()
+                                print(f"[InstanceService] 简单格式: 变量={var_name}, 字段={list_field}, 操作符={operator}, 右边表达式={right_expr}")
+
+                                # 解析右边表达式的值
+                                target_value = None
+                                if right_expr.startswith('state.') or right_expr.startswith('params.') or right_expr.startswith('${'):
+                                    right_expr = re.sub(r'^\$\{|\}$', '', right_expr)
+                                    target_value = self._get_nested_value(schema, right_expr)
+                                    print(f"[InstanceService] 从 {right_expr} 获取到值: {target_value}")
+                                else:
+                                    # 处理字面量: true, false, 数字, 字符串
+                                    right_expr_stripped = right_expr.strip()
+                                    if right_expr_stripped == 'true':
+                                        target_value = True
+                                    elif right_expr_stripped == 'false':
+                                        target_value = False
+                                    elif right_expr_stripped == 'null' or right_expr_stripped == 'undefined':
+                                        target_value = None
+                                    elif right_expr_stripped.isdigit():
+                                        target_value = int(right_expr_stripped)
+                                    elif right_expr_stripped.startswith('"') and right_expr_stripped.endswith('"'):
+                                        target_value = right_expr_stripped[1:-1]
+                                    elif right_expr_stripped.startswith("'") and right_expr_stripped.endswith("'"):
+                                        target_value = right_expr_stripped[1:-1]
+                                    else:
+                                        target_value = right_expr_stripped
+                                    print(f"[InstanceService] 字面量值: {target_value}")
+
+                                if target_value is not None:
+                                    # 执行过滤
+                                    if operator == '!==':
+                                        filtered_list: list[Any] = [item for item in current_list if item.get(list_field) != target_value]
+                                    elif operator == '===':
+                                        filtered_list: list[Any] = [item for item in current_list if item.get(list_field) == target_value]
+                                    else:
+                                        # 不等比较
+                                        filtered_list: list[Any] = [item for item in current_list if item.get(list_field) != target_value]
+
+                                    print(f"[InstanceService] 过滤后的列表: {len(filtered_list)} 个元素")
+
+                                    # 生成 patch 并应用到 schema
+                                    from .patch import apply_patch_to_schema
+                                    operation_result = self._execute_operation(schema, "set", {"value": filtered_list}, list_path)
+                                    print(f"[InstanceService] 已在服务端执行过滤: {len(current_list)} -> {len(filtered_list)}, 操作结果: {operation_result}")
+
+                                    # 立即应用 patch 到 schema
+                                    if operation_result:
+                                        apply_patch_to_schema(schema, operation_result)
+                                        print(f"[InstanceService] 已应用 patch 到 schema")
+
+                                    # 验证更新是否成功
+                                    updated_list = self._get_nested_value(schema, list_path)
+                                    print(f"[InstanceService] 验证更新后的列表: 长度={len(updated_list) if isinstance(updated_list, list) else 'not a list'}")
+
+                                    # 标记这个 patch 已处理
+                                    skip_indices.add(idx)
+                                else:
+                                    print(f"[InstanceService] 简单格式无法获取目标值，跳过处理")
+                            else:
+                                print(f"[InstanceService] 过滤条件格式不匹配，跳过处理")
+
+        # 应用统一格式的 patches
+        # 注意：skip_indices 中的 patch 已经通过自定义逻辑处理并应用到 schema
+        # 我们不需要再调用 apply_unified_patch，但需要将它们的值加入 patch_dict 用于前端更新
+        for idx, patch_item in enumerate(unified_patches):
+            if idx in skip_indices:
+                print(f"[InstanceService] 跳过已处理的 patch（但值已在schema中）: {patch_item}")
+                continue
+            result = self.apply_unified_patch(schema, patch_item)
+            print(f"[InstanceService] 应用 patch {patch_item}: {result}")
+
+        # 生成用于前端更新的 patch 字典
+        # 需要从 schema 中读取更新后的值，而不是使用操作参数
+        # 这样无论 patch 是通过自定义逻辑还是统一流程处理的，都能正确获取更新后的值
+        from .patch import get_nested_value
+        patch_dict = {}
+        for idx, patch_item in enumerate(unified_patches):
+            path = patch_item.path
+            # 从 schema 中获取更新后的值（无论这个 patch 是通过哪种方式处理的）
+            updated_value = get_nested_value(schema, path)
+            patch_dict[path] = updated_value
+            print(f"[InstanceService] 获取 patch 值: path={path}, value={updated_value}, 是否已自定义处理={idx in skip_indices}")
+
+        print(f"[InstanceService] Action handler 返回的 patch: {patch_dict}")
 
         return {
             "status": "success",
-            "patch": patch
+            "patch": patch_dict
         }
 
-    def _execute_action_handler(
-        self,
-        schema: UISchema,
-        action_config: Any
-    ) -> dict[str, Any]:
+    def _get_action_patches(self, action_config: ActionConfig) -> list[SchemaPatch]:
         """
-        执行 action 处理器（使用配置驱动的 EventHandler）
+        获取 action 的 patches 配置
 
-        支持 patches 中的值可以是：
-        - 直接值：直接设置到对应路径
-        - DirectValuePatch: {"mode": "direct"}
-        - OperationPatch: {"mode": "operation", "operation": "xxx", "params": {...}}
-        - ExternalApiPatch: {"mode": "external", "url": "...", ...}
+        patches 必须是统一格式数组（Pydantic 已验证）：
+        patches: [
+            {"op": "append_to_list", "path": "state.params.users", "value": {...}},
+            {"op": "merge", "path": "state.params.config", "value": {...}}
+        ]
 
         Args:
-            schema: 当前 schema
             action_config: action 配置
 
         Returns:
-            Patch 字典
+            SchemaPatch 列表
         """
-        from ..models import HandlerType
+        patches_config = action_config.patches
 
-        handler_type = getattr(action_config, "handler_type", None)
-        patches_config = getattr(action_config, "patches", {})
-
-        print(f"[InstanceService] _execute_action_handler: action_id={getattr(action_config, 'id', None)}, handler_type={handler_type}")
-        print(f"[InstanceService] patches_config = {patches_config}")
+        print(f"[InstanceService] _get_action_patches: input = {patches_config}")
 
         if not patches_config:
-            return {}
+            print(f"[InstanceService] _get_action_patches: patches 为空")
+            return []
 
-        patch = {}
+        # Pydantic 已经验证过类型，直接返回
+        print(f"[InstanceService] _get_action_patches: output = {patches_config}")
+        return patches_config
 
-        # 处理不同的 handler_type
-        if handler_type in [HandlerType.SET.value, HandlerType.TEMPLATE.value,
-                            HandlerType.TEMPLATE_ALL.value, HandlerType.TEMPLATE_STATE.value]:
-            # set、template 相关的处理
-            patch = {}
-            for path, value in patches_config.items():
-                if isinstance(value, dict) and "mode" in value:
-                    mode = value.get("mode")
+    def apply_unified_patch(self, schema: UISchema, patch: SchemaPatch) -> dict[str, Any]:
+        """
+        处理统一 Patch 范式的所有操作类型
 
-                    if mode == "operation":
-                        # OperationPatch
-                        operation = value.get("operation")
-                        if operation:
-                            params = value.get("params", {})
-                            operation_patch = self._execute_operation(schema, operation, params, path)
-                            patch.update(operation_patch)
-                            # 已经处理了这个路径，跳过后续处理
-                            continue
-                    elif mode == "external":
-                        # ExternalApiPatch（预留）
-                        pass
+        支持的操作：
+        - set: 直接设置值
+        - add/remove: schema 结构变更（原有语义）
+        - append_to_list: 追加元素到列表末尾
+        - prepend_to_list: 在列表开头插入元素
+        - update_list_item: 更新列表指定索引的元素
+        - filter_list: 过滤列表元素
+        - remove_last: 删除列表最后一项
+        - merge: 合并对象到目标路径
+        - increment/decrement: 增量/减量更新
+        - toggle: 切换布尔值
+
+        Args:
+            schema: UISchema 对象
+            patch: SchemaPatch 对象（Pydantic 验证过）
+
+        Returns:
+            处理结果 {"success": bool, "reason": str}
+        """
+        from .patch import execute_operation
+
+        op: PatchOperationType = patch.op
+        path: str = patch.path
+        value: object = patch.value
+        index: int | None = patch.index
+
+        print(f"[InstanceService] apply_unified_patch: op={op}, path={path}, value={value}, index={index}")
+
+        # 原有的 add/remove 操作（用于 schema 结构变更）
+        # 这些操作委托给 patch_routes 的函数
+        if op in ("add", "remove"):
+            # 对于 add/remove，我们需要通过 patch 来实现
+            # 因为这些操作需要特殊的状态管理
+            operation_patch = self._execute_operation(schema, operation=op, params={"value": value}, target_path=path)
+            if operation_patch:
+                apply_patch_to_schema(schema, operation_patch)
+                return {"success": True}
+            return {"success": False, "reason": f"Operation {op} failed"}
+
+        # set 操作：直接赋值（先渲染模板表达式）
+        if op == "set":
+            from .patch import render_template, render_dict_template
+            # 如果 value 是字符串，先渲染模板表达式
+            if isinstance(value, str):
+                rendered_value = render_template(schema, value)
+            elif isinstance(value, dict):
+                rendered_value = render_dict_template(schema, value)
+            elif isinstance(value, list):
+                # 如果是列表，对列表中的每个元素进行渲染
+                rendered_value = []
+                for item in value:
+                    if isinstance(item, str):
+                        rendered_value.append(render_template(schema, item))
+                    elif isinstance(item, dict):
+                        rendered_value.append(render_dict_template(schema, item))
                     else:
-                        # DirectValuePatch
-                        patch[path] = value
-                elif isinstance(value, str) and value.startswith("special:"):
-                    # 兼容旧的 special: 语法
-                    special_op = value[8:]
-                    operation_patch = self._execute_operation(schema, special_op, {}, path)
-                    patch.update(operation_patch)
-                else:
-                    # 直接设置值（向后兼容）
-                    if isinstance(value, str) and "${" in value and "}" in value:
-                        # 检查是否引用了 state.runtime.timestamp
-                        if "state.runtime.timestamp" in value:
-                            from datetime import datetime
-                            patch["state.runtime.timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        patch[path] = self._render_template(schema, value)
-                    else:
-                        patch[path] = value
+                        rendered_value.append(item)
+            else:
+                rendered_value = value
+            apply_patch_to_schema(schema, {path: rendered_value})
+            return {"success": True}
 
-        elif handler_type == HandlerType.INCREMENT.value:
-            # 使用 increment 处理
-            for path, delta in patches_config.items():
-                current_value = self._get_nested_value(schema, path, 0)
-                try:
-                    patch = {path: current_value + int(delta)}
-                except (ValueError, TypeError):
-                    patch = {path: current_value}
-                return patch
+        # 新的操作类型（委托给 execute_operation）
+        operation_map: dict[str, Callable[[], dict[str, Any]]] = {
+            "append_to_list": lambda: execute_operation(schema, operation="append_to_list", params={"items": value}, target_path=path),
+            "prepend_to_list": lambda: execute_operation(schema, operation="prepend_to_list", params={"items": value}, target_path=path),
+            "remove_from_list": lambda: execute_operation(schema, operation="remove_from_list", params=value if isinstance(value, dict) else {"value": value},target_path=path),
+            "update_list_item": lambda: execute_operation(schema, operation="update_list_item", params={"index": index, "item": value}, target_path=path),
+            "filter_list": lambda: execute_operation(schema, operation="filter_list", params=value if isinstance(value, dict) else {}, target_path=path),
+            "remove_last": lambda: execute_operation(schema, operation="remove_last", params={}, target_path=path),
+            "merge": lambda: execute_operation(schema, operation="merge", params={"data": value}, target_path=path),
+            "increment": lambda: execute_operation(schema, operation="increment", params={"delta": value}, target_path=path),
+            "decrement": lambda: execute_operation(schema, operation="decrement", params={"delta": value}, target_path=path),
+            "toggle": lambda: execute_operation(schema, operation="toggle", params={}, target_path=path),
+        }
 
-        elif handler_type == HandlerType.DECREMENT.value:
-            # 使用 decrement 处理
-            for path, delta in patches_config.items():
-                current_value = self._get_nested_value(schema, path, 0)
-                try:
-                    patch = {path: current_value - int(delta)}
-                except (ValueError, TypeError):
-                    patch = {path: current_value}
-                return patch
+        if op in operation_map:
+            try:
+                result_patch = operation_map[op]()
+                # 将返回的 patch 字典应用到 schema
+                if result_patch:
+                    apply_patch_to_schema(schema, result_patch)
+                    return {"success": True}
+                return {"success": False, "reason": "Operation returned empty patch"}
+            except Exception as e:
+                print(f"[InstanceService] Error executing operation {op}: {e}")
+                return {"success": False, "reason": str(e)}
 
-        elif handler_type == HandlerType.TOGGLE.value:
-            # 使用 toggle 处理
-            for path, _ in patches_config.items():
-                current_value = self._get_nested_value(schema, path, False)
-                return {path: not current_value}
-
-        elif handler_type == HandlerType.EXTERNAL.value:
-            # External API 调用（使用 EventHandler 的实现）
-            import asyncio  # type: ignore
-            # 注意：这里需要异步调用，但我们现在在同步方法中
-            # 返回空 patch，实际的外部 API 调用需要在异步上下文中处理
-            # TODO: 考虑将 handle_action 改为异步方法
-            print("[InstanceService] External API 调用需要在异步上下文中处理")
-            return {}
-
-        else:
-            # 未知的 handler_type，尝试直接设置值
-            patch = {}
-            for path, value in patches_config.items():
-                patch[path] = value
-            return patch
-
-        return patch
+        # 未知的 op 类型
+        return {"success": False, "reason": f"Unknown operation type: {op}"}
 
     def _execute_operation(
         self,
         schema: UISchema,
         operation: str,
-        params: dict[str, Any],
+        params: dict[str, object],
         target_path: str
-    ) -> dict[str, Any]:
+    ) -> dict[str, object]:
         """
         执行通用操作（委托给 patch.py 中的实现）
 
@@ -618,3 +817,45 @@ class InstanceService:
                 return None
 
         return current
+
+    def handle_table_button(
+        self,
+        instance_name: str,
+        button_id: str,
+        action_id: str | None,
+        params: dict[str, Any],
+        block_id: str | None = None,
+        field_key: str | None = None
+    ) -> dict[str, Any]:
+        """
+        处理表格内按钮点击事件
+
+        处理方式与 action:click 完全一致，通过 action_id 触发对应的 action 配置。
+
+        Args:
+            instance_name: 实例 ID
+            button_id: 按钮唯一标识
+            action_id: 关联的 action ID（可选）
+            params: 参数（包含 rowData, rowIndex 等）
+            block_id: Block ID（可选）
+            field_key: 字段 key（用于标识是哪个表格）
+
+        Returns:
+            处理结果字典（包含 status 和 patch）
+        """
+        print(f"[InstanceService] handle_table_button 被调用: instance_name={instance_name}, button_id={button_id}, action_id={action_id}, block_id={block_id}, field_key={field_key}, params={params}")
+
+        # 如果没有 action_id，返回错误
+        if not action_id:
+            print(f"[InstanceService] table button 没有关联的 action_id")
+            return {
+                "status": "error",
+                "error": "Table button must have an associated action_id"
+            }
+
+        # 复用 handle_action 的逻辑
+        # 表格按钮本质上就是一个 action，只是触发源不同
+        result: dict[str, Any] = self.handle_action(instance_name, action_id, params, block_id)
+
+        print(f"[InstanceService] handle_table_button 返回: {result}")
+        return result

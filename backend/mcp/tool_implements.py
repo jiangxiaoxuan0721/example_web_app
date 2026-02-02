@@ -16,10 +16,10 @@ FASTAPI_BASE_URL = f"http://localhost:{settings.port}"
 
 
 async def apply_patch_to_fastapi(
-    instance_id: str,
+    instance_name: str,
     patches: list[dict[str, Any]],
-    new_instance_id: str | None = None,
-    target_instance_id: str | None = None
+    new_instance_name: str | None = None,
+    target_instance_name: str | None = None
 ) -> dict[str, Any]:
     """通过 HTTP API 调用 FastAPI 后端应用 patch"""
     try:
@@ -28,18 +28,19 @@ async def apply_patch_to_fastapi(
             url = f"{FASTAPI_BASE_URL}/ui/patch"
 
             payload = {
-                "instance_id": instance_id,
+                "instance_name": instance_name,
                 "patches": patches
             }
 
-            if new_instance_id:
-                payload["new_instance_id"] = new_instance_id
-            if target_instance_id:
-                payload["target_instance_id"] = target_instance_id
+            if new_instance_name:
+                payload["new_instance_name"] = new_instance_name
+            if target_instance_name:
+                payload["target_instance_name"] = target_instance_name
 
             response = await client.post(url, json=payload, timeout=10.0)
 
             if response.status_code == 200:
+                _ = await switch_to_instance_impl(instance_name)
                 return response.json()
             else:
                 return {
@@ -57,10 +58,10 @@ async def apply_patch_to_fastapi(
 # ==================== 万能修改工具 ====================
 
 async def patch_ui_state_impl(
-    instance_id: str,
+    instance_name: str,
     patches: list[dict[str, Any]] = [],
-    new_instance_id: str | None = None,
-    target_instance_id: str | None = None
+    new_instance_name: str | None = None,
+    target_instance_name: str | None = None
 ) -> dict[str, Any]:
     """patch_ui_state 工具的实现"""
     # 验证 patches
@@ -71,9 +72,9 @@ async def patch_ui_state_impl(
         }
 
     # 通过 HTTP API 调用 FastAPI 后端
-    result = await apply_patch_to_fastapi(instance_id, patches, new_instance_id, target_instance_id)
+    result = await apply_patch_to_fastapi(instance_name, patches, new_instance_name, target_instance_name)
 
-    print(f"[MCP] 调用 FastAPI patch: instance_id={instance_id}, patches={patches}")
+    print(f"[MCP] 调用 FastAPI patch: instance_name={instance_name}, patches={patches}")
     print(f"[MCP] FastAPI 响应: {result}")
 
     return result
@@ -81,13 +82,13 @@ async def patch_ui_state_impl(
 
 # ==================== 只读查询工具 ====================
 
-async def get_schema_from_fastapi(instance_id: str | None = None) -> dict[str, Any]:
+async def get_schema_from_fastapi(instance_name: str | None = None) -> dict[str, Any]:
     """从 FastAPI 后端获取 schema"""
     try:
         async with httpx.AsyncClient() as client:
             url = f"{FASTAPI_BASE_URL}/ui/schema"
             # 使用驼峰命名 instanceId，与后端 Query(alias="instanceId") 保持一致
-            params = {"instanceId": instance_id} if instance_id is not None else None
+            params = {"instanceId": instance_name} if instance_name is not None else None
 
             response = await client.get(url, params=params, timeout=10.0)
             
@@ -106,10 +107,10 @@ async def get_schema_from_fastapi(instance_id: str | None = None) -> dict[str, A
         }
 
 
-async def get_schema_impl(instance_id: str | None = None) -> dict[str, Any]:
+async def get_schema_impl(instance_name: str | None = None) -> dict[str, Any]:
     """get_schema 工具的实现"""
-    result = await get_schema_from_fastapi(instance_id)
-    print(f"[MCP] 获取 schema: instance_id={instance_id or 'default'}, result={result}")
+    result = await get_schema_from_fastapi(instance_name)
+    print(f"[MCP] 获取 schema: instance_name={instance_name or 'default'}, result={result}")
     return result
 
 
@@ -136,19 +137,19 @@ async def list_instances_impl() -> dict[str, Any]:
         }
 
 
-async def switch_to_instance_impl(instance_id: str) -> dict[str, Any]:
+async def switch_to_instance_impl(instance_name: str) -> dict[str, Any]:
     """switch_to_instance 工具的实现"""
     try:
         async with httpx.AsyncClient() as client:
             url = f"{FASTAPI_BASE_URL}/ui/switch"
 
-            payload = {"instance_id": instance_id}
+            payload = {"instance_name": instance_name}
 
             response = await client.post(url, json=payload, timeout=10.0)
 
             if response.status_code == 200:
                 result = response.json()
-                print(f"[MCP] 切换实例: instance_id={instance_id}, result={result}")
+                print(f"[MCP] 切换实例: instance_name={instance_name}, result={result}")
                 return result
             else:
                 return {
@@ -165,201 +166,156 @@ async def switch_to_instance_impl(instance_id: str) -> dict[str, Any]:
 
 # ==================== 验证工具 ====================
 
-async def validate_completion_impl(
-    instance_id: str,
-    intent: str,
-    completion_criteria: list[dict[str, Any]]
-) -> dict[str, Any]:
-    """validate_completion 工具的实现"""
-    # 先获取当前 schema
-    schema_result = await get_schema_from_fastapi(instance_id)
-    
+async def validate_completion_impl(instance_name: str) -> dict[str, Any]:
+    """validate_completion 工具的实现 - 诊断UI实例状态"""
+    # 获取 schema
+    schema_result = await get_schema_from_fastapi(instance_name)
+
     if schema_result.get("status") == "error":
         return {
             "status": "error",
-            "error": f"Failed to get schema for validation: {schema_result.get('error')}"
+            "error": schema_result.get("error")
         }
-    
+
     schema = schema_result.get("schema", {})
-    
-    # 评估每个标准
-    passed_criteria = 0
-    detailed_results = []
-    
-    for criterion in completion_criteria:
-        criterion_type = criterion.get("type")
-        description = criterion.get("description", "")
-        
-        try:
-            if criterion_type == "field_exists":
-                # 检查字段路径是否存在
-                path = criterion.get("path", "")
-                if _get_nested_value(schema, path) is not None:
-                    passed_criteria += 1
-                    detailed_results.append({
-                        "criterion": description,
-                        "passed": True,
-                        "actual": "exists",
-                        "expected": "exists"
-                    })
-                else:
-                    detailed_results.append({
-                        "criterion": description,
-                        "passed": False,
-                        "actual": "not found",
-                        "expected": "exists"
-                    })
-            
-            elif criterion_type == "field_value":
-                # 检查字段值
-                path = criterion.get("path", "")
-                expected_value = criterion.get("value")
-                actual_value = _get_nested_value(schema, path)
-                
-                if actual_value == expected_value:
-                    passed_criteria += 1
-                    detailed_results.append({
-                        "criterion": description,
-                        "passed": True,
-                        "actual": actual_value,
-                        "expected": expected_value
-                    })
-                else:
-                    detailed_results.append({
-                        "criterion": description,
-                        "passed": False,
-                        "actual": actual_value,
-                        "expected": expected_value
-                    })
-            
-            elif criterion_type == "block_count":
-                # 检查 block 数量
-                expected_count = criterion.get("count", 0)
-                actual_count = len(schema.get("blocks", []))
-                
-                if actual_count == expected_count:
-                    passed_criteria += 1
-                    detailed_results.append({
-                        "criterion": description,
-                        "passed": True,
-                        "actual": actual_count,
-                        "expected": expected_count
-                    })
-                else:
-                    detailed_results.append({
-                        "criterion": description,
-                        "passed": False,
-                        "actual": actual_count,
-                        "expected": expected_count
-                    })
-            
-            elif criterion_type == "action_exists":
-                # 检查 action 是否存在
-                action_id = criterion.get("path", "")
-                exists = _action_exists(schema, action_id)
-                
-                if exists:
-                    passed_criteria += 1
-                    detailed_results.append({
-                        "criterion": description,
-                        "passed": True,
-                        "actual": "exists",
-                        "expected": "exists"
-                    })
-                else:
-                    detailed_results.append({
-                        "criterion": description,
-                        "passed": False,
-                        "actual": "not found",
-                        "expected": "exists"
-                    })
-            
-            elif criterion_type == "custom":
-                # 自定义验证（这里简化处理，实际应该评估条件表达式）
-                condition = criterion.get("condition", "")
-                detailed_results.append({
-                    "criterion": description,
-                    "passed": True,  # 默认通过
-                    "actual": "custom",
-                    "expected": condition
-                })
-                passed_criteria += 1
-            
-            else:
-                detailed_results.append({
-                    "criterion": description,
-                    "passed": False,
-                    "actual": "unknown criterion type",
-                    "expected": criterion_type
-                })
-        
-        except Exception as e:
-            detailed_results.append({
-                "criterion": description,
-                "passed": False,
-                "actual": f"error: {str(e)}",
-                "expected": "success"
-            })
-    
-    total_criteria = len(completion_criteria)
-    completion_ratio = passed_criteria / total_criteria if total_criteria > 0 else 0
-    
-    # 生成摘要和建议
-    summary = f"通过 {passed_criteria}/{total_criteria} 个标准"
-    recommendations = []
-    
-    if completion_ratio >= 1.0:
-        summary += " - 全部通过！✅"
-    else:
-        summary += f" - 还需 {total_criteria - passed_criteria} 个改进"
-        recommendations.append("查看详细结果以了解未通过的标准")
-    
-    return {
-        "status": "success",
-        "evaluation": {
-            "passed_criteria": passed_criteria,
-            "total_criteria": total_criteria,
-            "completion_ratio": completion_ratio,
-            "detailed_results": detailed_results,
-            "summary": summary,
-            "recommendations": recommendations
-        }
+
+    # 调试信息
+    blocks = schema.get("blocks", [])
+    state = schema.get("state", {})
+    params = state.get("params", {})
+    runtime = state.get("runtime", {})
+
+    field_count: int = 0
+    action_count: int = 0
+
+    debug_info = {
+        "instance_exists": True,
+        "instance_name": instance_name,
+        "block_count": len(blocks),
+        "field_count": field_count,
+        "action_count": action_count,
+        "state_params_keys": list(params.keys()),
+        "state_runtime_keys": list(runtime.keys()),
+        "layout_type": schema.get("layout", {}).get("type", "unknown")
     }
 
+    # 状态摘要
+    state_summary = {
+        "params": params,
+        "runtime": runtime
+    }
 
-# ==================== 辅助函数 ====================
+    # 收集所有字段和动作
+    all_fields: list[dict[str, Any]] = []
+    all_actions: list[dict[str, Any]] = []
+    structure_summary: list[dict[str, Any]] = []
 
-def _get_nested_value(obj: dict[str, Any], path: str) -> Any:
-    """从嵌套对象中获取值（支持点号分隔的路径）"""
-    if not path:
-        return None
-    
-    keys = path.split('.')
-    current = obj
-    
-    for key in keys:
-        if isinstance(current, dict) and key in current:
-            current = current[key]
-        else:
-            return None
-    
-    return current
+    for idx, block in enumerate(blocks):
+        block_id = block.get("id", f"block_{idx}")
+        block_layout = block.get("layout", "unknown")
+        block_title = block.get("title", "")
+        props = block.get("props", {})
 
+        block_fields = props.get("fields", [])
+        block_actions = props.get("actions", [])
 
-def _action_exists(schema: dict[str, Any], action_id: str) -> bool:
-    """检查 action 是否存在于全局或 block 中"""
-    # 检查全局 actions
-    global_actions = schema.get("actions", [])
-    for action in global_actions:
-        if action.get("id") == action_id:
-            return True
-    
-    # 检查 block 级别的 actions
-    blocks = schema.get("blocks", [])
-    for block in blocks:
-        block_actions = block.get("props", {}).get("actions", [])
+        field_count += len(block_fields) if isinstance(block_fields, list) else 0
+        action_count += len(block_actions) if isinstance(block_actions, list) else 0
+
+        # 构建块摘要
+        block_summary = {
+            "id": block_id,
+            "title": block_title,
+            "layout": block_layout,
+            "fields": [{"key": f.get("key"), "type": f.get("type"), "label": f.get("label", "")} for f in block_fields if isinstance(f, dict)],
+            "actions": [{"id": a.get("id"), "type": a.get("action_type"), "label": a.get("label", "")} for a in block_actions if isinstance(a, dict)]
+        }
+        structure_summary.append(block_summary)
+
+        # 收集字段详细信息
+        for field in block_fields:
+            field_key = field.get("key", "")
+            field_path = f"state.params.{field_key}" if field_key else "unknown"
+            has_value = field_key in params or field.get("value") is not None
+            all_fields.append({
+                "key": field_key,
+                "type": field.get("type"),
+                "label": field.get("label", ""),
+                "path": field_path,
+                "has_value": has_value
+            })
+        
+        # 收集动作详细信息
         for action in block_actions:
-            if action.get("id") == action_id:
-                return True
+            action_id = action.get("id", "")
+            patches = action.get("patches", [])
+            all_actions.append({
+                "id": action_id,
+                "label": action.get("label", ""),
+                "type": action.get("action_type"),
+                "patch_count": len(patches)
+            })
     
-    return False
+    # 全局 actions（顶层）
+    global_actions = schema.get("actions", [])
+    action_count += len(global_actions) if isinstance(global_actions, list) else 0
+
+    # 将全局 actions 添加到 structure_summary 的第一项（作为特殊的顶层块）
+    if global_actions:
+        structure_summary.insert(0, {
+            "id": "__global__",
+            "title": "全局操作 (Global Actions)",
+            "layout": "global",
+            "fields": [],
+            "actions": [{"id": a.get("id"), "type": a.get("action_type"), "label": a.get("label", "")} for a in global_actions if isinstance(a, dict)]
+        })
+
+    # 收集全局 actions 到 all_actions
+    for action in global_actions:
+        if not isinstance(action, dict):
+            continue
+        action_id = action.get("id", "")
+        patches = action.get("patches", [])
+        all_actions.append({
+            "id": action_id,
+            "label": action.get("label", ""),
+            "type": action.get("action_type"),
+            "patch_count": len(patches) if isinstance(patches, list) else 0,
+            "scope": "global"
+        })
+
+    # 生成提示
+    hints = []
+
+    if len(blocks) == 0:
+        hints.append("⚠️ 实例没有任何block，需要添加至少一个block")
+
+    if field_count == 0:
+        hints.append("⚠️ 没有任何字段，考虑添加text、number等field类型")
+
+    if action_count == 0:
+        hints.append("⚠️ 没有任何action，考虑添加按钮触发patch操作")
+
+    if not any("increment" in str(a.get("id", "")).lower() or "decrement" in str(a.get("id", "")).lower() for a in all_actions):
+        if field_count > 0 and any(f.get("type") == "number" for f in all_fields if isinstance(f, dict)):
+            hints.append("💡 检测到number字段但无增减action，可添加increment/decrement")
+
+    if not any("table" in str(f.get("type", "")) for f in all_fields if isinstance(f, dict)) and len(all_fields) > 3:
+        hints.append("💡 字段较多，考虑使用table组件展示数据")
+
+    if not hints:
+        hints.append("✅ 实例结构完整，可以尝试添加更多交互功能")
+
+    # 更新 debug_info 中的计数
+    debug_info["field_count"] = field_count
+    debug_info["action_count"] = action_count
+
+    return {
+        "status": "success",
+        "debug_info": debug_info,
+        "state_summary": state_summary,
+        "structure_summary": structure_summary,
+        "fields_summary": all_fields,
+        "actions_summary": all_actions,
+        "hints": hints
+    }

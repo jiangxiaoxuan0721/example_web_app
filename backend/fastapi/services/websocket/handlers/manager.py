@@ -18,54 +18,54 @@ class WebSocketManager:
         self._dispatcher = MessageDispatcher(self._pool)
         self._monitor = ConnectionMonitor(self._pool)
 
-    async def connect(self, websocket: WebSocket, instance_id: str) -> None:
+    async def connect(self, websocket: WebSocket, instance_name: str) -> None:
         """接受连接并添加到指定实例组
 
         Args:
             websocket: WebSocket 连接对象
-            instance_id: 实例 ID
+            instance_name: 实例 ID
         """
         await websocket.accept()
-        self._pool.add(websocket, instance_id)
+        self._pool.add(websocket, instance_name)
         logger.info(
-            f"[WSManager] 新连接加入实例 '{instance_id}'，"+
-            f"当前该实例连接数: {self._pool.count(instance_id)}"
+            f"[WSManager] 新连接加入实例 '{instance_name}'，"+
+            f"当前该实例连接数: {self._pool.count(instance_name)}"
         )
 
-    def disconnect(self, websocket: WebSocket, instance_id: str) -> None:
+    def disconnect(self, websocket: WebSocket, instance_name: str) -> None:
         """断开连接
 
         Args:
             websocket: WebSocket 连接对象
-            instance_id: 实例 ID
+            instance_name: 实例 ID
         """
-        self._pool.remove(websocket, instance_id)
+        self._pool.remove(websocket, instance_name)
         logger.info(
-            f"[WSManager] 连接断开实例 '{instance_id}'，"+
-            f"剩余连接数: {self._pool.count(instance_id)}"
+            f"[WSManager] 连接断开实例 '{instance_name}'，"+
+            f"剩余连接数: {self._pool.count(instance_name)}"
         )
 
     async def send_patch(
         self,
-        instance_id: str,
+        instance_name: str,
         patch: dict[Any,Any],
         patch_id: int | None = None
     ) -> bool:
         """向指定实例发送 Patch（兼容旧版本）
 
         Args:
-            instance_id: 实例 ID
+            instance_name: 实例 ID
             patch: Patch 数据
             patch_id: Patch ID
 
         Returns:
             是否有活跃连接接收到消息
         """
-        return await self._dispatcher.send_patch(instance_id, patch, patch_id, None)
+        return await self._dispatcher.send_patch(instance_name, patch, patch_id, None)
 
     async def send_patch_with_version(
         self,
-        instance_id: str,
+        instance_name: str,
         patch: dict[Any,Any],
         patch_id: int | None = None,
         base_version: int | None = None
@@ -73,7 +73,7 @@ class WebSocketManager:
         """向指定实例发送 Patch（带版本号）
 
         Args:
-            instance_id: 实例 ID
+            instance_name: 实例 ID
             patch: Patch 数据
             patch_id: Patch ID
             base_version: 基础版本号
@@ -81,19 +81,19 @@ class WebSocketManager:
         Returns:
             是否有活跃连接接收到消息
         """
-        return await self._dispatcher.send_patch(instance_id, patch, patch_id, base_version)
+        return await self._dispatcher.send_patch(instance_name, patch, patch_id, base_version)
 
-    async def send_message(self, instance_id: str, message: dict[Any,Any]) -> bool:
+    async def send_message(self, instance_name: str, message: dict[Any,Any]) -> bool:
         """向指定实例发送自定义消息
 
         Args:
-            instance_id: 实例 ID
+            instance_name: 实例 ID
             message: 消息内容
 
         Returns:
             是否有活跃连接接收到消息
         """
-        return await self._dispatcher.send_to_instance(instance_id, message)
+        return await self._dispatcher.send_to_instance(instance_name, message)
 
     async def broadcast(self, message: dict[Any,Any]) -> int:
         """向所有实例广播消息
@@ -106,16 +106,16 @@ class WebSocketManager:
         """
         return await self._dispatcher.broadcast(message)
 
-    def get_connection_count(self, instance_id: str) -> int:
+    def get_connection_count(self, instance_name: str) -> int:
         """获取指定实例的连接数
 
         Args:
-            instance_id: 实例 ID
+            instance_name: 实例 ID
 
         Returns:
             连接数
         """
-        return self._monitor.get_connection_count(instance_id)
+        return self._monitor.get_connection_count(instance_name)
 
     def get_total_connections(self) -> int:
         """获取总连接数
@@ -133,16 +133,16 @@ class WebSocketManager:
         """
         return self._monitor.get_stats()
 
-    def get_instance_stats(self, instance_id: str) -> dict[Any,Any]:
+    def get_instance_stats(self, instance_name: str) -> dict[Any,Any]:
         """获取指定实例的统计信息
 
         Args:
-            instance_id: 实例 ID
+            instance_name: 实例 ID
 
         Returns:
             实例统计信息
         """
-        return self._monitor.get_instance_stats(instance_id)
+        return self._monitor.get_instance_stats(instance_name)
 
     def health_check(self) -> dict[Any,Any]:
         """健康检查

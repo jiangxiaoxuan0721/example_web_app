@@ -16,8 +16,8 @@ class Settings(BaseSettings):
     port: int = 8001
 
     class Config:
-        env_file = ".env"
-        case_sensitive = False
+        env_file: str = ".env"
+        case_sensitive: bool = False
 
 
 # 全局配置实例

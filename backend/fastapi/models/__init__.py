@@ -14,12 +14,7 @@
 from .enums import *
 from .base import BaseModelWithConfig
 from .event_models import EventPayload, UIEvent
-from .patch_models import (
-    DirectValuePatch,
-    OperationPatch,
-    ExternalApiPatch,
-    PatchValue
-)
+from .patch_models import  SchemaPatch
 from .field_models import (
     OptionItem,
     ColumnConfig,
@@ -31,14 +26,15 @@ from .field_models import (
     FieldConfig
 )
 from .schema_models import (
-    StepInfo,
-    MetaInfo,
     StateInfo,
     LayoutInfo,
+    UISchema
+)
+
+from .block_models import (
     BlockProps,
     Block,
-    ActionConfig,
-    UISchema
+    ActionConfig
 )
 from .response_models import (
     BaseResponse,
@@ -54,24 +50,18 @@ from .response_models import (
 __all__ = [
     # 枚举
     "EventType",
-    "HandlerType",
     "ActionType",
-    "OperationType",
     "HTTPMethod",
     "BodyTemplateType",
     "FieldType",
     "LayoutType",
-    "StatusType",
     # 基础模型
     "BaseModelWithConfig",
     # 事件模型
     "EventPayload",
     "UIEvent",
     # Patch 模型
-    "DirectValuePatch",
-    "OperationPatch",
-    "ExternalApiPatch",
-    "PatchValue",
+    "SchemaPatch",
     # 字段模型
     "OptionItem",
     "ColumnConfig",
@@ -82,8 +72,6 @@ __all__ = [
     "ComponentFieldConfig",
     "FieldConfig",
     # Schema 模型
-    "StepInfo",
-    "MetaInfo",
     "StateInfo",
     "LayoutInfo",
     "BlockProps",

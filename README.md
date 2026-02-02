@@ -173,7 +173,7 @@ Apply structured patches to modify UI Schema state and structure. This is the ON
 ```python
 # Update state
 await patch_ui_state({
-    "instance_id": "counter",
+    "instance_name": "counter",
     "patches": [
         {"op": "set", "path": "state.params.count", "value": 42}
     ]
@@ -181,7 +181,7 @@ await patch_ui_state({
 
 # Update field (shortcut)
 await patch_ui_state({
-    "instance_id": "form",
+    "instance_name": "form",
     "field_key": "email",
     "updates": {
         "label": "Email Address",
@@ -191,8 +191,8 @@ await patch_ui_state({
 
 # Create new instance
 await patch_ui_state({
-    "instance_id": "__CREATE__",
-    "new_instance_id": "my_instance",
+    "instance_name": "__CREATE__",
+    "new_instance_name": "my_instance",
     "patches": [
         {"op": "set", "path": "meta", "value": {...}},
         {"op": "set", "path": "state", "value": {...}},
@@ -212,8 +212,8 @@ Get current UI Schema for an instance.
 - Verify modifications
 
 ```python
-result = await get_schema(instance_id="demo")
-# Returns: {"status": "success", "instance_id": "demo", "schema": {...}}
+result = await get_schema(instance_name="demo")
+# Returns: {"status": "success", "instance_name": "demo", "schema": {...}}
 ```
 
 ### 3. list_instances
@@ -240,7 +240,7 @@ Validate if UI instance meets specific completion criteria.
 
 ```python
 result = await validate_completion({
-    "instance_id": "form",
+    "instance_name": "form",
     "intent": "Create a registration form with email and password fields",
     "completion_criteria": [
         {
@@ -266,8 +266,8 @@ Access a specific UI instance and mark it as active.
 - Mark active instance
 
 ```python
-result = await access_instance(instance_id="form")
-# Returns: {"status": "success", "instance_id": "form", "schema": {...}}
+result = await access_instance(instance_name="form")
+# Returns: {"status": "success", "instance_name": "form", "schema": {...}}
 ```
 
 ## Supported Operations

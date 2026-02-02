@@ -8,16 +8,12 @@ from datetime import datetime
 from pydantic import BaseModel, Field, ConfigDict
 
 from .base import BaseModelWithConfig
-from .enums import StatusType
 from .schema_models import UISchema
-from .patch_models import PatchValue
-
+from .patch_models import SchemaPatch
 
 class BaseResponse(BaseModelWithConfig):
     """基础响应"""
     model_config = ConfigDict(populate_by_name=True, extra="ignore")
-    
-    status: StatusType = Field(..., description="状态")
     message: Optional[str] = Field(None, description="消息")
     error: Optional[str] = Field(None, description="错误信息")
     code: Optional[int] = Field(None, description="状态码")
@@ -56,7 +52,7 @@ class EventResponse(BaseResponse):
 class BatchPatchItem(BaseModelWithConfig):
     """批量Patch项"""
     path: str = Field(..., description="路径")
-    value: PatchValue = Field(..., description="Patch值")
+    value: SchemaPatch = Field(..., description="Patch值")
 
 
 class BatchPatchRequest(BaseModelWithConfig):

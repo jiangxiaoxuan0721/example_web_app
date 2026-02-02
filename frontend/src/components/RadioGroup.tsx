@@ -15,6 +15,9 @@ export interface RadioGroupProps {
 
 export default function RadioGroup({ field, value, onChange, disabled }: RadioGroupProps) {
   const options = field.options || [];
+  const isDisabled = disabled || field.editable === false;
+  const isRequired = field.required === true;
+  const isEditable = field.editable !== false;
 
   return (
     <div style={{ marginBottom: '16px' }}>
@@ -26,6 +29,7 @@ export default function RadioGroup({ field, value, onChange, disabled }: RadioGr
         color: '#374151'
       }}>
         {field.label}
+        {isRequired && <span style={{ color: 'red', marginLeft: '4px' }}>*</span>}
       </label>
       <div style={{
         display: 'flex',
@@ -42,19 +46,20 @@ export default function RadioGroup({ field, value, onChange, disabled }: RadioGr
               padding: '8px 16px',
               border: value === option.value ? '2px solid #6366f1' : '2px solid #e5e7eb',
               borderRadius: '8px',
-              backgroundColor: value === option.value ? '#eef2ff' : 'white',
-              cursor: disabled ? 'not-allowed' : 'pointer',
+              backgroundColor: isDisabled ? '#f9fafb' : (value === option.value ? '#eef2ff' : 'white'),
+              cursor: isDisabled ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s ease',
-              userSelect: 'none'
+              userSelect: 'none',
+              opacity: isDisabled ? 0.7 : 1
             }}
             onMouseEnter={(e) => {
-              if (!disabled && value !== option.value) {
+              if (!isDisabled && value !== option.value) {
                 e.currentTarget.style.borderColor = '#a5b4fc';
                 e.currentTarget.style.backgroundColor = '#fafafa';
               }
             }}
             onMouseLeave={(e) => {
-              if (!disabled && value !== option.value) {
+              if (!isDisabled && value !== option.value) {
                 e.currentTarget.style.borderColor = '#e5e7eb';
                 e.currentTarget.style.backgroundColor = 'white';
               }
@@ -66,25 +71,31 @@ export default function RadioGroup({ field, value, onChange, disabled }: RadioGr
               value={option.value}
               checked={value === option.value}
               onChange={(e) => onChange?.(e.target.value)}
-              disabled={disabled}
+              disabled={isDisabled}
+              required={isRequired}
               style={{
                 width: '16px',
                 height: '16px',
                 marginRight: '8px',
-                cursor: disabled ? 'not-allowed' : 'pointer',
+                cursor: isDisabled ? 'not-allowed' : 'pointer',
                 accentColor: '#6366f1'
               }}
             />
             <span style={{
               fontSize: '14px',
               fontWeight: value === option.value ? '600' : '500',
-              color: value === option.value ? '#4f46e5' : '#374151'
+              color: isDisabled ? '#9ca3af' : (value === option.value ? '#4f46e5' : '#374151')
             }}>
               {option.label}
             </span>
           </label>
         ))}
       </div>
+      {!isEditable && !disabled && (
+        <div style={{ marginTop: '4px', color: '#999', fontSize: '12px' }}>
+          此字段不可编辑
+        </div>
+      )}
     </div>
   );
 }

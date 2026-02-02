@@ -21,10 +21,10 @@ class ConnectionMonitor:
         instances = self._pool.get_all_instances()
         instance_stats = []
 
-        for instance_id in instances:
+        for instance_name in instances:
             instance_stats.append({
-                "instance_id": instance_id,
-                "connections": self._pool.count(instance_id)
+                "instance_name": instance_name,
+                "connections": self._pool.count(instance_name)
             })
 
         return {
@@ -33,19 +33,19 @@ class ConnectionMonitor:
             "instances": instance_stats
         }
 
-    def get_instance_stats(self, instance_id: str) -> dict[str, Any]:
+    def get_instance_stats(self, instance_name: str) -> dict[str, Any]:
         """获取指定实例的连接统计
 
         Args:
-            instance_id: 实例 ID
+            instance_name: 实例 ID
 
         Returns:
             实例连接统计
         """
         return {
-            "instance_id": instance_id,
-            "connections": self._pool.count(instance_id),
-            "has_connections": self._pool.has_instance(instance_id)
+            "instance_name": instance_name,
+            "connections": self._pool.count(instance_name),
+            "has_connections": self._pool.has_instance(instance_name)
         }
 
     def health_check(self) -> dict[str, Any]:
@@ -70,15 +70,15 @@ class ConnectionMonitor:
         """
         return self._pool.get_all_instances()
 
-    def get_connection_count(self, instance_id: str = "") -> int:
+    def get_connection_count(self, instance_name: str = "") -> int:
         """获取连接数
 
         Args:
-            instance_id: 如果指定，返回该实例的连接数；否则返回总数
+            instance_name: 如果指定，返回该实例的连接数；否则返回总数
 
         Returns:
             连接数
         """
-        if instance_id:
-            return self._pool.count(instance_id)
+        if instance_name:
+            return self._pool.count(instance_name)
         return self._pool.count_all()

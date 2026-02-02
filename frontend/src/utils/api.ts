@@ -18,49 +18,49 @@ export async function loadSchema(instanceId: string) {
   const now = Date.now();
   const cachedTimestamp = cacheTimestamps.get(instanceId);
   const cachedSchema = schemaCache.get(instanceId);
-  
+
   if (cachedSchema && cachedTimestamp && (now - cachedTimestamp < CACHE_TTL)) {
     console.log(`[API] 从缓存加载 Schema，instanceId: ${instanceId}`);
     return {
       status: 'success',
-      instance_id: instanceId,
+      instance_name: instanceId,
       schema: cachedSchema
     };
   }
-  
+
   console.log(`[API] 从服务器加载 Schema，instanceId: ${instanceId}`);
   const url = `/ui/schema?instanceId=${instanceId}`;
   console.log(`[API] 请求 URL: ${url}`);
-  
+
   try {
     // 添加超时控制
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000); // 3秒超时
-    
-    const response = await fetch(url, { 
+
+    const response = await fetch(url, {
       signal: controller.signal,
       headers: {
         'Cache-Control': 'no-cache',
       }
     });
     clearTimeout(timeoutId);
-    
+
     console.log(`[API] 响应状态: ${response.status}`);
-    
+
     if (!response.ok) {
       console.error(`[API] 响应错误: ${response.status} ${response.statusText}`);
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
+
     const data = await response.json();
     console.log(`[API] 响应数据:`, data);
-    
+
     // 更新缓存
     if (data.status === 'success' && data.schema) {
       schemaCache.set(instanceId, data.schema);
       cacheTimestamps.set(instanceId, now);
     }
-    
+
     return data;
   } catch (error) {
     console.error(`[API] 请求失败:`, error);
@@ -69,7 +69,7 @@ export async function loadSchema(instanceId: string) {
       console.log(`[API] 请求失败，使用缓存数据，instanceId: ${instanceId}`);
       return {
         status: 'success',
-        instance_id: instanceId,
+        instance_name: instanceId,
         schema: cachedSchema,
         cached: true // 标记为缓存数据
       };

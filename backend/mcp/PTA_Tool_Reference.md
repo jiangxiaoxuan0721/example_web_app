@@ -1,25 +1,4 @@
-"""MCP工具定义文件
-
-此文件定义所有MCP工具。实现逻辑在tool_implements.py中。
-工具描述会被注入到Agent上下文,必须完整、准确。
-"""
-
-from typing import Any
-from fastmcp import FastMCP
-
-mcp = FastMCP("ui-patch-server")
-
-
-# ===== 万能修改工具(推荐使用)=====
-
-@mcp.tool()
-async def patch_ui_state(
-    instance_name: str,
-    patches: list[dict[str, Any]] = [],
-    new_instance_name: str | None = None,
-    target_instance_name: str | None = None
-) -> dict[str, Any]:
-    """
+<PTA_TOOL_REFERENCE>
 <KEY_WORDS>
 ui_schema :  记录在内存中,用于渲染UI界面的json schema,查看 **UI_SCHEMA_STRUCTURE**了解它的结构
 patch     :  补丁,用于修改ui_schema来实现UI界面的修改(也包括一些处理逻辑的设计),查看**PATCH_EXAMPLE**。
@@ -30,7 +9,6 @@ path      :  用于定位schema中的某个元素,使用JSON指针语法从ui_sc
 instance  :  一个实例是一个完整的单页面PTA应用,包含一个ui_schema和一个运行时状态
 state     :  ui_schema中数据存储的地方,由params(原始数据)和runtime(运行数据)两者构成
 </KEY_WORDS>
-
 <TOOL_DEFINITION>
 - NAME: patch_ui_state
 - DESCRIPTION: 修改 UI 状态
@@ -42,6 +20,42 @@ state     :  ui_schema中数据存储的地方,由params(原始数据)和runtime
   patches: list[patch] - patch字典数组,详见 **SCHEMA_PATCH_DESCRIPTION**
   new_instance_name: str | None - instance_name为"__CREATE__"时提供的新实例名
   target_instance_name: str | None - instance_name为"__DELETE__"时提供的目标实例名
+</TOOL_DEFINITION>
+
+<TOOL_DEFINITION>
+- NAME: get_schema
+- DESCRIPTION: 获取实例的完整 ui_schema
+- PARAMETERS:
+  instance_name: str - 要获取 ui_schema 的实例名
+</TOOL_DEFINITION>
+
+<TOOL_DEFINITION>
+- NAME: list_instances
+- DESCRIPTION: 列出所有可用实例
+</TOOL_DEFINITION>
+
+<TOOL_DEFINITION>
+- NAME: validate_completion
+- DESCRIPTION: 快速诊断UI实例状态,返回当前结构摘要和调试信息,指导进行完成度检查
+- PARAMETERS:
+  instance_name: str - 要诊断的实例名
+- 返回: {status, debug_info, state_summary, structure_summary, fields_summary, actions_summary, hints}
+  - debug_info: {instance_exists, instance_name, block_count, field_count, action_count, state_params_keys, state_runtime_keys, layout_type}
+  - state_summary: {params: {键值对}, runtime: {键值对}} - 完整的状态数据
+  - structure_summary: [{id, title, layout, fields: [{key, type, label}], actions: [{id, type, label}]}, ...]
+    - 第一项(id="__global__")是顶层全局actions,后续项是各block的结构
+  - fields_summary: [{key, type, label, path, has_value}, ...] - 所有字段的紧凑列表
+  - actions_summary: [{id, label, type, patch_count, scope}, ...] - 所有actions的紧凑列表(scope: "global"|"block")
+  - hints: 基于当前状态的改进建议
+- 调用此工具获取界面快照,判断完成度,决定后续patch操作
+- 示例: {"instance_name":"counter"} -> 返回计数器的完整结构概览、状态值和缺失组件提示
+</TOOL_DEFINITION>
+
+<TOOL_DEFINITION>
+- NAME: switch_to_instance
+- DESCRIPTION: 切换到实例
+- PARAMETERS:
+  instance_name: str - 要访问的实例名
 </TOOL_DEFINITION>
 
 <PATCH_DESCRIPTION>
@@ -219,80 +233,4 @@ op 参数可选的值及示例使用如下:
 - 优先使用validate_completion而非get_schema来获取页面结构信息(第一次需要初步了解详细信息时除外)。
 - 注意使用合理的组件和布局,在完成功能的基础上尽量美观。
 </NOTE>
-    """
-    from backend.mcp.tool_implements import patch_ui_state_impl
-    return await patch_ui_state_impl(
-        instance_name, patches, new_instance_name, target_instance_name
-    )
-
-
-# ===== 只读查询工具 =====
-
-@mcp.tool()
-async def get_schema(instance_name: str | None = None) -> dict[str, Any]:
-    """
-- NAME: get_schema
-- DESCRIPTION: 获取实例的完整 ui_schema
-- PARAMETERS:
-  instance_name: str - 要获取 ui_schema 的实例名
-    """
-    from backend.mcp.tool_implements import get_schema_impl
-    return await get_schema_impl(instance_name)
-
-
-@mcp.tool()
-async def list_instances() -> dict[str, Any]:
-    f"""
-- NAME: list_instances
-- DESCRIPTION: 列出所有可用实例
-- PARAMETERS: 无参数
-    """
-    from backend.mcp.tool_implements import list_instances_impl
-    return await list_instances_impl()
-
-
-@mcp.tool()
-async def switch_to_instance(instance_name: str) -> dict[str, Any]:
-    """
-- NAME: switch_to_instance
-- DESCRIPTION: 切换到实例,呈现给用户
-- PARAMETERS:
-  instance_name: str - 要访问的实例名
-    """
-    from backend.mcp.tool_implements import switch_to_instance_impl
-    return await switch_to_instance_impl(instance_name)
-
-
-# ===== 验证工具 =====
-@mcp.tool()
-async def validate_completion(
-    instance_name: str
-) -> dict[str, Any]:
-    """
-- NAME: validate_completion
-- DESCRIPTION: 快速诊断UI实例状态,返回当前结构摘要和调试信息,指导进行完成度检查
-- PARAMETERS:
-  instance_name: str - 要诊断的实例名
-- 返回: {status, debug_info, state_summary, structure_summary, fields_summary, actions_summary, hints}
-  - debug_info: {instance_exists, instance_name, block_count, field_count, action_count, state_params_keys, state_runtime_keys, layout_type}
-  - state_summary: {params: {键值对}, runtime: {键值对}} - 完整的状态数据
-  - structure_summary: [{id, title, layout, fields: [{key, type, label}], actions: [{id, type, label}]}, ...]
-    - 第一项(id="__global__")是顶层全局actions,后续项是各block的结构
-  - fields_summary: [{key, type, label, path, has_value}, ...] - 所有字段的紧凑列表
-  - actions_summary: [{id, label, type, patch_count, scope}, ...] - 所有actions的紧凑列表(scope: "global"|"block")
-  - hints: 基于当前状态的改进建议
-- 调用此工具获取界面快照,判断完成度,决定后续patch操作
-- 示例: {"instance_name":"counter"} -> 返回计数器的完整结构概览、状态值和缺失组件提示
-    """
-    from backend.mcp.tool_implements import validate_completion_impl
-    return await validate_completion_impl(instance_name)
-
-
-if __name__ == "__main__":
-    print("🚀 Starting MCP Server for UI Patch Tool...")
-    mcp.run(
-        transport="streamable-http",
-        port=8766,
-        host="0.0.0.0",
-        path="/mcp",
-    )
+</PTA_TOOL_REFERENCE>

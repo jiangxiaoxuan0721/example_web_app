@@ -347,51 +347,24 @@ const defaultRenderers: FieldRendererRegistry = {
   },
 
   component: ({ field }) => {
-    const getInstance = useMultiInstanceStore((state) => state.getInstance);
-    const targetInstance = field.targetInstance;
-
-    if (!targetInstance) {
+    // 组件嵌入：渲染 field.blockConfig 中定义的 Block
+    if (!field.blockConfig) {
       return (
         <div style={{ color: '#999', padding: '20px' }}>
-          未指定目标实例
+          未指定要渲染的 Block 配置
         </div>
       );
     }
 
-    const targetSchema = getInstance(targetInstance);
-
-    if (!targetSchema) {
-      return (
-        <div style={{ color: '#999', padding: '20px' }}>
-          目标实例不存在: {targetInstance}
-        </div>
-      );
-    }
-
-    // 如果指定了 targetBlock，只渲染指定的 block
-    if (field.targetBlock) {
-      const targetBlock = targetSchema.blocks.find(b => b.id === field.targetBlock);
-      if (targetBlock) {
-        return (
-          <div style={{ marginBottom: '16px' }}>
-            <BlockRenderer block={targetBlock} />
-          </div>
-        );
-      } else {
-        return (
-          <div style={{ color: '#999', padding: '20px' }}>
-            目标 block 不存在: {field.targetBlock}
-          </div>
-        );
-      }
-    }
-
-    // 否则渲染所有 block（无标题）
+    // 使用 BlockRenderer 渲染嵌套的 Block
     return (
       <div style={{ marginBottom: '16px' }}>
-        {targetSchema.blocks.map((block) => (
-          <BlockRenderer key={block.id} block={block} />
-        ))}
+        {field.label && (
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+            {field.label}
+          </label>
+        )}
+        <BlockRenderer block={field.blockConfig} />
       </div>
     );
   }
@@ -440,7 +413,7 @@ export default function GenericFieldRenderer({
 
   // 从传入的 schema 中提取值
   const storedValue = useMemo(() => {
-    // 1. Resolve block.bind path
+    // 1. Resolve bindPath path (默认为 state.params)
     let baseObj: any = schema;
     let actualPath = 'schema';
 

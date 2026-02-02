@@ -23,10 +23,6 @@ import {
   Loading,
   ErrorState,
   InstanceSelector,
-  BlockRenderer,
-  ActionButton,
-  PatchHistory,
-  DebugInfo,
   Sidebar
 } from './components';
 import SchemaLayoutRenderer from './components/SchemaLayoutRenderer';
