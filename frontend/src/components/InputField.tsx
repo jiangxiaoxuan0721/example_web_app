@@ -19,6 +19,8 @@ export default function InputField({ field, value, onChange, disabled, highlight
   // required 属性用于表单验证
   const isRequired = field.required === true;
   const isEditable = field.editable !== false;
+  // 处理 undefined/null 值，显示空字符串而不是 "undefined"/"null"
+  const displayValue = value !== undefined && value !== null ? String(value) : '';
 
   return (
     <div style={{ marginBottom: '16px' }}>
@@ -28,7 +30,7 @@ export default function InputField({ field, value, onChange, disabled, highlight
       </label>
       <input
         type={field.type}
-        value={String(value)}
+        value={displayValue}
         onChange={(e) => onChange?.(e.target.value)}
         disabled={isDisabled}
         required={isRequired}

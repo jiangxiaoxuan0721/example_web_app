@@ -2,7 +2,76 @@
 
 import re
 from typing import Any
-from ..models import UISchema
+from ..models import (
+    # 枚举定义
+    FieldType, PatchOperationType,
+    # 基础模型
+    UISchema,
+    # Block 相关
+    Block, BlockProps, ActionConfig,
+    # 字段相关
+    BaseFieldConfig, SelectableFieldConfig, ImageFieldConfig,
+    TableFieldConfig, ComponentFieldConfig, FieldConfig
+)
+
+
+def validate_key_uniqueness(schema: UISchema, error_message: str = "") -> None:
+    """验证 schema 中的 key 唯一性
+
+    检查：
+    1. Block 的 id 必须在所有 block 中唯一
+    2. Field 的 key 必须在所有 block 的所有 fields 中唯一
+    3. Action 的 id 必须在所有 block 的 actions 中唯一
+    4. Schema actions 的 id 必须唯一
+
+    Args:
+        schema: 当前 schema
+        error_message: 错误消息前缀
+
+    Raises:
+        ValueError: 如果发现重复的 key
+    """
+    prefix = error_message if error_message else "Key uniqueness validation failed"
+
+    # 检查 Block id 唯一性
+    block_ids = []
+    for block in schema.blocks:
+        block_id = getattr(block, 'id', None)
+        if block_id:
+            if block_id in block_ids:
+                raise ValueError(f"{prefix}: Duplicate block id '{block_id}'")
+            block_ids.append(block_id)
+
+    # 检查 Field key 唯一性（跨所有 blocks）
+    field_keys = []
+    for block in schema.blocks:
+        if block.props and block.props.fields:
+            for field in block.props.fields:
+                field_key = getattr(field, 'key', None)
+                if field_key:
+                    if field_key in field_keys:
+                        raise ValueError(f"{prefix}: Duplicate field key '{field_key}'")
+                    field_keys.append(field_key)
+
+    # 检查 Block Action id 唯一性（跨所有 blocks）
+    action_ids = []
+    for block in schema.blocks:
+        if block.props and block.props.actions:
+            for action in block.props.actions:
+                action_id = getattr(action, 'id', None)
+                if action_id:
+                    if action_id in action_ids:
+                        raise ValueError(f"{prefix}: Duplicate action id '{action_id}'")
+                    action_ids.append(action_id)
+
+    # 检查 Schema Action id 唯一性
+    schema_action_ids = []
+    for action in schema.actions:
+        action_id = getattr(action, 'id', None)
+        if action_id:
+            if action_id in schema_action_ids:
+                raise ValueError(f"{prefix}: Duplicate schema action id '{action_id}'")
+            schema_action_ids.append(action_id)
 
 
 def get_nested_value(schema: UISchema, path: str, default: Any = None) -> Any:
@@ -16,7 +85,7 @@ def get_nested_value(schema: UISchema, path: str, default: Any = None) -> Any:
     Returns:
         获取到的值
     """
-    keys = path.split('.')
+    keys: list[str] = path.split(sep='.')
     current: Any = schema
 
     try:
@@ -80,7 +149,7 @@ def render_dict_template(schema: UISchema, template_dict: dict[str, Any]) -> dic
     Returns:
         渲染后的字典
     """
-    result = {}
+    result: dict[str, Any] = {}
     for key, value in template_dict.items():
         if isinstance(value, str):
             result[key] = render_template(schema, value)
@@ -98,32 +167,178 @@ def render_dict_template(schema: UISchema, template_dict: dict[str, Any]) -> dic
     return result
 
 
+def render_block_template(schema: UISchema, block_dict: dict[str, Any]) -> dict[str, Any]:
+    """渲染 block 配置中的模板值，但不渲染 field 的 value
+
+    Args:
+        schema: 当前 schema
+        block_dict: block 配置字典
+
+    Returns:
+        渲染后的 block 配置
+    """
+    result: dict[str, Any] = {}
+    for key, value in block_dict.items():
+        if key == "value":
+            # field 的 value 不渲染，保留模板表达式
+            result[key] = value
+        elif isinstance(value, str):
+            result[key] = render_template(schema, value)
+        elif isinstance(value, dict):
+            # 如果是 fields，使用特殊的处理
+            if key == "fields":
+                result[key] = [
+                    render_field_template(schema, field) if isinstance(field, dict)
+                    else field
+                    for field in value
+                ]
+            else:
+                result[key] = render_dict_template(schema, value)
+        elif isinstance(value, list):
+            result[key] = [
+                render_block_template(schema, item) if isinstance(item, dict)
+                else render_template(schema, item) if isinstance(item, str)
+                else item
+                for item in value
+            ]
+        else:
+            result[key] = value
+    return result
+
+
+def render_field_template(schema: UISchema, field_dict: dict[str, Any]) -> dict[str, Any]:
+    """渲染 field 配置中的模板值，但不渲染 value 本身
+
+    Args:
+        schema: 当前 schema
+        field_dict: field 配置字典
+
+    Returns:
+        渲染后的 field 配置
+    """
+    result: dict[str, Any] = {}
+    for key, value in field_dict.items():
+        if key == "value":
+            # field 的 value 不渲染，保留模板表达式
+            result[key] = value
+        elif isinstance(value, str):
+            result[key] = render_template(schema, value)
+        elif isinstance(value, dict):
+            result[key] = render_dict_template(schema, value)
+        elif isinstance(value, list):
+            result[key] = [
+                render_template(schema, item) if isinstance(item, str)
+                else render_dict_template(schema, item) if isinstance(item, dict)
+                else item
+                for item in value
+            ]
+        else:
+            result[key] = value
+    return result
+
+
+def parse_field_config(field_data: dict[str, Any]) -> (
+    BaseFieldConfig |
+    SelectableFieldConfig |
+    ImageFieldConfig |
+    TableFieldConfig |
+    ComponentFieldConfig
+):
+    """根据字段类型解析为对应的 FieldConfig 模型
+
+    Args:
+        field_data: 字段数据字典
+
+    Returns:
+        对应的 FieldConfig 模型实例
+
+    Raises:
+        ValueError: 如果字段类型无效
+    """
+    field_type = field_data.get('type', 'text')
+
+    # 根据字段类型处理可能为 None 的数组属性
+    if field_type == FieldType.TABLE:
+        if 'columns' not in field_data or field_data['columns'] is None:
+            field_data['columns'] = []
+        return TableFieldConfig(**field_data)
+
+    elif field_type in [FieldType.SELECT, FieldType.RADIO, FieldType.MULTISELECT]:
+        if 'options' not in field_data or field_data['options'] is None:
+            field_data['options'] = []
+        return SelectableFieldConfig(**field_data)
+
+    elif field_type == FieldType.IMAGE:
+        return ImageFieldConfig(**field_data)
+
+    elif field_type == FieldType.COMPONENT:
+        return ComponentFieldConfig(**field_data)
+
+    else:
+        return BaseFieldConfig(**field_data)
+
+
+def init_field_state(
+    schema: UISchema,
+    field: (BaseFieldConfig | SelectableFieldConfig | ImageFieldConfig | TableFieldConfig | ComponentFieldConfig),
+    old_fields: list[BaseFieldConfig] | None = None
+) -> None:
+    """初始化字段的 state.params
+
+    Args:
+        schema: 当前 schema
+        field: 要初始化的字段配置
+        old_fields: 旧的字段列表（用于清理不存在的字段 state）
+    """
+    field_key = getattr(field, 'key', None)
+    if not field_key:
+        return
+
+    # 如果新字段 key 不存在，初始化 state
+    if field_key not in schema.state.params:
+        schema.state.params[field_key] = field.value if hasattr(field, 'value') else ""
+        print(f"[PatchService] Initialized state.params.{field_key}")
+
+    # 清理旧字段的 state（如果提供了旧字段列表）
+    if old_fields:
+        for old_field in old_fields:
+            old_field_key = getattr(old_field, 'key', None)
+            if old_field_key and old_field_key not in schema.state.params:
+                if old_field_key in schema.state.params:
+                    del schema.state.params[old_field_key]
+                    print(f"[PatchService] Cleaned up state.params.{old_field_key}")
+
+
 def execute_operation(
     schema: UISchema,
-    operation: str,
+    operation: PatchOperationType,
     params: dict[str, Any],
     target_path: str
 ) -> dict[str, Any]:
     """执行通用操作
 
     支持的操作：
-    - append_to_list: 向列表添加元素
-    - prepend_to_list: 向列表开头添加元素
-    - remove_from_list: 从列表中删除元素（支持 index: -1 批量删除所有匹配项）
-    - remove_last: 删除列表最后一项
-    - update_list_item: 更新列表中的某个元素
-    - filter_list: 过滤列表元素（根据条件保留元素）
-    - clear_all_params: 清空所有 params
-    - append_block: 添加新块到 schema
-    - prepend_block: 在开头添加块
-    - remove_block: 删除块
-    - update_block: 更新块
-    - merge: 合并对象
+        - add: 添加块到 schema
+        - remove: 从 schema 移除块
+        - append_to_list: 向列表添加元素
+        - prepend_to_list: 向列表开头添加元素
+        - remove_from_list: 从列表中删除元素（支持 index: -1 批量删除所有匹配项）
+        - remove_last: 删除列表最后一项
+        - update_list_item: 更新列表中的某个元素
+        - filter_list: 过滤列表元素（根据条件保留元素）
+        - clear_all_params: 清空所有 params
+        - merge: 合并对象
+        - increment: 增量更新
+        - decrement: 减量更新
+        - toggle: 切换布尔值
+
+    注意：
+        set 操作在 apply_unified_patch 中直接处理，不在此函数中。
 
     Args:
         schema: 当前 schema
         operation: 操作名称
-        params: 操作参数
+        params: 操作参数（根据操作类型不同而不同）
         target_path: 目标路径
 
     Returns:
@@ -131,10 +346,9 @@ def execute_operation(
     """
     print(f"[PatchService] execute_operation: operation={operation}, params={params}, target_path={target_path}")
 
-    patch = {}
-    from ..models import Block
+    patch: dict[Any, Any] = {}
 
-    if operation == "append_to_list":
+    if operation == PatchOperationType.APPEND_TO_LIST:
         # 向列表添加元素
         current_list = get_nested_value(schema, target_path, [])
         items = params.get("items", [])
@@ -153,7 +367,7 @@ def execute_operation(
                 items = render_dict_template(schema, items)
             patch[target_path] = current_list + [items]
 
-    elif operation == "prepend_to_list":
+    elif operation == PatchOperationType.PREPEND_TO_LIST:
         # 向列表开头添加元素
         current_list = get_nested_value(schema, target_path, [])
         items = params.get("items", [])
@@ -172,7 +386,7 @@ def execute_operation(
                 items = render_dict_template(schema, items)
             patch[target_path] = [items] + current_list
 
-    elif operation == "remove_from_list":
+    elif operation == PatchOperationType.REMOVE_FROM_LIST:
         # 从列表中删除元素
         current_list = get_nested_value(schema, target_path, [])
         if isinstance(current_list, list):
@@ -196,13 +410,13 @@ def execute_operation(
 
             patch[target_path] = new_list
 
-    elif operation == "remove_last":
+    elif operation == PatchOperationType.REMOVE_LAST:
         # 删除列表最后一项
         current_list = get_nested_value(schema, target_path, [])
         if isinstance(current_list, list) and len(current_list) > 0:
             patch[target_path] = current_list[:-1]
 
-    elif operation == "update_list_item":
+    elif operation == PatchOperationType.UPDATE_LIST_ITEM:
         # 更新列表中的某个元素
         current_list = get_nested_value(schema, target_path, [])
         if isinstance(current_list, list):
@@ -224,63 +438,108 @@ def execute_operation(
                     new_list.append(item)
             patch[target_path] = new_list
 
-    elif operation == "clear_all_params":
+    elif operation == PatchOperationType.CLEAR_ALL_PARAMS:
         # 清空所有 params 字段
         current_params = get_nested_value(schema, "state.params", {})
         for key in current_params.keys():
             patch[f"state.params.{key}"] = ""
 
-    elif operation == "append_block":
-        # 添加新块到 schema
-        # 渲染 params 中的模板变量
-        rendered_params = render_dict_template(schema, params)
-        block_data = rendered_params.get("block")
-        if block_data:
-            new_blocks = list(schema.blocks) + [Block(**block_data)]
-            # 转换为字典以便 JSON 序列化
-            patch["blocks"] = [block.model_dump(by_alias=True) for block in new_blocks]
+    elif operation == PatchOperationType.ADD:
+        # 添加块到 schema（文档定义的 add 操作）
+        current_blocks: list[Block] = get_nested_value(schema, target_path, [])
+        value_to_add = params.get("value")
 
-    elif operation == "prepend_block":
-        # 在开头添加新块
-        # 渲染 params 中的模板变量
-        rendered_params = render_dict_template(schema, params)
-        block_data = rendered_params.get("block")
-        if block_data:
-            new_blocks = [Block(**block_data)] + list(schema.blocks)
-            # 转换为字典以便 JSON 序列化
-            patch["blocks"] = [block.model_dump(by_alias=True) for block in new_blocks]
+        if value_to_add is not None and isinstance(value_to_add, dict):
+            # 渲染模板（但不渲染 field 的 value）
+            rendered_value = render_block_template(schema, value_to_add)
 
-    elif operation == "remove_block":
-        # 删除块
-        block_id = params.get("id")
-        if block_id:
-            new_blocks = [block for block in schema.blocks if block.id != block_id]
-            patch["blocks"] = [block.model_dump(by_alias=True) for block in new_blocks]
+            # 使用 Block 模型验证和规范化（自动类型检查和转换）
+            new_block = Block(**rendered_value)
 
-    elif operation == "update_block":
-        # 更新块
-        block_id = params.get("id")
-        updates = params.get("updates", {})
-        if block_id and updates:
-            new_blocks = []
-            for block in schema.blocks:
-                if block.id == block_id:
-                    # 合并更新
-                    block_dict = block.model_dump(by_alias=True)
-                    updated_dict = {**block_dict, **updates}
-                    new_blocks.append(Block(**updated_dict))
+            # 验证 key 唯一性（在添加到列表之前）
+            temp_blocks = current_blocks + [new_block]
+            # 临时修改 schema 以便验证
+            original_blocks = schema.blocks
+            schema.blocks = temp_blocks  # type: ignore
+            try:
+                validate_key_uniqueness(schema, error_message="ADD operation validation failed")
+            finally:
+                # 恢复原始 blocks
+                schema.blocks = original_blocks  # type: ignore
+
+            # 初始化新 block 中 fields 的 state.params
+            if (new_block.props is not None and
+                new_block.props.fields is not None):
+                for field_data in new_block.props.fields:
+                    init_field_state(schema, field_data)
+
+            # 返回新的 blocks 列表
+            patch[target_path] = current_blocks + [new_block]
+
+            # 同时返回 state.params 的更新（让前端同步初始化的值）
+            if (new_block.props is not None and
+                new_block.props.fields is not None):
+                for field_data in new_block.props.fields:
+                    field_key = getattr(field_data, 'key', None)
+                    if field_key and field_key in schema.state.params:
+                        patch[f"state.params.{field_key}"] = schema.state.params[field_key]
+
+        elif isinstance(value_to_add, list):
+            # 批量添加 blocks
+            new_blocks: list[Block] = []
+            for item in value_to_add:
+                if isinstance(item, dict):
+                    # 渲染模板（但不渲染 field 的 value）
+                    rendered_item = render_block_template(schema, item)
+                    new_block = Block(**rendered_item)
+
+                    # 初始化 state.params
+                    if (new_block.props is not None and
+                        new_block.props.fields is not None):
+                        for field_data in new_block.props.fields:
+                            init_field_state(schema, field_data)
+
+                    new_blocks.append(new_block)
                 else:
-                    new_blocks.append(block)
-            patch["blocks"] = [block.model_dump(by_alias=True) for block in new_blocks]
+                    new_blocks.append(item)
 
-    elif operation == "merge":
+            # 验证 key 唯一性（在批量添加之前）
+            temp_blocks = current_blocks + new_blocks
+            # 临时修改 schema 以便验证
+            original_blocks = schema.blocks
+            schema.blocks = temp_blocks  # type: ignore
+            try:
+                validate_key_uniqueness(schema, error_message="ADD operation validation failed")
+            finally:
+                # 恢复原始 blocks
+                schema.blocks = original_blocks  # type: ignore
+
+            patch[target_path] = current_blocks + new_blocks
+
+            # 同时返回 state.params 的更新
+            for new_block in new_blocks:
+                if (new_block.props is not None and
+                    new_block.props.fields is not None):
+                    for field_data in new_block.props.fields:
+                        field_key = getattr(field_data, 'key', None)
+                        if field_key and field_key in schema.state.params:
+                            patch[f"state.params.{field_key}"] = schema.state.params[field_key]
+
+    elif operation == PatchOperationType.REMOVE:
+        # 从 schema 移除块（文档定义的 remove 操作）
+        block_id = params.get("value", {}).get("id") if isinstance(params.get("value"), dict) else None
+        current_list = get_nested_value(schema, target_path, [])
+        if block_id and isinstance(current_list, list):
+            patch[target_path] = [item for item in current_list if getattr(item, 'id', None) != block_id]
+
+    elif operation == PatchOperationType.MERGE:
         # 合并对象
         current_obj = get_nested_value(schema, target_path, {})
         if isinstance(current_obj, dict):
             merge_data = params.get("data", {})
             patch[target_path] = {**current_obj, **merge_data}
 
-    elif operation == "increment":
+    elif operation == PatchOperationType.INCREMENT:
         # 增量更新
         current_value = get_nested_value(schema, target_path, 0)
         delta = params.get("delta", 1)
@@ -290,7 +549,7 @@ def execute_operation(
             print(f"[PatchService] increment error: current_value={current_value}, delta={delta}")
             patch[target_path] = current_value
 
-    elif operation == "decrement":
+    elif operation == PatchOperationType.DECREMENT:
         # 减量更新
         current_value = get_nested_value(schema, target_path, 0)
         delta = params.get("delta", 1)
@@ -300,12 +559,12 @@ def execute_operation(
             print(f"[PatchService] decrement error: current_value={current_value}, delta={delta}")
             patch[target_path] = current_value
 
-    elif operation == "toggle":
+    elif operation == PatchOperationType.TOGGLE:
         # 切换布尔值
         current_value = get_nested_value(schema, target_path, False)
         patch[target_path] = not current_value
 
-    elif operation == "filter_list":
+    elif operation == PatchOperationType.FILTER_LIST:
         # 过滤列表元素
         current_list = get_nested_value(schema, target_path, [])
         if isinstance(current_list, list):
@@ -354,7 +613,6 @@ def execute_operation(
             else:
                 # 没有指定过滤条件，返回空列表
                 patch[target_path] = []
-
     return patch
 
 
@@ -375,10 +633,51 @@ def apply_patch_to_schema(schema: UISchema, patch: dict[str, object]) -> None:
     """
     print(f"[PatchService] apply_patch_to_schema 被调用，patch keys: {list(patch.keys())}")
 
+    # 先收集所有需要验证的路径
+    needs_validation = False
+
     # 处理直接赋值类型的 patches
     for path, value in patch.items():
         keys = path.split('.')
         print(f"[PatchService] 处理路径: {path}, keys: {keys}")
+
+        # 判断是否需要验证唯一性（修改 blocks、fields、actions 相关的路径）
+        if keys[0] in ('blocks', 'actions') or (keys[0] == 'state' and keys[1] == 'params'):
+            needs_validation = True
+
+        # 路径格式：blocks - 替换整个 blocks 数组（add 操作使用）
+        if len(keys) == 1 and keys[0] == 'blocks':
+            print(f"[PatchService] 匹配到 blocks 路径（替换整个数组）")
+            try:
+                from ..models import Block
+                if isinstance(value, list):
+                    # 确保所有元素都是 Block 对象
+                    blocks_list = []
+                    for block_data in value:
+                        if isinstance(block_data, Block):
+                            # 已经是 Block 对象（已在 execute_operation 中验证）
+                            blocks_list.append(block_data)
+                        elif isinstance(block_data, dict):
+                            # 字典转换为 Block（兜底处理）
+                            rendered_block_data = render_dict_template(schema, block_data)
+                            new_block = Block(**rendered_block_data)
+                            blocks_list.append(new_block)
+
+                            # 初始化 state.params（兜底处理）
+                            if (new_block.props is not None and
+                                new_block.props.fields is not None):
+                                for field in new_block.props.fields:
+                                    field_key = getattr(field, 'key', None)
+                                    if field_key and field_key not in schema.state.params:
+                                        schema.state.params[field_key] = field.value if hasattr(field, 'value') else ""
+                                        print(f"[PatchService] Initialized state.params.{field_key}")
+
+                    schema.blocks = blocks_list
+                    print(f"[PatchService] Replaced blocks array, total: {len(blocks_list)}")
+                else:
+                    print(f"[PatchService] blocks value must be a list, got: {type(value)}")
+            except Exception as e:
+                print(f"[PatchService] Error applying blocks operation: {e}")
 
         # 路径格式：actions.X.patches - 更新 action 的 patches（必须先匹配，因为比 actions.X 更具体）
         if len(keys) >= 3 and keys[0] == 'actions' and keys[2] == 'patches':
@@ -503,66 +802,25 @@ def apply_patch_to_schema(schema: UISchema, patch: dict[str, object]) -> None:
                         if props_attr:
                             # 特殊处理 fields 属性（整个字段数组）
                             if props_attr == 'fields':
-                                from ..models.field_models import (
-                                    BaseFieldConfig,
-                                    SelectableFieldConfig,
-                                    ImageFieldConfig,
-                                    TableFieldConfig,
-                                    ComponentFieldConfig
-                                )
                                 if isinstance(value, list):
-                                    # 收集新字段的 key（用于保留 state）
-                                    new_field_keys = set()
-                                    for field_data in value:
-                                        if isinstance(field_data, dict):
-                                            new_field_keys.add(field_data.get('key'))
-                                        elif hasattr(field_data, 'key'):
-                                            new_field_keys.add(getattr(field_data, 'key'))
-
-                                    # 清理旧字段的 state（但保留新 fields 中存在的 key）
-                                    old_fields = getattr(block.props, 'fields', None)
-                                    if old_fields and isinstance(old_fields, list):
-                                        for old_field in old_fields:
-                                            old_field_key = getattr(old_field, 'key', None)
-                                            if old_field_key and old_field_key not in new_field_keys:
-                                                if old_field_key in schema.state.params:
-                                                    del schema.state.params[old_field_key]
-                                                    print(f"[PatchService] Cleaned up state.params.{old_field_key}")
-
                                     # 转换为 FieldConfig 列表
-                                    fields_list = []
+                                    fields_list: list[FieldConfig] = []
+
+                                    # 获取旧字段列表（用于清理 state）
+                                    old_fields = getattr(block.props, 'fields', None)
+
                                     for field_data in value:
                                         if isinstance(field_data, dict):
-                                            # 根据字段类型选择正确的模型类
-                                            field_type = field_data.get('type', 'text')
-                                            
-                                            # 根据字段类型处理可能为 None 的数组属性
-                                            if field_type == 'table':
-                                                # 确保 columns 不是 None
-                                                if 'columns' not in field_data or field_data['columns'] is None:
-                                                    field_data['columns'] = []
-                                                fields_list.append(TableFieldConfig(**field_data))
-                                            elif field_type in ['select', 'radio', 'multiselect']:
-                                                # 确保 options 不是 None
-                                                if 'options' not in field_data or field_data['options'] is None:
-                                                    field_data['options'] = []
-                                                fields_list.append(SelectableFieldConfig(**field_data))
-                                            elif field_type == 'image':
-                                                fields_list.append(ImageFieldConfig(**field_data))
-                                            elif field_type == 'component':
-                                                fields_list.append(ComponentFieldConfig(**field_data))
-                                            else:
-                                                fields_list.append(BaseFieldConfig(**field_data))
+                                            new_field = parse_field_config(field_data)
+                                            fields_list.append(new_field)
                                         else:
                                             fields_list.append(field_data)
-                                    setattr(block.props, 'fields', fields_list)
 
-                                    # 初始化新字段的 state
+                                    # 清理旧字段 state 并初始化新字段 state
                                     for new_field in fields_list:
-                                        new_field_key = getattr(new_field, 'key', None)
-                                        if new_field_key and new_field_key not in schema.state.params:
-                                            schema.state.params[new_field_key] = ""
-                                            print(f"[PatchService] Initialized state.params.{new_field_key}")
+                                        init_field_state(schema, new_field, old_fields)
+
+                                    setattr(block.props, 'fields', fields_list)
                                 else:
                                     print(f"[PatchService] fields value must be a list, got: {type(value)}")
                             # 特殊处理 actions 属性
@@ -587,7 +845,6 @@ def apply_patch_to_schema(schema: UISchema, patch: dict[str, object]) -> None:
                                 print(f"[PatchService] Updated block[{block_index}].props.{props_attr} = {value}")
                         else:
                             # 替换整个 props
-                            from ..models import BlockProps, FieldConfig
                             if isinstance(value, dict):
                                 # 确保 fields 中的表格字段有 columns
                                 if 'fields' in value and isinstance(value['fields'], list):
@@ -596,11 +853,9 @@ def apply_patch_to_schema(schema: UISchema, patch: dict[str, object]) -> None:
                                             field_type = field.get('type', 'text')
                                             if field_type == 'table' and ('columns' not in field or field['columns'] is None):
                                                 field['columns'] = []
-                                                print(f"[PatchService] Auto-initialized columns to empty array in table field")
                                             elif field_type in ['select', 'radio', 'multiselect'] and ('options' not in field or field['options'] is None):
                                                 field['options'] = []
-                                                print(f"[PatchService] Auto-initialized options to empty array in {field_type} field")
-                                new_props: BlockProps = BlockProps(**value)
+                                new_props = BlockProps(**value)
                             elif isinstance(value, BlockProps):
                                 new_props = value
                             else:
@@ -634,36 +889,7 @@ def apply_patch_to_schema(schema: UISchema, patch: dict[str, object]) -> None:
                         if 0 <= field_index < len(current_fields):
                             # 如果是 dict，转换为 FieldConfig 对象
                             if isinstance(value, dict):
-                                # 根据字段类型选择正确的模型类
-                                from ..models.field_models import (
-                                    BaseFieldConfig,
-                                    SelectableFieldConfig,
-                                    ImageFieldConfig,
-                                    TableFieldConfig,
-                                    ComponentFieldConfig
-                                )
-                                
-                                field_type = value.get('type', 'text')
-                                
-                                # 根据字段类型处理可能为 None 的数组属性
-                                if field_type == 'table':
-                                    # 确保 columns 不是 None
-                                    if 'columns' not in value or value['columns'] is None:
-                                        value['columns'] = []
-                                        print(f"[PatchService] Auto-initialized columns to empty array for table field")
-                                    new_field = TableFieldConfig(**value)
-                                elif field_type in ['select', 'radio', 'multiselect']:
-                                    # 确保 options 不是 None
-                                    if 'options' not in value or value['options'] is None:
-                                        value['options'] = []
-                                        print(f"[PatchService] Auto-initialized options to empty array for {field_type} field")
-                                    new_field = SelectableFieldConfig(**value)
-                                elif field_type == 'image':
-                                    new_field = ImageFieldConfig(**value)
-                                elif field_type == 'component':
-                                    new_field = ComponentFieldConfig(**value)
-                                else:
-                                    new_field = BaseFieldConfig(**value)
+                                new_field = parse_field_config(value)
                             else:
                                 new_field = value
 
@@ -732,4 +958,14 @@ def apply_patch_to_schema(schema: UISchema, patch: dict[str, object]) -> None:
                             print(f"[PatchService] Updated field attribute: blocks[{block_index}].props.fields[{field_index}].{field_attr} = {value}")
             except (ValueError, AttributeError, IndexError) as e:
                 print(f"[PatchService] Error applying set operation for path '{path}': {e}")
+
+    # 如果修改了相关的内容，进行唯一性验证
+    if needs_validation:
+        try:
+            validate_key_uniqueness(schema, error_message="SET operation validation failed")
+            print(f"[PatchService] Key uniqueness validation passed")
+        except ValueError as e:
+            # 验证失败，抛出异常
+            print(f"[PatchService] Key uniqueness validation failed: {e}")
+            raise ValueError(str(e))
      

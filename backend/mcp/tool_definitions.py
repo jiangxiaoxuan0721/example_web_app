@@ -243,7 +243,7 @@ async def get_schema(instance_name: str | None = None) -> dict[str, Any]:
 
 @mcp.tool()
 async def list_instances() -> dict[str, Any]:
-    f"""
+    """
 - NAME: list_instances
 - DESCRIPTION: 列出所有可用实例
 - PARAMETERS: 无参数

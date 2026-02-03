@@ -135,11 +135,12 @@ const defaultRenderers: FieldRendererRegistry = {
     />
   ),
 
-  textarea: ({ field, onChange, disabled }) => (
+  textarea: ({ field, value, onChange, disabled }) => (
     <TextArea
       field={field}
       schema={null as any}
       bindPath=""
+      value={value}
       onChange={onChange}
       disabled={disabled}
     />

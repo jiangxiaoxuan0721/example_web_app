@@ -37,7 +37,6 @@ def _create_demo_schema() -> UISchema:
                 # 动态交互
                 counter=0,
                 message="欢迎使用 UI Patch System！点击按钮体验动态更新功能",
-                # 模板表达式演示字段
                 new_name="",
                 new_email="",
                 next_id=2,  # 下一个用户的 ID
@@ -54,7 +53,7 @@ def _create_demo_schema() -> UISchema:
         ),
         layout=LayoutInfo(type=LayoutType.SINGLE, columns=None, gap=None),
         blocks=[
-            # Block 1: 系统消息和计数器
+            # Block 1:系统消息和计数器
             Block(
                 id="overview_block",
                 layout="form",
@@ -326,7 +325,7 @@ def _create_demo_schema() -> UISchema:
                 style="primary",
                 patches=[
                     SchemaPatch(
-                        op=PatchOperationType.ADD, 
+                        op=PatchOperationType.ADD,
                         path="blocks",
                         value={
                             "id": "generated_block",

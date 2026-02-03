@@ -3,9 +3,9 @@
 包含基础响应、配置响应、Schema 响应、Patch 响应、事件响应等模型定义
 """
 
-from typing import Any, Optional
+from typing import Any
 from datetime import datetime
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import Field, ConfigDict
 
 from .base import BaseModelWithConfig
 from .schema_models import UISchema
@@ -14,10 +14,10 @@ from .patch_models import SchemaPatch
 class BaseResponse(BaseModelWithConfig):
     """基础响应"""
     model_config = ConfigDict(populate_by_name=True, extra="ignore")
-    message: Optional[str] = Field(None, description="消息")
-    error: Optional[str] = Field(None, description="错误信息")
-    code: Optional[int] = Field(None, description="状态码")
-    request_id: Optional[str] = Field(None, description="请求ID")
+    message: str | None = Field(None, description="消息")
+    error: str | None = Field(None, description="错误信息")
+    code: int| None = Field(None, description="状态码")
+    request_id: str | None = Field(None, description="请求ID")
     timestamp: datetime = Field(default_factory=datetime.now, description="响应时间")
 
 
@@ -29,7 +29,7 @@ class ConfigResponse(BaseResponse):
 
 class SchemaResponse(BaseResponse):
     """Schema响应"""
-    ui_schema: Optional[UISchema] = Field(None, alias="schema", description="UI Schema")
+    ui_schema: UISchema | None = Field(None, alias="schema", description="UI Schema")
     partial: bool = Field(default=False, description="是否为部分更新")
 
 
@@ -41,9 +41,9 @@ class PatchResponse(BaseResponse):
 
 class EventResponse(BaseResponse):
     """事件处理响应"""
-    ui_schema: Optional[UISchema] = Field(None, alias="schema", description="UI Schema")
-    patch: Optional[dict[str, Any]] = Field(None, description="UI Patch")
-    redirect: Optional[str] = Field(None, description="重定向URL")
+    ui_schema: UISchema | None = Field(None, alias="schema", description="UI Schema")
+    patch: dict[str, Any] | None = Field(None, description="UI Patch")
+    redirect: str | None  = Field(None, description="重定向URL")
     reload: bool = Field(default=False, description="是否重新加载")
 
 

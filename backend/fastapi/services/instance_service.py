@@ -1,6 +1,7 @@
 """实例服务 - 处理实例的创建、删除和操作"""
 
 from re import Match
+
 from backend.fastapi.models import ActionConfig, UISchema, PatchOperationType, StateInfo, LayoutInfo, Block, FieldConfig, LayoutType, SchemaPatch
 import httpx
 from typing import Any, Callable
@@ -29,13 +30,13 @@ class InstanceService:
             return False, f"Instance '{instance_name}' already exists"
 
         # 应用 patches 创建实例
-        new_schema: UISchema = None   # pyright: ignore[reportAssignmentType]
+        new_schema: UISchema | None = None  # pyright: ignore[reportAssignmentType]
         for patch in patches:
             op: PatchOperationType = patch.op
             path: str = patch.path
             value: object = patch.value
 
-            if op != "set":
+            if op != PatchOperationType.SET:
                 continue
 
             if path == "meta":
@@ -211,7 +212,7 @@ class InstanceService:
         # 预处理特殊的表达式操作
         # 对于包含 JavaScript 表达式的 value，在服务端先计算结果
         for idx, patch_item in enumerate(unified_patches):
-            if patch_item.op == "set" and patch_item.value:
+            if patch_item.op == PatchOperationType.SET and patch_item.value:
                 value = patch_item.value
                 if isinstance(value, str) and ".filter(" in value:
                     # 这是一个过滤操作，需要服务端处理
@@ -296,7 +297,7 @@ class InstanceService:
 
                                     # 生成 patch 并应用到 schema
                                     from .patch import apply_patch_to_schema
-                                    operation_patch: dict[str, object] = self._execute_operation(schema, operation="set", params={"value": filtered_list}, target_path=list_path)
+                                    operation_patch: dict[str, object] = self._execute_operation(schema, operation=PatchOperationType.SET, params={"value": filtered_list}, target_path=list_path)
                                     print(f"[InstanceService] 已在服务端执行过滤: {len(current_list)} -> {len(filtered_list)}, 操作结果: {operation_patch}")
 
                                     # 立即应用 patch 到 schema
@@ -355,7 +356,7 @@ class InstanceService:
 
                                     # 生成 patch 并应用到 schema
                                     from .patch import apply_patch_to_schema
-                                    operation_result = self._execute_operation(schema, "set", {"value": filtered_list}, list_path)
+                                    operation_result = self._execute_operation(schema, PatchOperationType.SET, {"value": filtered_list}, list_path)
                                     print(f"[InstanceService] 已在服务端执行过滤: {len(current_list)} -> {len(filtered_list)}, 操作结果: {operation_result}")
 
                                     # 立即应用 patch 到 schema
@@ -396,11 +397,14 @@ class InstanceService:
             patch_dict[path] = updated_value
             print(f"[InstanceService] 获取 patch 值: path={path}, value={updated_value}, 是否已自定义处理={idx in skip_indices}")
 
-        print(f"[InstanceService] Action handler 返回的 patch: {patch_dict}")
+        # 将 Pydantic 对象转换为字典以便 JSON 序列化
+        serialized_patch = self._serialize_patch_dict(patch_dict)
+
+        print(f"[InstanceService] Action handler 返回的 patch: {serialized_patch}")
 
         return {
             "status": "success",
-            "patch": patch_dict
+            "patch": serialized_patch
         }
 
     def _get_action_patches(self, action_config: ActionConfig) -> list[SchemaPatch]:
@@ -459,13 +463,12 @@ class InstanceService:
         op: PatchOperationType = patch.op
         path: str = patch.path
         value: object = patch.value
-        index: int | None = patch.index
 
-        print(f"[InstanceService] apply_unified_patch: op={op}, path={path}, value={value}, index={index}")
+        print(f"[InstanceService] apply_unified_patch: op={op}, path={path}, value={value}")
 
         # 原有的 add/remove 操作（用于 schema 结构变更）
         # 这些操作委托给 patch_routes 的函数
-        if op in ("add", "remove"):
+        if op in (PatchOperationType.ADD, PatchOperationType.REMOVE):
             # 对于 add/remove，我们需要通过 patch 来实现
             # 因为这些操作需要特殊的状态管理
             operation_patch = self._execute_operation(schema, operation=op, params={"value": value}, target_path=path)
@@ -475,7 +478,7 @@ class InstanceService:
             return {"success": False, "reason": f"Operation {op} failed"}
 
         # set 操作：直接赋值（先渲染模板表达式）
-        if op == "set":
+        if op == PatchOperationType.SET:
             from .patch import render_template, render_dict_template
             # 如果 value 是字符串，先渲染模板表达式
             if isinstance(value, str):
@@ -498,17 +501,18 @@ class InstanceService:
             return {"success": True}
 
         # 新的操作类型（委托给 execute_operation）
-        operation_map: dict[str, Callable[[], dict[str, Any]]] = {
-            "append_to_list": lambda: execute_operation(schema, operation="append_to_list", params={"items": value}, target_path=path),
-            "prepend_to_list": lambda: execute_operation(schema, operation="prepend_to_list", params={"items": value}, target_path=path),
-            "remove_from_list": lambda: execute_operation(schema, operation="remove_from_list", params=value if isinstance(value, dict) else {"value": value},target_path=path),
-            "update_list_item": lambda: execute_operation(schema, operation="update_list_item", params={"index": index, "item": value}, target_path=path),
-            "filter_list": lambda: execute_operation(schema, operation="filter_list", params=value if isinstance(value, dict) else {}, target_path=path),
-            "remove_last": lambda: execute_operation(schema, operation="remove_last", params={}, target_path=path),
-            "merge": lambda: execute_operation(schema, operation="merge", params={"data": value}, target_path=path),
-            "increment": lambda: execute_operation(schema, operation="increment", params={"delta": value}, target_path=path),
-            "decrement": lambda: execute_operation(schema, operation="decrement", params={"delta": value}, target_path=path),
-            "toggle": lambda: execute_operation(schema, operation="toggle", params={}, target_path=path),
+        operation_map: dict[PatchOperationType, Callable[[], dict[str, Any]]] = {
+            PatchOperationType.APPEND_TO_LIST: lambda: execute_operation(schema, operation=PatchOperationType.APPEND_TO_LIST, params={"items": value}, target_path=path),
+            PatchOperationType.PREPEND_TO_LIST: lambda: execute_operation(schema, operation=PatchOperationType.PREPEND_TO_LIST, params={"items": value}, target_path=path),
+            PatchOperationType.REMOVE_FROM_LIST: lambda: execute_operation(schema, operation=PatchOperationType.REMOVE_FROM_LIST, params=value if isinstance(value, dict) else {"value": value}, target_path=path),
+            PatchOperationType.UPDATE_LIST_ITEM: lambda: execute_operation(schema, operation=PatchOperationType.UPDATE_LIST_ITEM, params=value if isinstance(value, dict) else {}, target_path=path),
+            PatchOperationType.FILTER_LIST: lambda: execute_operation(schema, operation=PatchOperationType.FILTER_LIST, params=value if isinstance(value, dict) else {}, target_path=path),
+            PatchOperationType.REMOVE_LAST: lambda: execute_operation(schema, operation=PatchOperationType.REMOVE_LAST, params={}, target_path=path),
+            PatchOperationType.MERGE: lambda: execute_operation(schema, operation=PatchOperationType.MERGE, params={"data": value}, target_path=path),
+            PatchOperationType.INCREMENT: lambda: execute_operation(schema, operation=PatchOperationType.INCREMENT, params={"delta": value}, target_path=path),
+            PatchOperationType.DECREMENT: lambda: execute_operation(schema, operation=PatchOperationType.DECREMENT, params={"delta": value}, target_path=path),
+            PatchOperationType.TOGGLE: lambda: execute_operation(schema, operation=PatchOperationType.TOGGLE, params={}, target_path=path),
+            PatchOperationType.CLEAR_ALL_PARAMS: lambda: execute_operation(schema, operation=PatchOperationType.CLEAR_ALL_PARAMS, params={}, target_path=path),
         }
 
         if op in operation_map:
@@ -529,25 +533,28 @@ class InstanceService:
     def _execute_operation(
         self,
         schema: UISchema,
-        operation: str,
+        operation: PatchOperationType,
         params: dict[str, object],
         target_path: str
     ) -> dict[str, object]:
         """
         执行通用操作（委托给 patch.py 中的实现）
 
-        支持的操作：
-        - append_to_list: 向列表添加元素
-        - prepend_to_list: 向列表开头添加元素
-        - remove_from_list: 从列表中删除元素（支持 index: -1 批量删除所有匹配项）
+        支持的操作（参考 PTA_Tool_Reference.md）：
+        - add: 添加块到 schema
+        - remove: 从 schema 移除块
+        - append_to_list: 追加元素到列表末尾
+        - prepend_to_list: 插入元素到列表开头
+        - remove_from_list: 从列表删除元素
+        - update_list_item: 更新列表元素
+        - filter_list: 按条件过滤列表
         - remove_last: 删除列表最后一项
-        - update_list_item: 更新列表中的某个元素
-        - clear_all_params: 清空所有 params
-        - append_block: 添加新块到 schema
-        - prepend_block: 在开头添加块
-        - remove_block: 删除块
-        - update_block: 更新块
         - merge: 合并对象
+        - increment: 增加数值
+        - decrement: 减少数值
+        - toggle: 切换布尔值
+
+        注意：set 操作在 apply_unified_patch 中直接处理，不调用此函数。
 
         Args:
             schema: 当前 schema
@@ -859,3 +866,32 @@ class InstanceService:
 
         print(f"[InstanceService] handle_table_button 返回: {result}")
         return result
+
+    def _serialize_patch_dict(self, patch_dict: dict[str, Any]) -> dict[str, Any]:
+        """
+        将 patch 字典中的 Pydantic 对象序列化为字典
+
+        Pydantic 对象（如 Block, ActionConfig, FieldConfig）无法直接 JSON 序列化
+        需要调用 model_dump() 方法转换为字典
+        """
+        serialized = {}
+
+        for key, value in patch_dict.items():
+            if isinstance(value, list):
+                # 处理列表中的 Pydantic 对象
+                serialized[key] = [
+                    item.model_dump(by_alias=True) if hasattr(item, 'model_dump') else item
+                    for item in value
+                ]
+            elif hasattr(value, 'model_dump'):
+                # 处理 Pydantic 对象
+                serialized[key] = value.model_dump(by_alias=True)
+            elif isinstance(value, dict):
+                # 递归处理嵌套字典
+                serialized[key] = self._serialize_patch_dict(value)
+            else:
+                # 基本类型直接赋值
+                serialized[key] = value
+
+        return serialized
+

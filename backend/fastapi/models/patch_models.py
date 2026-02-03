@@ -49,6 +49,3 @@ class SchemaPatch(BaseModelWithConfig):
     op: PatchOperationType = Field(..., description="操作类型")
     path: str = Field(..., description="目标路径")
     value: object = Field(default=None, description="操作值（根据 op 类型不同含义不同）")
-
-    # 用于 update_list_item 的可选参数
-    index: int | None = Field(default=None, description="目标索引（仅 update_list_item 使用）")

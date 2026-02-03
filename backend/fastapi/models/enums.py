@@ -40,7 +40,8 @@ class PatchOperationType(str, Enum):
     INCREMENT = "increment"
     DECREMENT = "decrement"
     TOGGLE = "toggle"
-    
+    # 全局操作
+    CLEAR_ALL_PARAMS = "clear_all_params"
 
 
 class HTTPMethod(str, Enum):

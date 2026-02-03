@@ -63,7 +63,6 @@ patch包含以下键:
   - "op": 可选值以及示例请查看**PATCH_EXAMPLE**
   - "path": "blocks.xxx"|"states.xxx"|"actions.xxx"|"layout.xxx"
   - "value": 用于操作所选path的字典,需要根据界面的结构来确定value的结构,因此将详细讨论界面各个组件的结构,详见: **UI_SCHEMA_STRUCTURE**,**FIELD_STRUCTURE**,**ACTION_STRUCTURE**
-  - "index": "索引（可选,仅 update_list_item 使用）"
 </PATCH_DESCRIPTION>
 
 <UI_SCHEMA_STRUCTURE>
@@ -180,7 +179,7 @@ op 参数可选的值及示例使用如下:
     - 示例: {"op": "filter_list", "path": "state.params.todos", "value": {"key": "completed", "operator": "!=", "value": true}}
 
   - "update_list_item": 更新列表元素
-    - 参数: path(string), index?(number已弃用), value({key, value, updates})
+    - 参数: path(string), value({key, value, updates})
     - key: 匹配字段名,默认"id"
     - value: 要更新的元素的key值
     - updates: 要更新的字段字典

@@ -18,6 +18,8 @@ export default function Select({ field, value, onChange, disabled }: SelectProps
   const isDisabled = disabled || field.editable === false;
   const isRequired = field.required === true;
   const isEditable = field.editable !== false;
+  // 处理 undefined/null 值
+  const displayValue = value !== undefined && value !== null ? String(value) : '';
 
   return (
     <div style={{ marginBottom: '16px' }}>
@@ -26,7 +28,7 @@ export default function Select({ field, value, onChange, disabled }: SelectProps
         {isRequired && <span style={{ color: 'red', marginLeft: '4px' }}>*</span>}
       </label>
       <select
-        value={String(value)}
+        value={displayValue}
         onChange={(e) => onChange?.(e.target.value)}
         disabled={isDisabled}
         required={isRequired}
