@@ -1,10 +1,11 @@
 """事件相关 API 路由"""
 
+from backend.fastapi.models.schema_models import UISchema
 from typing import Any
 from fastapi import FastAPI
 from backend.fastapi.services.websocket.handlers.manager import WebSocketManager
 from backend.core import SchemaManager, PatchHistoryManager
-from ..services import InstanceService
+from ..services import InstanceService,apply_patch_to_schema
 
 def register_event_routes(
     app: FastAPI,
@@ -31,15 +32,16 @@ def register_event_routes(
         处理前端事件
         """
         event_type = event.get("type")
-        action_id = event.get("payload", {}).get("actionId")
+        payload = event.get("payload", {})
+        action_id = payload.get("actionId")
         instance_name = event.get("pageKey", default_instance_name)
-        params = event.get("payload", {}).get("params", {})
-        block_id = event.get("payload", {}).get("blockId")  # 接收 blockId
+        params = payload.get("params", {})
+        block_id = payload.get("blockId")  # 接收 blockId
 
-        print(f"[EventRoutes] 收到事件: {event_type}, actionId: {action_id}, instanceId: {instance_name}, params={params}, blockId={block_id}")
+        print(f"[EventRoutes] 收到事件: {event_type}, actionId: {action_id}, instanceId: {instance_name}, params={params}, blockId={block_id}, payload={payload}")
 
         # 获取当前实例的 Schema
-        schema = schema_manager.get(instance_name)
+        schema: UISchema | None = schema_manager.get(instance_name)
         if not schema:
             return {
                 "status": "error",
@@ -48,21 +50,19 @@ def register_event_routes(
 
         # 处理字段变化事件
         if event_type == "field:change":
-            field_key = params.get("fieldKey")
-            field_value = params.get("value")
+            # field:change 事件的 payload 直接包含 fieldKey 和 value
+            field_key = payload.get("fieldKey")
+            field_value = payload.get("value")
 
             if field_key:
                 patch = {f"state.params.{field_key}": field_value}
 
                 # 保存到历史记录
                 patch_id = patch_history.save(instance_name, patch)
-
-                # 应用到 schema
-                from ..services.patch import apply_patch_to_schema
                 apply_patch_to_schema(schema, patch)
 
                 # WebSocket 推送
-                await ws_manager.send_patch(instance_name, patch, patch_id)
+                _ = await ws_manager.send_patch(instance_name, patch, patch_id)
 
                 return {
                     "status": "success",
@@ -90,7 +90,7 @@ def register_event_routes(
                 patch_id = patch_history.save(instance_name, patch)
 
                 # WebSocket 推送（此时 schema.state.runtime 已更新）
-                await ws_manager.send_patch(instance_name, patch, patch_id)
+                _ = await ws_manager.send_patch(instance_name, patch, patch_id)
 
                 return {
                     "status": "success",

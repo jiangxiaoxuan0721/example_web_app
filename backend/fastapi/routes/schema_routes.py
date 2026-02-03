@@ -1,12 +1,14 @@
 """Schema 相关 API 路由"""
 
+from backend.fastapi.models.schema_models import UISchema
 from datetime import datetime
-from fastapi import Query
+from fastapi import FastAPI, Query
 from typing import Any
 from ...core.manager import SchemaManager
+from backend.fastapi.services.websocket.handlers.manager import WebSocketManager
 
 
-def register_schema_routes(app, schema_manager: SchemaManager, default_instance_name: str, ws_manager=None):
+def register_schema_routes(app:FastAPI, schema_manager: SchemaManager, default_instance_name: str, ws_manager:WebSocketManager | None = None) -> None:
     """注册 Schema 相关的路由
 
     Args:
@@ -34,7 +36,7 @@ def register_schema_routes(app, schema_manager: SchemaManager, default_instance_
             print(f"[SchemaRoutes] 使用默认实例: '{instance_name}'")
 
         # 查找实例
-        schema = schema_manager.get(instance_name)
+        schema: UISchema | None = schema_manager.get(instance_name)
 
         if not schema:
             print(f"[SchemaRoutes] 实例 '{instance_name}' 不存在")
@@ -47,11 +49,36 @@ def register_schema_routes(app, schema_manager: SchemaManager, default_instance_
         print(f"[SchemaRoutes] 找到实例 '{instance_name}'")
 
         # 动态更新 runtime.timestamp 为当前时间
-        if schema.state and schema.state.runtime is not None:
+        if schema.state:
             schema.state.runtime["timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             print(f"[SchemaRoutes] 已更新 runtime.timestamp 为当前时间")
 
-        dumped_schema = schema.model_dump(by_alias=True)
+        # 确保字段和 state.params 的一致性
+        # 1. 如果字段有 value 但 params 中没有，初始化它
+        # 2. 如果 params 中有值但字段没有 value，反向同步
+        for block in schema.blocks:
+            if block.props and block.props.fields:
+                for field in block.props.fields:
+                    field_key = getattr(field, 'key', None)
+                    if not field_key:
+                        continue
+
+                    field_value = getattr(field, 'value', None)
+
+                    # 情况1：字段有 value 但 params 中没有，初始化它
+                    if field_key not in schema.state.params and field_value is not None:
+                        schema.state.params[field_key] = field_value
+                        print(f"[SchemaRoutes] 同步字段值到 params: {field_key} = {field_value}")
+
+                    # 情况2：params 中有值，但字段 value 是 None 或空，可以选择反向同步
+                    # 注意：这里我们只记录日志，不修改字段定义
+                    # 因为字段定义应该保持原始的默认值，而实际值存储在 state.params 中
+                    if field_key in schema.state.params:
+                        param_value = schema.state.params[field_key]
+                        if param_value != field_value:
+                            print(f"[SchemaRoutes] 字段 {field_key}: field.value={field_value}, state.params.{field_key}={param_value}")
+
+        dumped_schema: dict[str, Any] = schema.model_dump(by_alias=True)
         # 调试：检查 columns 的 renderType 字段
         if dumped_schema.get('blocks'):
             first_block = dumped_schema['blocks'][0]
@@ -89,7 +116,7 @@ def register_schema_routes(app, schema_manager: SchemaManager, default_instance_
             }
 
         # 检查实例是否存在
-        schema = schema_manager.get(instance_name)
+        schema: UISchema | None = schema_manager.get(instance_name)
         if not schema:
             return {
                 "status": "error",
@@ -101,7 +128,7 @@ def register_schema_routes(app, schema_manager: SchemaManager, default_instance_
 
         # 如果WebSocket管理器可用，通知前端切换到指定实例
         if ws_manager:
-            await ws_manager.broadcast({
+            _ = await ws_manager.broadcast(message={
                 "type": "switch_instance",
                 "instance_name": instance_name
             })

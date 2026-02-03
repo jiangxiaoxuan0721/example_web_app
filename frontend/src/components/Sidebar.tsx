@@ -106,11 +106,7 @@ export default function Sidebar({ }: SidebarProps) {
     }
   };
 
-  // 如果没有导航项，不显示 sidebar
-  if (navItems.length === 0) {
-    return null;
-  }
-
+  // 始终显示 sidebar
   return (
     <div className={`pta-sidebar ${isCollapsed ? 'pta-sidebar--collapsed' : ''}`}>
       {/* 折叠按钮 */}

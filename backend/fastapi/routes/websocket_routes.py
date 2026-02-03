@@ -1,18 +1,17 @@
 """WebSocket 相关 API 路由"""
 
-from fastapi import WebSocket, WebSocketDisconnect, Depends
-from ..services.websocket import WebSocketManager
+from typing import Any
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from backend.fastapi.services.websocket.handlers.manager import WebSocketManager
 
 
-def register_websocket_routes(app, ws_manager: WebSocketManager, schema_manager):
+def register_websocket_routes(app:FastAPI, ws_manager: WebSocketManager) -> None:
     """注册 WebSocket 相关的路由
 
     Args:
         app: FastAPI 应用实例
         ws_manager: WebSocket 管理器
-        schema_manager: Schema 管理器
     """
-
     @app.websocket("/ui/ws/{instance_name}")
     async def websocket_endpoint(websocket: WebSocket, instance_name: str):
         """WebSocket 连接端点"""
@@ -29,7 +28,7 @@ def register_websocket_routes(app, ws_manager: WebSocketManager, schema_manager)
             ws_manager.disconnect(websocket, instance_name)
 
     @app.get("/ui/ws/stats")
-    async def get_websocket_stats():
+    async def get_websocket_stats() -> dict[str, str | dict[Any, Any]]:
         """获取 WebSocket 连接统计信息"""
         return {
             "status": "success",
@@ -37,7 +36,7 @@ def register_websocket_routes(app, ws_manager: WebSocketManager, schema_manager)
         }
 
     @app.get("/ui/ws/health")
-    async def websocket_health():
+    async def websocket_health() -> dict[str, str | dict[Any, Any]]:
         """WebSocket 健康检查"""
         return {
             "status": "success",

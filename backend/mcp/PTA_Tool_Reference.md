@@ -206,10 +206,47 @@ op 参数可选的值及示例使用如下:
     - 示例: {"op": "toggle", "path": "state.params.visible"}
 
   - 模板使用: 支持${path}语法引用state值,支持字符串/字典/列表中的嵌套模板
-    {
-      "op": "append_to_list", "path": "state.params.dynamic_users",
-      "value": {"id": "${state.params.next_id}", "name": "${state.params.new_name}", "email": "${state.params.new_email}", "added_at": "${state.runtime.timestamp}"}
-    }
+    - 基础state引用:
+      {"op": "set", "path": "state.params.message", "value": "姓名: ${state.params.name}"}
+    - 选项组件引用(支持.label获取标签):
+      {"op": "set", "path": "state.params.status_display", "value": "状态: ${state.params.status.label} (${state.params.status})"}
+      {"op": "set", "path": "state.params.categories_display", "value": "分类: ${state.params.categories.label}"}
+    - 嵌套引用(字典/列表中的模板):
+      {"op": "append_to_list", "path": "state.params.users",
+       "value": {"id": "${state.params.next_id}", "name": "${state.params.new_name}", "status": "${state.params.status.label}"}}
+    - 综合示例(动态添加数据):
+      {
+        "op": "append_to_list", "path": "state.params.dynamic_users",
+        "value": {"id": "${state.params.next_id}", "name": "${state.params.new_name}", "email": "${state.params.new_email}", "added_at": "${state.runtime.timestamp}"}
+      }
+
+  - 创建新实例:
+    - 使用 "__CREATE__" 作为 instance_name 创建新实例
+    - 必须提供 new_instance_name 参数
+    - 使用 "set" 操作定义实例结构(meta/state/blocks/actions)
+    - 示例:
+      {
+        "instance_name": "__CREATE__",
+        "new_instance_name": "my_app",
+        "patches": [
+          {"op": "set", "path": "meta", "value": {"page_key": "my_app"}},
+          {"op": "set", "path": "state", "value": {"params": {}, "runtime": {}}},
+          {"op": "set", "path": "blocks", "value": [
+            {"id": "main_block", "layout": "form", "props": {"fields": [{"key": "name", "label": "姓名", "type": "text"}], "actions": []}}
+          ]},
+          {"op": "set", "path": "actions", "value": []}
+        ]
+      }
+
+  - 删除实例:
+    - 使用 "__DELETE__" 作为 instance_name 删除实例
+    - 必须提供 target_instance_name 参数
+    - 示例:
+      {
+        "instance_name": "__DELETE__",
+        "target_instance_name": "my_app",
+        "patches": []
+      }
 </PATCH_EXAMPLE>
 
 <COLUMN_STRUCTURE>

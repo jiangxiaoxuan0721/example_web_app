@@ -1,7 +1,6 @@
 """实例服务 - 处理实例的创建、删除和操作"""
 
 from re import Match
-
 from backend.fastapi.models import ActionConfig, UISchema, PatchOperationType, StateInfo, LayoutInfo, Block, FieldConfig, LayoutType, SchemaPatch
 import httpx
 from typing import Any, Callable
@@ -894,4 +893,3 @@ class InstanceService:
                 serialized[key] = value
 
         return serialized
-

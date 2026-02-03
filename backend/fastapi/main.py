@@ -1,14 +1,15 @@
 """FastAPI 主应用 - Agent 可编程 UI Runtime 后端"""
 
+from backend.fastapi.services.websocket.handlers.manager import WebSocketManager
+from backend.core.history import PatchHistoryManager
+from backend.fastapi.services.instance_service import InstanceService
+from backend.core.manager import SchemaManager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-from ..core import PatchHistoryManager, SchemaManager
-from .services.websocket.handlers.manager import WebSocketManager
 from ..config import settings
 
 # 创建 FastAPI 应用
-app = FastAPI(
+app: FastAPI = FastAPI(
     title="Agent Programmable UI Runtime",
     version="1.0.0",
     description="Schema-driven UI Runtime Backend",
@@ -26,14 +27,13 @@ app.add_middleware(
 
 # 初始化服务
 from backend.core.defaults import get_default_instances
-from .services.instance_service import InstanceService
 
 
 # 创建服务实例
-schema_manager = SchemaManager()
-instance_service = InstanceService(schema_manager)
-patch_history = PatchHistoryManager()
-ws_manager = WebSocketManager()
+schema_manager: SchemaManager = SchemaManager()
+instance_service: InstanceService = InstanceService(schema_manager)
+patch_history: PatchHistoryManager = PatchHistoryManager()
+ws_manager: WebSocketManager = WebSocketManager()
 default_instance_name = "demo"
 
 # 初始化默认实例
@@ -52,7 +52,7 @@ from .routes.websocket_routes import register_websocket_routes
 register_event_routes(app, schema_manager, instance_service, patch_history, ws_manager, default_instance_name)
 register_patch_routes(app, schema_manager, patch_history, ws_manager, instance_service)
 register_schema_routes(app, schema_manager, default_instance_name, ws_manager)
-register_websocket_routes(app, ws_manager, schema_manager)
+register_websocket_routes(app, ws_manager)
 
 
 # 基础端点

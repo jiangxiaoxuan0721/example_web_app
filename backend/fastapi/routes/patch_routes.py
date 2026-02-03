@@ -1,28 +1,22 @@
 """Patch 相关 API 路由"""
 
-from backend.fastapi.models.field_models import BaseFieldConfig
-from fastapi import Query
+from fastapi import FastAPI, Query
 from typing import Any
 from ...core.history import PatchHistoryManager
 from ...core.manager import SchemaManager
 from ..services.patch import apply_patch_to_schema
 from ..models import (
     UISchema, StateInfo, LayoutInfo,
-    Block, FieldConfig, ActionConfig,
-    BaseFieldConfig, LayoutType
+    Block, ActionConfig, LayoutType,
+    BaseFieldConfig, SelectableFieldConfig, ImageFieldConfig,
+    TableFieldConfig, ComponentFieldConfig
 )
+from backend.fastapi.services.websocket.handlers.manager import WebSocketManager
+from backend.fastapi.services.instance_service import InstanceService
 
 
 def convert_field_config(value: dict[str, Any]) -> Any:
     """根据字段类型将字典转换为正确的 FieldConfig 模型对象"""
-    from ..models.field_models import (
-        BaseFieldConfig,
-        SelectableFieldConfig,
-        ImageFieldConfig,
-        TableFieldConfig,
-        ComponentFieldConfig
-    )
-
     field_type = value.get("type", "text")
     
     # 根据字段类型处理可能为 None 的数组属性
@@ -648,11 +642,11 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
 
 
 def register_patch_routes(
-    app,
+    app:FastAPI,
     schema_manager: SchemaManager,
     patch_history: PatchHistoryManager,
-    ws_manager,
-    instance_service
+    ws_manager: WebSocketManager,
+    instance_service: InstanceService
 ):
     """注册 Patch 相关的路由
 
