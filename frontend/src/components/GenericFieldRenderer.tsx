@@ -255,12 +255,14 @@ const defaultRenderers: FieldRendererRegistry = {
         </label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {tags.map((tag: any, index: number) => {
-            const tagType = tag.type || 'default';
+            // 如果 tag 是对象，提取 type 和 label；否则直接使用字符串
+            const tagType = typeof tag === 'object' && tag.type ? tag.type : tag;
+            const tagLabel = tag.label || tag;
             return (
               <Tag
                 key={index}
                 type={tagType}
-                label={tag.label || tag}
+                label={tagLabel}
               />
             );
           })}

@@ -184,14 +184,13 @@ export default function Table({ field, value }: TableProps) {
                       const match = comp.tagType.match(/value\s*===?\s*['"]?([^'"']+)['"]?/);
                       if (match && match[1] === String(componentValue)) {
                         tagType = comp.tagType.split('=>')[1]?.trim().replace(/['"]/g, '') || 'default';
-                      } else if (['success', 'warning', 'error', 'info'].includes(comp.tagType)) {
+                      } else {
+                        // Tag 组件会自动映射状态值到颜色类型
                         tagType = comp.tagType;
                       }
                     } else {
-                      if (['success', 'active', 'completed', 'done'].includes(String(componentValue))) tagType = 'success';
-                      else if (['warning', 'pending', 'waiting'].includes(String(componentValue))) tagType = 'warning';
-                      else if (['error', 'failed', 'danger', 'rejected'].includes(String(componentValue))) tagType = 'error';
-                      else if (['info', 'processing'].includes(String(componentValue))) tagType = 'info';
+                      // 使用 componentValue，Tag 组件会自动映射
+                      tagType = String(componentValue);
                     }
 
                     const tagStyles: Record<string, any> = {
@@ -201,7 +200,23 @@ export default function Table({ field, value }: TableProps) {
                       error: { background: '#f8d7da', color: '#721c24' },
                       info: { background: '#d1ecf1', color: '#0c5460' }
                     };
-                    const style = tagStyles[tagType] || tagStyles.default;
+
+                    // 根据映射规则获取实际的颜色类型
+                    const mappedType = (() => {
+                      const status = String(tagType).toLowerCase();
+                      if (['active', 'completed', 'done', 'success', 'enabled', 'open'].includes(status)) {
+                        return 'success';
+                      } else if (['pending', 'waiting', 'warning', 'processing'].includes(status)) {
+                        return 'warning';
+                      } else if (['error', 'failed', 'danger', 'rejected'].includes(status)) {
+                        return 'error';
+                      } else if (['info'].includes(status)) {
+                        return 'info';
+                      }
+                      return 'default';  // inactive, disabled, closed, 其他未知状态
+                    })();
+
+                    const style = tagStyles[mappedType] || tagStyles.default;
 
                     return (
                       <span key={compIndex} style={{
@@ -414,6 +429,9 @@ export default function Table({ field, value }: TableProps) {
             } else if (typeof column.tagType === 'string') {
               tagType = evaluateExpression(column.tagType, val) || 'default';
             }
+          } else {
+            // 使用 val 作为状态值，Tag 组件会自动映射
+            tagType = String(val);
           }
           const tagStyles: Record<string, any> = {
             default: { background: '#e9ecef', color: '#495057' },
@@ -422,7 +440,23 @@ export default function Table({ field, value }: TableProps) {
             error: { background: '#f8d7da', color: '#721c24' },
             info: { background: '#d1ecf1', color: '#0c5460' }
           };
-          const style = tagStyles[tagType] || tagStyles.default;
+
+          // 根据映射规则获取实际的颜色类型
+          const mappedType = (() => {
+            const status = String(tagType).toLowerCase();
+            if (['active', 'completed', 'done', 'success', 'enabled', 'open'].includes(status)) {
+              return 'success';
+            } else if (['pending', 'waiting', 'warning', 'processing'].includes(status)) {
+              return 'warning';
+            } else if (['error', 'failed', 'danger', 'rejected'].includes(status)) {
+              return 'error';
+            } else if (['info'].includes(status)) {
+              return 'info';
+            }
+            return 'default';  // inactive, disabled, closed, 其他未知状态
+          })();
+
+          const style = tagStyles[mappedType] || tagStyles.default;
 
           let displayValue = val;
           if (column.renderText) {
