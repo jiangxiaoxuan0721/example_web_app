@@ -35,6 +35,7 @@ const SingleLayout = ({
           block={block}
           highlightField={highlightField}
           highlightBlockId={highlightBlockId}
+          onNavigate={onNavigate}
         />
       ))}
 
@@ -85,6 +86,7 @@ const GridLayout = ({
             block={block}
             highlightField={highlightField}
             highlightBlockId={highlightBlockId}
+            onNavigate={onNavigate}
           />
         ))}
       </div>
@@ -135,6 +137,7 @@ const FlexLayout = ({
               block={block}
               highlightField={highlightField}
               highlightBlockId={highlightBlockId}
+              onNavigate={onNavigate}
             />
           </div>
         ))}
@@ -227,6 +230,7 @@ const TabsLayout = ({
             block={block}
             highlightField={highlightField}
             highlightBlockId={highlightBlockId}
+            onNavigate={onNavigate}
           />
         ))}
       </div>

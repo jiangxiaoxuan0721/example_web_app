@@ -2,6 +2,7 @@
 
 import { FieldConfig } from '../types/schema';
 import type { UISchema } from '../types/schema';
+import { getOptionLabel, getOptionLabels } from '../utils/template';
 
 export interface MultiSelectProps {
   field: FieldConfig;
@@ -18,6 +19,7 @@ export default function MultiSelect({ field, value, onChange, disabled }: MultiS
   const isDisabled = disabled || field.editable === false;
   const isRequired = field.required === true;
   const isEditable = field.editable !== false;
+  const options = field.options || [];
 
   return (
     <div style={{ marginBottom: '16px' }}>
@@ -32,7 +34,7 @@ export default function MultiSelect({ field, value, onChange, disabled }: MultiS
         {isRequired && <span style={{ color: 'red', marginLeft: '4px' }}>*</span>}
       </label>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-        {field.options?.map((option) => {
+        {options.map((option) => {
           const isSelected = selectedOptions.includes(option.value);
           return (
             <label
@@ -68,10 +70,18 @@ export default function MultiSelect({ field, value, onChange, disabled }: MultiS
                 type="checkbox"
                 checked={isSelected}
                 onChange={() => {
+                  let newValue;
                   if (isSelected) {
-                    onChange?.(selectedOptions.filter((v: string) => v !== option.value));
+                    newValue = selectedOptions.filter((v: string) => v !== option.value);
                   } else {
-                    onChange?.([...selectedOptions, option.value]);
+                    newValue = [...selectedOptions, option.value];
+                  }
+                  onChange?.(newValue);
+                  // 存储到 state.params 中以便模板使用
+                  if (field.key) {
+                    const labels = getOptionLabels(newValue, options);
+                    (window as any).__optionLabels__ = (window as any).__optionLabels__ || {};
+                    (window as any).__optionLabels__[field.key] = labels.join(', ');
                   }
                 }}
                 disabled={isDisabled}

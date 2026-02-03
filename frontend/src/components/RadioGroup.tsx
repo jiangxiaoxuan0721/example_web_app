@@ -2,6 +2,7 @@
 
 import { FieldConfig } from '../types/schema';
 import type { UISchema } from '../types/schema';
+import { getOptionLabel } from '../utils/template';
 
 export interface RadioGroupProps {
   field: FieldConfig;
@@ -70,7 +71,16 @@ export default function RadioGroup({ field, value, onChange, disabled }: RadioGr
               name={field.key}
               value={option.value}
               checked={value === option.value}
-              onChange={(e) => onChange?.(e.target.value)}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                onChange?.(newValue);
+                // 存储到 state.params 中以便模板使用
+                if (field.key) {
+                  const label = getOptionLabel(newValue, options);
+                  (window as any).__optionLabels__ = (window as any).__optionLabels__ || {};
+                  (window as any).__optionLabels__[field.key] = label;
+                }
+              }}
               disabled={isDisabled}
               required={isRequired}
               style={{

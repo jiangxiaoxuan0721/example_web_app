@@ -49,7 +49,10 @@
 /* ====== Sidebar 样式 ====== */
 
 .pta-sidebar {
-  position: relative !important;
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
   width: 240px !important;
   flex-shrink: 0 !important;
   background-color: white !important;
@@ -57,12 +60,13 @@
   transition: width 0.3s ease !important;
   display: flex !important;
   flex-direction: column !important;
+  z-index: 100 !important;
 }
 
 .pta-sidebar--collapsed {
   width: 0px !important;
   border-right: none !important;
-  overflow: visible !important;
+  overflow: hidden !important;
 }
 
 .pta-sidebar--collapsed .pta-sidebar__content {
@@ -70,8 +74,8 @@
 }
 
 .pta-sidebar__toggle {
-  position: absolute !important;
-  right: -20px !important;
+  position: fixed !important;
+  left: 240px !important;
   top: 50% !important;
   transform: translateY(-50%) !important;
   width: 20px !important;
@@ -86,13 +90,16 @@
   justify-content: center !important;
   color: #666 !important;
   font-size: 12px !important;
-  transition: all 0.2s ease !important;
+  transition: left 0.3s ease, all 0.2s ease !important;
   z-index: 1000 !important;
 }
 
+/* Sidebar 收缩时，折叠按钮移到左侧边缘 */
 .pta-sidebar--collapsed .pta-sidebar__toggle {
-  right: -20px !important;
+  left: 0 !important;
 }
+
+
 
 .pta-sidebar__toggle:hover {
   background-color: #f9fafb !important;
@@ -223,29 +230,67 @@
   flex-direction: column !important;
   min-width: 0 !important;
   min-height: 0 !important;
+  margin-left: 240px !important;
+  transition: margin-left 0.3s ease !important;
+}
+
+/* 当 sidebar 收缩时，主容器左边距为 0 */
+.pta-layout:has(.pta-sidebar--collapsed) .pta-container {
+  margin-left: 0 !important;
 }
 
 /* ====== 顶部区域 ====== */
 
 .pta-header {
   /* 固定的顶部区域 */
+  position: fixed !important;
+  left: 240px !important;
+  right: 0 !important;
+  top: 0 !important;
   flex-shrink: 0 !important;
   background-color: white !important;
-  padding: 15px !important;
+  padding: 10px !important;
   border-radius: 8px !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  margin-bottom: 20px !important;
+  z-index: 100 !important;
+}
+
+/* Sidebar 收缩时，header 占据全宽 */
+.pta-layout:has(.pta-sidebar--collapsed) .pta-header {
+  left: 0 !important;
 }
 
 /* ====== 主内容区域 ====== */
 
 .pta-content {
-  /* 不可滚动的内容区域 */
+  /* 可滚动的内容区域 */
   flex: 1 !important;
-  overflow: hidden !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
   min-height: 0 !important;
-  padding: 20px !important;
+  padding: 90px 20px 20px 20px !important;
   display: flex !important;
   flex-direction: column !important;
+}
+
+/* 滚动条样式 */
+.pta-content::-webkit-scrollbar {
+  width: 10px !important;
+}
+
+.pta-content::-webkit-scrollbar-track {
+  background: #f1f1f1 !important;
+  border-radius: 5px !important;
+}
+
+.pta-content::-webkit-scrollbar-thumb {
+  background: #888 !important;
+  border-radius: 5px !important;
+}
+
+.pta-content::-webkit-scrollbar-thumb:hover {
+  background: #555 !important;
 }
 
 /* ====== Schema 容器 ====== */
@@ -947,9 +992,13 @@
 /* ====== 通用响应式样式 ====== */
 
 @media (max-width: 768px) {
-  /* 移动端隐藏 sidebar */
+  /* 移动端隐藏 sidebar，主容器不需要左边距 */
   .pta-sidebar {
     display: none !important;
+  }
+
+  .pta-container {
+    margin-left: 0 !important;
   }
 
   .pta-block {

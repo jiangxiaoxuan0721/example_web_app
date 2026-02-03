@@ -143,18 +143,20 @@ python tools.py
 
 ## Available Instances
 
-The system comes with four pre-configured instances:
+The system comes with five pre-configured instances:
 
 1. **demo** - User data table example (showcasing tables, tags, images, actions, etc.)
-2. **counter** - Counter application (demonstrating increment/decrement functionality)
-3. **rich_content** - Rich content display (HTML, images, fullscreen viewing, downloads, etc.)
-4. **block_actions_test** - Block Actions testing (showcasing block-level actions and dynamic operations)
+2. **block_actions_test** - Block Actions testing (showcasing block-level actions and dynamic operations)
+3. **block_layouts_demo** - Layout demonstrations (showcasing grid, flex, tabs, and accordion layouts)
+4. **table_buttons_demo** - Table button events (showcasing inline button click handling)
+5. **option_label_demo** - Option label template (showcasing how to get both value and label from select/radio/multiselect fields)
 
 Access them at:
 - `http://localhost:5173?instanceId=demo`
-- `http://localhost:5173?instanceId=counter`
-- `http://localhost:5173?instanceId=rich_content`
 - `http://localhost:5173?instanceId=block_actions_test`
+- `http://localhost:5173?instanceId=block_layouts_demo`
+- `http://localhost:5173?instanceId=table_buttons_demo`
+- `http://localhost:5173?instanceId=option_label_demo`
 
 ## MCP Tools
 

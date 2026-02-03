@@ -2,6 +2,7 @@
 
 import { FieldConfig } from '../types/schema';
 import type { UISchema } from '../types/schema';
+import { getOptionLabel } from '../utils/template';
 
 export interface SelectProps {
   field: FieldConfig;
@@ -29,7 +30,18 @@ export default function Select({ field, value, onChange, disabled }: SelectProps
       </label>
       <select
         value={displayValue}
-        onChange={(e) => onChange?.(e.target.value)}
+        onChange={(e) => {
+          // 更新值时，同时更新 label 映射
+          const newValue = e.target.value;
+          onChange?.(newValue);
+          // 存储到 state.params 中以便模板使用
+          if (field.key) {
+            const label = getOptionLabel(newValue, options);
+            // 将 label 存储到对应的字段路径
+            (window as any).__optionLabels__ = (window as any).__optionLabels__ || {};
+            (window as any).__optionLabels__[field.key] = label;
+          }
+        }}
         disabled={isDisabled}
         required={isRequired}
         style={{

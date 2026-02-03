@@ -14,6 +14,7 @@ interface BlockRendererProps {
   highlightField?: string | null;
   highlightBlockId?: string | null;
   actions?: ActionConfig[];
+  onNavigate?: (targetInstance: string) => void;
 }
 
 const bindPath = 'state.params';
@@ -31,7 +32,7 @@ export interface BlockRenderer {
 
 // 块渲染器注册表
 const blockRenderers: Record<string, BlockRenderer> = {
-  form: ({ block, schema, disabled, highlightField, highlightBlockId, actions }) => {
+  form: ({ block, schema, disabled, highlightField, highlightBlockId, actions, onNavigate }) => {
     const isHighlighted = highlightBlockId === block.id;
     // 默认 bindPath 为 state.params
     // 确保 fields 始终是数组，处理各种可能的格式
@@ -50,8 +51,9 @@ const blockRenderers: Record<string, BlockRenderer> = {
     const allActions = actions ? [...blockActions, ...actions] : blockActions;
 
     const handleNavigate = (targetInstance: string) => {
-      // 通过 window.location 触发导航
-      window.location.hash = `#instance=${targetInstance}`;
+      if (onNavigate) {
+        onNavigate(targetInstance);
+      }
     };
 
     return (
@@ -164,14 +166,16 @@ const blockRenderers: Record<string, BlockRenderer> = {
   },
 
   // 布局类型 1: 标签页布局 - 支持多个选项卡
-  tabs: ({ block, schema, disabled, highlightField, highlightBlockId }) => {
+  tabs: ({ block, schema, disabled, highlightField, highlightBlockId, onNavigate }) => {
     const [activeTab, setActiveTab] = useState(0);
     const isHighlighted = highlightBlockId === block.id;
     const instanceId = useSchemaStore((state) => state.instanceId);
 
 
     const handleNavigate = (targetInstance: string) => {
-      window.location.hash = `#instance=${targetInstance}`;
+      if (onNavigate) {
+        onNavigate(targetInstance);
+      }
     };
 
     // 默认 bindPath 为 state.params
@@ -251,7 +255,7 @@ const blockRenderers: Record<string, BlockRenderer> = {
   },
 
   // 布局类型 2: 网格布局 - 响应式网格
-  grid: ({ block, schema, disabled, highlightField, highlightBlockId }) => {
+  grid: ({ block, schema, disabled, highlightField, highlightBlockId, onNavigate }) => {
     const isHighlighted = highlightBlockId === block.id;
     const instanceId = useSchemaStore((state) => state.instanceId);
     let fields: any[] = [];
@@ -267,7 +271,9 @@ const blockRenderers: Record<string, BlockRenderer> = {
     const gap = block.props?.gap || '16px';
 
     const handleNavigate = (targetInstance: string) => {
-      window.location.hash = `#instance=${targetInstance}`;
+      if (onNavigate) {
+        onNavigate(targetInstance);
+      }
     };
 
     // 默认 bindPath 为 state.params
@@ -334,7 +340,7 @@ const blockRenderers: Record<string, BlockRenderer> = {
   },
 
   // 布局类型 3: 折叠面板布局
-  accordion: ({ block, schema, disabled, highlightField, highlightBlockId }) => {
+  accordion: ({ block, schema, disabled, highlightField, highlightBlockId, onNavigate }) => {
     const [openPanels, setOpenPanels] = useState<Set<number>>(new Set([0]));
     const isHighlighted = highlightBlockId === block.id;
     const instanceId = useSchemaStore((state) => state.instanceId);
@@ -350,7 +356,9 @@ const blockRenderers: Record<string, BlockRenderer> = {
     };
 
     const handleNavigate = (targetInstance: string) => {
-      window.location.hash = `#instance=${targetInstance}`;
+      if (onNavigate) {
+        onNavigate(targetInstance);
+      }
     };
 
     return (
@@ -440,7 +448,7 @@ export const getRegisteredBlockTypes = (): string[] => {
 /**
  * 通用块渲染器组件
  */
-export default function BlockRenderer({ block, disabled, highlightField, highlightBlockId, actions }: BlockRendererProps) {
+export default function BlockRenderer({ block, disabled, highlightField, highlightBlockId, actions, onNavigate }: BlockRendererProps) {
   const schema = useSchemaStore((state) => state.schema);
   const renderer = blockRenderers[block.layout];
 
@@ -454,5 +462,5 @@ export default function BlockRenderer({ block, disabled, highlightField, highlig
     return null;
   }
 
-  return renderer({ block, schema, disabled, highlightField, highlightBlockId, actions });
+  return renderer({ block, schema, disabled, highlightField, highlightBlockId, actions, onNavigate });
 }

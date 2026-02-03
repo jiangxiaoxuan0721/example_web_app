@@ -5,6 +5,41 @@
 import type { UISchema } from '../types/schema';
 
 /**
+ * 从选项列表中查找标签
+ * @param value 选中的值
+ * @param options 选项列表
+ * @returns 对应的标签，如果找不到则返回原值
+ */
+export function getOptionLabel(
+  value: any,
+  options?: Array<{ label: string; value: string }>
+): string {
+  if (!value || !options || !Array.isArray(options)) {
+    return String(value ?? '');
+  }
+
+  const found = options.find(opt => opt.value === String(value));
+  return found ? found.label : String(value);
+}
+
+/**
+ * 从选项列表中查找多个标签
+ * @param values 选中的值数组
+ * @param options 选项列表
+ * @returns 对应的标签数组，如果找不到则返回原值
+ */
+export function getOptionLabels(
+  values: any[],
+  options?: Array<{ label: string; value: string }>
+): string[] {
+  if (!values || !Array.isArray(values) || !options || !Array.isArray(options)) {
+    return [];
+  }
+
+  return values.map(v => getOptionLabel(v, options));
+}
+
+/**
  * 从 schema 中获取嵌套值
  * @param obj 对象
  * @param path 点分隔的路径，如 'state.params.userId'
@@ -63,6 +98,26 @@ export function renderTemplate(
 
   return template.replace(templateRegex, (match, expression) => {
     const trimmed = expression.trim();
+
+    // 处理 .label 后缀（从选项框获取标签）
+    if (trimmed.endsWith('.label')) {
+      const baseExpression = trimmed.slice(0, -6); // 移除 '.label'
+      const baseValue = getNestedValue(context, baseExpression, match);
+      
+      // 从全局存储中查找对应的标签
+      // 从路径中提取字段名，如 state.params.status.label -> status
+      const parts = baseExpression.split('.');
+      const fieldKey = parts[parts.length - 1];
+      const optionLabels = (window as any).__optionLabels__ || {};
+      const label = optionLabels[fieldKey];
+      
+      if (label !== undefined) {
+        return label;
+      }
+      
+      // 如果没有找到标签，返回原值
+      return baseValue === match ? match : String(baseValue);
+    }
 
     // 尝试从上下文中获取值
     const value = getNestedValue(context, trimmed, match);

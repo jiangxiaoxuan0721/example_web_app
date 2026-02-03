@@ -38,6 +38,17 @@ ${meta.pageKey}
 ${meta.status}
 ```
 
+### 6. 选项框标签获取 - 新功能！
+
+对于 `select`、`radio`、`multiselect` 类型的字段，可以使用 `.label` 后缀获取选中项的标签文本：
+
+```
+${state.params.status.label}          # 获取选中状态的标签（如 "活跃"）
+${state.params.status}                 # 获取选中状态的值（如 "active"）
+${state.params.categories.label}       # 多选框会返回逗号分隔的标签（如 "科技, 生活"）
+${state.params.categories}              # 多选框返回值的数组（如 ["tech", "life"]）
+```
+
 ## 使用场景
 
 ### 1. HTML 内容中显示动态值
@@ -83,6 +94,100 @@ ${meta.status}
 }
 ```
 
+### 5. 选项框标签显示 - 新功能！
+
+对于 select、radio、multiselect 类型的字段，可以显示选中的标签文本而不是值：
+
+**Select 示例：**
+
+```json
+{
+  "type": "select",
+  "key": "status",
+  "label": "状态",
+  "options": [
+    {"label": "活跃", "value": "active"},
+    {"label": "非活跃", "value": "inactive"},
+    {"label": "待审核", "value": "pending"}
+  ]
+}
+```
+
+在 HTML 中显示选中的标签：
+
+```json
+{
+  "type": "html",
+  "key": "statusDisplay",
+  "value": "<p>当前状态: <strong>${state.params.status.label}</strong></p>"
+}
+```
+
+用户选择 "active" 时，显示：
+```
+当前状态: 活跃
+```
+
+**MultiSelect 示例：**
+
+```json
+{
+  "type": "multiselect",
+  "key": "categories",
+  "label": "分类",
+  "options": [
+    {"label": "科技", "value": "tech"},
+    {"label": "生活", "value": "life"},
+    {"label": "娱乐", "value": "entertainment"}
+  ]
+}
+```
+
+在 HTML 中显示选中的多个标签：
+
+```json
+{
+  "type": "html",
+  "key": "categoriesDisplay",
+  "value": "<p>已选分类: ${state.params.categories.label}</p>"
+}
+```
+
+用户选择 ["tech", "life"] 时，显示：
+```
+已选分类: 科技, 生活
+```
+
+**Radio 示例：**
+
+```json
+{
+  "type": "radio",
+  "key": "priority",
+  "label": "优先级",
+  "options": [
+    {"label": "高", "value": "high"},
+    {"label": "中", "value": "medium"},
+    {"label": "低", "value": "low"}
+  ]
+}
+```
+
+在 HTML 中显示选中的优先级：
+
+```json
+{
+  "type": "html",
+  "key": "priorityDisplay",
+  "value": "<p>优先级设置: ${state.params.priority.label} (${state.params.priority})</p>"
+}
+```
+
+用户选择 "high" 时，显示：
+```
+优先级设置: 高 (high)
+```
+
 ## 注意事项
 
 1. **路径区分大小写**：`${state.params.userId}` 和 `${state.params.USERID}` 是不同的
@@ -94,6 +199,12 @@ ${meta.status}
 4. **数组类型**：如果值是数组，会自动转换为逗号分隔的字符串
 
 5. **性能优化**：模板解析在组件渲染时进行，使用了 React 的 useMemo 进行优化
+
+6. **选项框标签**：
+   - `.label` 后缀仅适用于 select、radio、multiselect 类型的字段
+   - 标签存储在客户端内存中，页面刷新后会丢失
+   - 对于 multiselect，`.label` 会返回所有选中标签的逗号分隔字符串
+   - 如果选项配置中的 label 不存在，会返回原始值
 
 ## 示例
 

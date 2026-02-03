@@ -2,7 +2,7 @@
 
 from backend.fastapi.models.enums import FieldType
 from ..fastapi.models import (
-    UISchema, StateInfo, LayoutInfo, Block, ActionConfig,ColumnConfig,
+    UISchema, StateInfo, LayoutInfo, Block, ActionConfig,
     BlockProps, LayoutType, ActionType,SchemaPatch,PatchOperationType,
     BaseFieldConfig, SelectableFieldConfig, TableFieldConfig, ImageFieldConfig
 )
@@ -15,6 +15,7 @@ def get_default_instances() -> dict[str, UISchema]:
         "block_actions_test": _create_block_actions_test_schema(),
         "block_layouts_demo": _create_layouts_demo_schema(),
         "table_buttons_demo": _create_table_buttons_demo_schema(),
+        "option_label_demo": _create_option_label_demo_schema(),
     }
 
 
@@ -295,21 +296,6 @@ def _create_demo_schema() -> UISchema:
             ),
         ],
         actions=[
-            # 实例导航 actions
-            ActionConfig(
-                id="to_counter",
-                label="计数器演示",
-                style="primary",
-                action_type=ActionType.NAVIGATE,
-                target_instance="counter"
-            ),
-            ActionConfig(
-                id="to_rich_content",
-                label="富内容展示",
-                style="secondary",
-                action_type=ActionType.NAVIGATE,
-                target_instance="rich_content"
-            ),
             ActionConfig(
                 id="to_block_actions",
                 label="Block Actions",
@@ -451,7 +437,7 @@ def _create_block_actions_test_schema() -> UISchema:
                 layout="form",
                 props=BlockProps(  # pyright: ignore[reportCallIssue]
                     fields=[
-                        BaseFieldConfig(  # pyright: ignore[reportCallIssue]
+                        BaseFieldConfig(
                             label="消息",
                             key="message",
                             type=FieldType.TEXT
@@ -757,7 +743,7 @@ def _create_table_buttons_demo_schema() -> UISchema:
                 layout="form",
                 props=BlockProps(  # pyright: ignore[reportCallIssue]
                     fields=[
-                        BaseFieldConfig(  # pyright: ignore[reportCallIssue]
+                        BaseFieldConfig(
                             label="操作消息",
                             key="action_message",
                             type=FieldType.TEXT,
@@ -968,5 +954,163 @@ def _create_table_buttons_demo_schema() -> UISchema:
                     SchemaPatch(op=PatchOperationType.SET, path="state.params.next_id", value=6),
                 ]
             )
+        ]
+    )
+
+
+def _create_option_label_demo_schema() -> UISchema:
+    """创建选项框标签演示 Schema - 展示从选项框获取值和标签的功能"""
+    from datetime import datetime
+
+    return UISchema(
+        page_key="option_label_demo",
+        state=StateInfo(
+            params=dict(
+                # 下拉选择框
+                status="active",
+                # 单选框
+                priority="medium",
+                # 多选框
+                categories=["tech", "life"],
+            ),
+            runtime={
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "version": "1.0.0"
+            }
+        ),
+        layout=LayoutInfo(type=LayoutType.SINGLE, columns=None, gap=None),
+        blocks=[
+            # Block 1: 选项框选择
+            Block(
+                id="selection_block",
+                layout="form",
+                props=BlockProps(  # pyright: ignore[reportCallIssue]
+                    fields=[
+                        SelectableFieldConfig(
+                            label="状态（下拉框）",
+                            key="status",
+                            type=FieldType.SELECT,
+                            options=[  # pyright: ignore[reportArgumentType]
+                                {"label": "活跃", "value": "active"},
+                                {"label": "非活跃", "value": "inactive"},
+                                {"label": "待审核", "value": "pending"}
+                            ],
+                            description="选择状态，下方会显示对应的标签"
+                        ),
+                        SelectableFieldConfig(
+                            label="优先级（单选框）",
+                            key="priority",
+                            type=FieldType.RADIO,
+                            options=[  # pyright: ignore[reportArgumentType]
+                                {"label": "高", "value": "high"},
+                                {"label": "中", "value": "medium"},
+                                {"label": "低", "value": "low"}
+                            ],
+                            description="选择优先级，下方会显示对应的标签"
+                        ),
+                        SelectableFieldConfig(
+                            label="分类（多选框）",
+                            key="categories",
+                            type=FieldType.MULTISELECT,
+                            options=[  # pyright: ignore[reportArgumentType]
+                                {"label": "科技", "value": "tech"},
+                                {"label": "生活", "value": "life"},
+                                {"label": "娱乐", "value": "entertainment"}
+                            ],
+                            description="选择多个分类，下方会显示对应的标签"
+                        ),
+                    ]
+                )
+            ),
+
+            # Block 2: 实时显示值和标签
+            Block(
+                id="display_block",
+                layout="form",
+                props=BlockProps(  # pyright: ignore[reportCallIssue]
+                    fields=[
+                        BaseFieldConfig(
+                            label="当前状态信息",
+                            key="status_display",
+                            type=FieldType.HTML,
+                            description="显示选中的状态值和标签",
+                            # 使用模板同时显示值和标签
+                            value='<div style="padding: 12px; background: #eef2ff; border-radius: 4px;">' +
+                                  '<p><strong>状态值:</strong> ${state.params.status}</p>' +
+                                  '<p><strong>状态标签:</strong> ${state.params.status.label}</p>' +
+                                  '</div>'
+                        ),
+                        BaseFieldConfig(
+                            label="当前优先级信息",
+                            key="priority_display",
+                            type=FieldType.HTML,
+                            description="显示选中的优先级值和标签",
+                            # 使用模板同时显示值和标签
+                            value='<div style="padding: 12px; background: #fef3c7; border-radius: 4px;">' +
+                                  '<p><strong>优先级值:</strong> ${state.params.priority}</p>' +
+                                  '<p><strong>优先级标签:</strong> ${state.params.priority.label}</p>' +
+                                  '</div>'
+                        ),
+                        BaseFieldConfig(
+                            label="当前分类信息",
+                            key="categories_display",
+                            type=FieldType.HTML,
+                            description="显示选中的多个分类值和标签",
+                            # 使用模板同时显示值和标签
+                            value='<div style="padding: 12px; background: #dcfce7; border-radius: 4px;">' +
+                                  '<p><strong>分类值:</strong> ${state.params.categories}</p>' +
+                                  '<p><strong>分类标签:</strong> ${state.params.categories.label}</p>' +
+                                  '</div>'
+                        ),
+                        BaseFieldConfig(
+                            label="综合信息展示",
+                            key="summary_display",
+                            type=FieldType.HTML,
+                            description="综合展示所有选择的信息",
+                            # 使用模板组合多个字段
+                            value='<div style="padding: 16px; background: #f3e8ff; border-radius: 8px;">' +
+                                  '<h3 style="margin-top: 0;">当前配置</h3>' +
+                                  '<p>状态: <strong>${state.params.status.label}</strong> (${state.params.status})</p>' +
+                                  '<p>优先级: <strong>${state.params.priority.label}</strong> (${state.params.priority})</p>' +
+                                  '<p>分类: <strong>${state.params.categories.label}</strong></p>' +
+                                  '<p style="color: #666; font-size: 12px;">最后更新: ${state.runtime.timestamp}</p>' +
+                                  '</div>'
+                        ),
+                    ]
+                )
+            ),
+
+            # Block 3: 导航按钮
+            Block(
+                id="nav_block",
+                layout="form",
+                props=BlockProps(  # pyright: ignore[reportCallIssue]
+                    fields=[
+                        BaseFieldConfig(
+                            label="操作说明",
+                            key="instructions",
+                            type=FieldType.HTML,
+                            value='<div style="padding: 16px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">' +
+                                  '<h4 style="margin-top: 0;">功能说明</h4>' +
+                                  '<p>此实例展示了如何使用模板表达式从选项框中获取值和标签：</p>' +
+                                  '<ul style="margin-bottom: 0;">' +
+                                  '<li><code>${state.params.status}</code> - 获取状态值（如 "active"）</li>' +
+                                  '<li><code>${state.params.status.label}</code> - 获取状态标签（如 "活跃"）</li>' +
+                                  '<li><code>.label</code> 后缀适用于 select、radio、multiselect 类型</li>' +
+                                  '</ul>' +
+                                  '</div>'
+                        ),
+                    ],
+                    actions=[
+                        ActionConfig(
+                            id="to_demo",
+                            label="返回主页",
+                            style="secondary",
+                            action_type=ActionType.NAVIGATE,
+                            target_instance="demo"
+                        ),
+                    ]
+                )
+            ),
         ]
     )
