@@ -54,7 +54,6 @@ export function renderTemplate(
     state: schema.state || {},
     params: schema.state?.params || {},
     runtime: schema.state?.runtime || {},
-    meta: schema.meta || {},
     ...extraContext
   };
 
