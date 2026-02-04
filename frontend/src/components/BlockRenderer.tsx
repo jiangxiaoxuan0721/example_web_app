@@ -15,6 +15,7 @@ interface BlockRendererProps {
   highlightBlockId?: string | null;
   actions?: ActionConfig[];
   onNavigate?: (targetInstance: string) => void;
+  onNavigateBlock?: (targetBlock: string) => void;
 }
 
 const bindPath = 'state.params';
@@ -32,7 +33,7 @@ export interface BlockRenderer {
 
 // 块渲染器注册表
 const blockRenderers: Record<string, BlockRenderer> = {
-  form: ({ block, schema, disabled, highlightField, highlightBlockId, actions, onNavigate }) => {
+  form: ({ block, schema, disabled, highlightField, highlightBlockId, actions, onNavigate, onNavigateBlock }) => {
     const isHighlighted = highlightBlockId === block.id;
     // 默认 bindPath 为 state.params
     // 确保 fields 始终是数组，处理各种可能的格式
@@ -102,6 +103,7 @@ const blockRenderers: Record<string, BlockRenderer> = {
                 action={action}
                 highlighted={false}
                 onNavigate={handleNavigate}
+                onNavigateBlock={onNavigateBlock}
                 blockId={block.id}
               />
             ))}
@@ -166,7 +168,7 @@ const blockRenderers: Record<string, BlockRenderer> = {
   },
 
   // 布局类型 1: 标签页布局 - 支持多个选项卡
-  tabs: ({ block, schema, disabled, highlightField, highlightBlockId, onNavigate }) => {
+  tabs: ({ block, schema, disabled, highlightField, highlightBlockId, onNavigate, onNavigateBlock }) => {
     const [activeTab, setActiveTab] = useState(0);
     const isHighlighted = highlightBlockId === block.id;
     const instanceId = useSchemaStore((state) => state.instanceId);
@@ -245,6 +247,7 @@ const blockRenderers: Record<string, BlockRenderer> = {
                 action={action}
                 highlighted={false}
                 onNavigate={handleNavigate}
+                onNavigateBlock={onNavigateBlock}
                 blockId={block.id}
               />
             ))}
@@ -255,7 +258,7 @@ const blockRenderers: Record<string, BlockRenderer> = {
   },
 
   // 布局类型 2: 网格布局 - 响应式网格
-  grid: ({ block, schema, disabled, highlightField, highlightBlockId, onNavigate }) => {
+  grid: ({ block, schema, disabled, highlightField, highlightBlockId, onNavigate, onNavigateBlock }) => {
     const isHighlighted = highlightBlockId === block.id;
     const instanceId = useSchemaStore((state) => state.instanceId);
     let fields: any[] = [];
@@ -330,6 +333,7 @@ const blockRenderers: Record<string, BlockRenderer> = {
                 action={action}
                 highlighted={false}
                 onNavigate={handleNavigate}
+                onNavigateBlock={onNavigateBlock}
                 blockId={block.id}
               />
             ))}
@@ -340,7 +344,7 @@ const blockRenderers: Record<string, BlockRenderer> = {
   },
 
   // 布局类型 3: 折叠面板布局
-  accordion: ({ block, schema, disabled, highlightField, highlightBlockId, onNavigate }) => {
+  accordion: ({ block, schema, disabled, highlightField, highlightBlockId, onNavigate, onNavigateBlock }) => {
     const [openPanels, setOpenPanels] = useState<Set<number>>(new Set([0]));
     const isHighlighted = highlightBlockId === block.id;
     const instanceId = useSchemaStore((state) => state.instanceId);
@@ -412,12 +416,13 @@ const blockRenderers: Record<string, BlockRenderer> = {
             {/* 渲染 panel 级别的 actions */}
             {panel.actions && panel.actions.length > 0 && (
               <div style={{ marginTop: '12px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                {panel.actions.map((action) => (
+                {panel.actions.map((action: ActionConfig) => (
                   <ActionButton
                     key={action.id}
                     action={action}
                     highlighted={false}
                     onNavigate={handleNavigate}
+                    onNavigateBlock={onNavigateBlock}
                     blockId={block.id}
                   />
                 ))}
@@ -448,7 +453,7 @@ export const getRegisteredBlockTypes = (): string[] => {
 /**
  * 通用块渲染器组件
  */
-export default function BlockRenderer({ block, disabled, highlightField, highlightBlockId, actions, onNavigate }: BlockRendererProps) {
+export default function BlockRenderer({ block, disabled, highlightField, highlightBlockId, actions, onNavigate, onNavigateBlock }: BlockRendererProps) {
   const schema = useSchemaStore((state) => state.schema);
   const renderer = blockRenderers[block.layout];
 
@@ -462,5 +467,5 @@ export default function BlockRenderer({ block, disabled, highlightField, highlig
     return null;
   }
 
-  return renderer({ block, schema, disabled, highlightField, highlightBlockId, actions, onNavigate });
+  return renderer({ block, schema, disabled, highlightField, highlightBlockId, actions, onNavigate, onNavigateBlock });
 }

@@ -21,7 +21,8 @@ class ActionConfig(BaseModelWithConfig):
     )
     action_type: ActionType = Field(default=ActionType.PATCH, alias="action_type", description="操作类型")
     patches: list[SchemaPatch] | None = Field(default_factory=list, description="要应用的patch映射")
-    target_instance: str | None = Field(default=None, alias="target_instance", description="目标实例ID")
+    target_instance: str | None = Field(default=None, alias="target_instance", description="目标实例ID（action_type=navigate时使用）")
+    target_block: str | None = Field(default=None, alias="target_block", description="目标block ID（action_type=navigate_block时使用）")
     disabled: bool = Field(default=False, description="是否禁用")
 
 

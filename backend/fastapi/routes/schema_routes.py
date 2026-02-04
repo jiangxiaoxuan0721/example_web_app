@@ -105,37 +105,74 @@ def register_schema_routes(app:FastAPI, schema_manager: SchemaManager, default_i
         }
 
     @app.post("/ui/switch")
-    async def switch_instance(request: dict[Any, Any]):
-        """切换到指定实例并设置为活跃状态"""
+    async def switch_ui(request: dict[Any, Any]):
+        """切换到指定实例或实例内的指定block"""
         instance_name = request.get("instance_name")
+        block_id = request.get("block_id")
 
-        if not instance_name:
+        # 至少需要提供一个参数
+        if not instance_name and not block_id:
             return {
                 "status": "error",
-                "error": "缺少 instance_name 参数"
+                "error": "缺少参数，需要提供 instance_name 或 block_id"
             }
 
-        # 检查实例是否存在
-        schema: UISchema | None = schema_manager.get(instance_name)
-        if not schema:
-            return {
-                "status": "error",
-                "error": f"实例 '{instance_name}' 不存在",
-                "available_instances": schema_manager.list_all()
-            }
+        # 如果提供了 instance_name，切换实例
+        if instance_name:
+            # 检查实例是否存在
+            schema: UISchema | None = schema_manager.get(instance_name)
+            if not schema:
+                return {
+                    "status": "error",
+                    "error": f"实例 '{instance_name}' 不存在",
+                    "available_instances": schema_manager.list_all()
+                }
 
-        print(f"[SchemaRoutes] 切换实例: '{instance_name}'")
+            print(f"[SchemaRoutes] 切换实例: '{instance_name}'")
 
-        # 如果WebSocket管理器可用，通知前端切换到指定实例
-        if ws_manager:
-            _ = await ws_manager.broadcast(message={
-                "type": "switch_instance",
-                "instance_name": instance_name
-            })
-            print(f"[SchemaRoutes] 已通知前端切换到实例: '{instance_name}'")
+            # 如果WebSocket管理器可用，通知前端切换到指定实例
+            if ws_manager:
+                _ = await ws_manager.broadcast(message={
+                    "type": "switch_instance",
+                    "instance_name": instance_name
+                })
+                print(f"[SchemaRoutes] 已通知前端切换到实例: '{instance_name}'")
+
+        # 如果提供了 block_id，切换到指定block
+        if block_id:
+            print(f"[SchemaRoutes] 切换到block: '{block_id}'")
+
+            # 验证 block_id 是否存在
+            # 如果没有指定 instance_name，使用默认实例或当前实例
+            target_instance_name = instance_name or default_instance_name
+            target_schema: UISchema | None = schema_manager.get(target_instance_name)
+
+            if not target_schema:
+                return {
+                    "status": "error",
+                    "error": f"无法验证 block_id：实例 '{target_instance_name}' 不存在"
+                }
+
+            # 检查 block 是否存在
+            block_ids = [block.id for block in target_schema.blocks if hasattr(block, 'id')]
+            if block_id not in block_ids:
+                return {
+                    "status": "error",
+                    "error": f"block_id '{block_id}' 在实例 '{target_instance_name}' 中不存在",
+                    "available_blocks": block_ids
+                }
+
+            # 如果WebSocket管理器可用，通知前端切换到指定block
+            if ws_manager:
+                _ = await ws_manager.broadcast(message={
+                    "type": "highlight_block",
+                    "block_id": block_id
+                })
+                print(f"[SchemaRoutes] 已通知前端切换到block: '{block_id}'")
 
         return {
             "status": "success",
-            "message": f"已成功切换到实例 '{instance_name}'",
-            "instance_name": instance_name
+            "message": f"已切换{'到实例' + f" '{instance_name}'" if instance_name else ''}{'，' if instance_name and block_id else ''}{'切换到block' + f" '{block_id}'" if block_id else ''}",
+            "instance_name": instance_name,
+            "block_id": block_id
         }

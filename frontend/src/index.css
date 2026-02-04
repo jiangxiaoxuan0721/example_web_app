@@ -30,16 +30,18 @@
 /* ====== 容器布局（带 Sidebar） ====== */
 
 .pta-layout {
-  /* 使用 flex 布局，高度占满父容器 */
+  /* 使用 flex 布局，高度比视窗小一些 */
   display: flex !important;
   flex-direction: row !important;
   width: 100% !important;
-  height: 100vh !important;
+  height: calc(90vh) !important;
+  margin: 10px !important;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif !important;
   background-color: #f5f5f5 !important;
   overflow: hidden !important;
+  border-radius: 8px !important;
 }
 
 .pta-layout--no-sidebar {
@@ -49,7 +51,6 @@
 /* ====== Sidebar 样式 ====== */
 
 .pta-sidebar {
-  position: fixed !important;
   left: 0 !important;
   top: 0 !important;
   bottom: 0 !important;
@@ -230,46 +231,31 @@
   flex-direction: column !important;
   min-width: 0 !important;
   min-height: 0 !important;
-  margin-left: 240px !important;
-  transition: margin-left 0.3s ease !important;
-}
-
-/* 当 sidebar 收缩时，主容器左边距为 0 */
-.pta-layout:has(.pta-sidebar--collapsed) .pta-container {
-  margin-left: 0 !important;
 }
 
 /* ====== 顶部区域 ====== */
 
 .pta-header {
-  /* 固定的顶部区域 */
-  position: fixed !important;
-  left: 240px !important;
-  right: 0 !important;
-  top: 0 !important;
+  /* 顶部区域，使用常规布局而非 fixed 定位 */
   flex-shrink: 0 !important;
   background-color: white !important;
   padding: 10px !important;
   border-radius: 8px !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
-  margin-bottom: 20px !important;
+  margin: 10px !important;
   z-index: 100 !important;
-}
-
-/* Sidebar 收缩时，header 占据全宽 */
-.pta-layout:has(.pta-sidebar--collapsed) .pta-header {
-  left: 0 !important;
 }
 
 /* ====== 主内容区域 ====== */
 
 .pta-content {
-  /* 可滚动的内容区域 */
+  /* 可滚动的内容区域，确保不超出视窗高度 */
   flex: 1 !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
   min-height: 0 !important;
-  padding: 90px 20px 20px 20px !important;
+  max-height: calc(100vh - 60px) !important;
+  padding: 0 10px 20px 10px !important;
   display: flex !important;
   flex-direction: column !important;
 }
@@ -295,10 +281,10 @@
 
 /* ====== Schema 容器 ====== */
 
-.pta-container > .pta-content > .pta-schema-container {
+.pta-container>.pta-content>.pta-schema-container {
   border: 1px solid #ccc !important;
   border-radius: 8px !important;
-  padding: 30px !important;
+  padding: 20px !important;
   background-color: white !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
   text-align: left !important;
@@ -311,11 +297,13 @@
   overflow-y: auto !important;
   overflow-x: hidden !important;
   position: relative !important;
+  /* 确保不超出父容器高度 */
+  max-height: 100% !important;
 }
 
 /* ====== Actions 容器 ====== */
 
-.pta-container > .pta-content > .pta-schema-container > .pta-actions-container {
+.pta-container>.pta-content>.pta-schema-container>.pta-actions-container {
   display: flex !important;
   gap: 10px !important;
   justify-content: center !important;
@@ -326,13 +314,13 @@
 
 /* ====== 折叠详情 ====== */
 
-.pta-container > .pta-content > .pta-schema-container > .pta-details {
+.pta-container>.pta-content>.pta-schema-container>.pta-details {
   margin-top: 20px !important;
   padding-top: 15px !important;
   border-top: 1px solid #eee !important;
 }
 
-.pta-container > .pta-content > .pta-schema-container > .pta-details > .pta-details-summary {
+.pta-container>.pta-content>.pta-schema-container>.pta-details>.pta-details-summary {
   cursor: pointer !important;
   font-weight: bold !important;
   color: #666 !important;
@@ -340,37 +328,37 @@
   user-select: none !important;
 }
 
-.pta-container > .pta-content > .pta-schema-container > .pta-details:hover > .pta-details-summary {
+.pta-container>.pta-content>.pta-schema-container>.pta-details:hover>.pta-details-summary {
   color: #333 !important;
 }
 
-.pta-container > .pta-content > .pta-schema-container > .pta-details > .pta-details-content {
+.pta-container>.pta-content>.pta-schema-container>.pta-details>.pta-details-content {
   margin-top: 10px !important;
   padding: 0 10px !important;
 }
 
 /* ====== 滚动条样式 ====== */
 
-.pta-container > .pta-content::-webkit-scrollbar {
+.pta-container>.pta-content::-webkit-scrollbar {
   width: 10px !important;
 }
 
-.pta-container > .pta-content::-webkit-scrollbar-track {
+.pta-container>.pta-content::-webkit-scrollbar-track {
   background: #f1f1f1 !important;
   border-radius: 5px !important;
 }
 
-.pta-container > .pta-content::-webkit-scrollbar-thumb {
+.pta-container>.pta-content::-webkit-scrollbar-thumb {
   background: #888 !important;
   border-radius: 5px !important;
 }
 
-.pta-container > .pta-content::-webkit-scrollbar-thumb:hover {
+.pta-container>.pta-content::-webkit-scrollbar-thumb:hover {
   background: #555 !important;
 }
 
 /* Firefox 滚动条样式 */
-.pta-container > .pta-content {
+.pta-container>.pta-content {
   scrollbar-width: thin !important;
   scrollbar-color: #888 #f1f1f1 !important;
 }
@@ -378,21 +366,21 @@
 /* ====== 响应式设计 ====== */
 
 @media (max-width: 768px) {
-  .pta-container > .pta-header {
-    padding: 10px !important;
-    margin-bottom: 15px !important;
+  .pta-container>.pta-header {
+    padding: 8px !important;
+    margin: 8px !important;
   }
 
-  .pta-container > .pta-content {
-    padding: 0 10px !important;
-    width: calc(100% - 20px) !important;
+  .pta-container>.pta-content {
+    padding: 0 8px 16px 8px !important;
+    max-height: calc(100vh - 50px) !important;
   }
 
-  .pta-container > .pta-content > .pta-schema-container {
-    padding: 20px !important;
+  .pta-container>.pta-content>.pta-schema-container {
+    padding: 15px !important;
   }
 
-  .pta-container > .pta-content > .pta-schema-container > .pta-actions-container {
+  .pta-container>.pta-content>.pta-schema-container>.pta-actions-container {
     flex-direction: column !important;
     align-items: stretch !important;
   }
@@ -400,18 +388,18 @@
 
 /* ====== 过渡动画 ====== */
 
-.pta-container > .pta-content > .pta-schema-container > .pta-details {
+.pta-container>.pta-content>.pta-schema-container>.pta-details {
   transition: all 0.2s ease !important;
 }
 
-.pta-container > .pta-content > .pta-schema-container > .pta-details[open] {
+.pta-container>.pta-content>.pta-schema-container>.pta-details[open] {
   margin-bottom: 10px !important;
 }
 
 /* ====== 确保不被 Tailwind 覆盖 ====== */
 
 /* 使用更高的特异性，确保 PTA 样式优先 */
-.pta-container > * {
+.pta-container>* {
   box-sizing: border-box !important;
 }
 
@@ -441,25 +429,26 @@
 /* ====== 打印样式 ====== */
 
 @media print {
-  .pta-container > .pta-header,
-    .pta-container > .pta-content > .pta-schema-container > .pta-details {
+
+  .pta-container>.pta-header,
+  .pta-container>.pta-content>.pta-schema-container>.pta-details {
     display: none !important;
   }
 
-  .pta-container > .pta-content {
+  .pta-container>.pta-content {
     overflow: visible !important;
   }
 }
 
 /* ====== 实例选择器样式 ====== */
 
-.pta-container > .pta-header > .pta-instance-selector {
+.pta-container>.pta-header>.pta-instance-selector {
   position: relative !important;
   display: inline-block !important;
 }
 
 /* 当前实例按钮 */
-.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__current {
+.pta-container>.pta-header>.pta-instance-selector>.pta-instance-selector__current {
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
@@ -475,35 +464,35 @@
   box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3) !important;
 }
 
-.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__current:hover {
+.pta-container>.pta-header>.pta-instance-selector>.pta-instance-selector__current:hover {
   transform: translateY(-1px) !important;
   box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4) !important;
 }
 
-.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__current:active {
+.pta-container>.pta-header>.pta-instance-selector>.pta-instance-selector__current:active {
   transform: translateY(0) !important;
   box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3) !important;
 }
 
 /* 实例标签 */
-.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__current > .pta-instance-selector__label {
+.pta-container>.pta-header>.pta-instance-selector>.pta-instance-selector__current>.pta-instance-selector__label {
   flex: 1 !important;
   text-align: left !important;
 }
 
 /* 下拉箭头 */
-.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__arrow {
+.pta-container>.pta-header>.pta-instance-selector>.pta-instance-selector__arrow {
   transition: transform 0.2s ease !important;
   font-size: 12px !important;
   opacity: 0.9 !important;
 }
 
-.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__arrow--open {
+.pta-container>.pta-header>.pta-instance-selector>.pta-instance-selector__arrow--open {
   transform: rotate(180deg) !important;
 }
 
 /* 下拉菜单 */
-.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__dropdown {
+.pta-container>.pta-header>.pta-instance-selector>.pta-instance-selector__dropdown {
   position: absolute !important;
   top: calc(100% + 8px) !important;
   left: 0 !important;
@@ -522,6 +511,7 @@
     opacity: 0 !important;
     transform: translateY(-8px) !important;
   }
+
   to {
     opacity: 1 !important;
     transform: translateY(0) !important;
@@ -529,25 +519,25 @@
 }
 
 /* 下拉菜单项 */
-.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__dropdown > .pta-instance-selector__item {
+.pta-container>.pta-header>.pta-instance-selector>.pta-instance-selector__dropdown>.pta-instance-selector__item {
   padding: 10px 16px !important;
   cursor: pointer !important;
   transition: all 0.15s ease !important;
   border-left: 3px solid transparent !important;
 }
 
-.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__dropdown > .pta-instance-selector__item:hover {
+.pta-container>.pta-header>.pta-instance-selector>.pta-instance-selector__dropdown>.pta-instance-selector__item:hover {
   background-color: #f8fafc !important;
   border-left-color: #667eea !important;
 }
 
-.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__dropdown > .pta-instance-selector__item--active {
+.pta-container>.pta-header>.pta-instance-selector>.pta-instance-selector__dropdown>.pta-instance-selector__item--active {
   background: linear-gradient(90deg, #f0f9ff 0%, #e0f2fe 100%) !important;
   border-left-color: #0070f3 !important;
 }
 
 /* 下拉项内容布局 */
-.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__dropdown > .pta-instance-selector__item > .pta-instance-selector__item-main {
+.pta-container>.pta-header>.pta-instance-selector>.pta-instance-selector__dropdown>.pta-instance-selector__item>.pta-instance-selector__item-main {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
@@ -555,13 +545,13 @@
 }
 
 /* 实例名称 */
-.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__dropdown > .pta-instance-selector__item > .pta-instance-selector__item-main > .pta-instance-selector__item-name {
+.pta-container>.pta-header>.pta-instance-selector>.pta-instance-selector__dropdown>.pta-instance-selector__item>.pta-instance-selector__item-main>.pta-instance-selector__item-name {
   font-weight: 500 !important;
   color: #333 !important;
 }
 
 /* 当前实例徽章 */
-.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__dropdown > .pta-instance-selector__item > .pta-instance-selector__item-main > .pta-instance-selector__item-badge {
+.pta-container>.pta-header>.pta-instance-selector>.pta-instance-selector__dropdown>.pta-instance-selector__item>.pta-instance-selector__item-main>.pta-instance-selector__item-badge {
   background: #10b981 !important;
   color: white !important;
   font-size: 10px !important;
@@ -571,7 +561,7 @@
 }
 
 /* 实例描述 */
-.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__dropdown > .pta-instance-selector__item > .pta-instance-selector__item-desc {
+.pta-container>.pta-header>.pta-instance-selector>.pta-instance-selector__dropdown>.pta-instance-selector__item>.pta-instance-selector__item-desc {
   font-size: 12px !important;
   color: #666 !important;
   margin-top: 4px !important;
@@ -579,7 +569,7 @@
 }
 
 /* 点击遮罩 */
-.pta-container > .pta-header > .pta-instance-selector > .pta-instance-selector__overlay {
+.pta-container>.pta-header>.pta-instance-selector>.pta-instance-selector__overlay {
   position: fixed !important;
   top: 0 !important;
   left: 0 !important;
@@ -607,6 +597,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -614,9 +605,12 @@
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }
@@ -805,7 +799,7 @@
 .pta-block--highlight {
   transition: background-color 0.3s ease, box-shadow 0.3s ease !important;
   background-color: #fff3cd !important;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
 }
 
 .pta-block__title {
@@ -992,6 +986,7 @@
 /* ====== 通用响应式样式 ====== */
 
 @media (max-width: 768px) {
+
   /* 移动端隐藏 sidebar，主容器不需要左边距 */
   .pta-sidebar {
     display: none !important;
@@ -1023,4 +1018,3 @@
     width: 200px !important;
   }
 }
-

@@ -119,9 +119,10 @@ action 包含以下键:
   - "id": 字符串,不显示的唯一标识
   - "label": 字符串,显示的标签
   - "style": 字符串,按钮样式,可选值:primary/secondary/danger/warning/success,默认 secondary
-  - "action_type": 字符串,点击触发的事件类型,可选值:apply_patch/navigate/api/modal
+  - "action_type": 字符串,点击触发的事件类型,可选值:apply_patch/navigate/navigate_block/api/modal
   - "patches": action_type=apply_patch时,将执行的patch数组,详见 **PATCH_DESCRIPTION**
-  - "target_instance": action_type=navigate时跳转到target_instance
+  - "target_instance": action_type=navigate时跳转到target_instance（实例导航）
+  - "target_block": action_type=navigate_block时跳转到target_block（block导航，同实例内滚动到指定block）
   - "api": action_type=api 时,将执行的api调用
   - "disabled": 布尔值,默认 false,是否禁用
 </ACTION_STRUCTURE>
@@ -453,15 +454,40 @@ async def list_instances() -> dict[str, Any]:
 
 
 @mcp.tool()
-async def switch_to_instance(instance_name: str) -> dict[str, Any]:
+async def switch_ui(
+    instance_name: str | None = None,
+    block_id: str | None = None
+) -> dict[str, Any]:
     """
-- NAME: switch_to_instance
-- DESCRIPTION: 切换到实例,呈现给用户
+<KEY_WORDS>
+ui_schema :  记录在内存中,用于渲染UI界面的json schema
+block     :  一个block是一个UI元素,包含一个或多个field,一个或多个action
+instance  :  一个实例是一个完整的单页面PTA应用,包含一个ui_schema和一个运行时状态
+</KEY_WORDS>
+
+<TOOL_DEFINITION>
+- NAME: switch_ui
+- DESCRIPTION: 切换UI界面，支持切换到指定实例或切换到实例内的指定block
 - PARAMETERS:
-  instance_name: str - 要访问的实例名
+  instance_name: str | None - 要切换到的实例名，不传则不切换实例
+  block_id: str | None - 要切换到的block ID，不传则不切换block（例如在Tabs布局中切换标签页）
+- 使用方式：
+  1. 切换到实例: {"instance_name": "demo"}
+  2. 切换到实例内的block: {"instance_name": "demo", "block_id": "counter_block"}
+  3. 仅切换当前实例内的block: {"block_id": "counter_block"}
+</TOOL_DEFINITION>
+
+<NOTE>
+- instance_name 和 block_id 都是可选参数
+- 当传递 instance_name 时，会切换到指定实例
+- 当传递 block_id 时，会在当前或指定实例内切换到对应block
+- 对于Tabs布局，切换block会自动切换到对应标签页
+- 对于其他布局，切换block会高亮并滚动到对应位置
+</NOTE>
     """
-    from backend.mcp.tool_implements import switch_to_instance_impl
-    return await switch_to_instance_impl(instance_name)
+    from backend.mcp.tool_implements import switch_ui_impl as _switch_ui_impl
+    return await _switch_ui_impl(instance_name, block_id)
+
 
 
 # ===== 验证工具 =====

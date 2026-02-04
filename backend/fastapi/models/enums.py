@@ -18,6 +18,7 @@ class ActionType(str, Enum):
     """操作类型枚举"""
     API = "api"
     NAVIGATE = "navigate"
+    NAVIGATE_BLOCK = "navigate_block"
     MODAL = "modal"
     PATCH = "apply_patch"
 

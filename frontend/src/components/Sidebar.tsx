@@ -22,6 +22,7 @@ interface NavigationItem {
 
 export default function Sidebar({ }: SidebarProps) {
   const schema = useSchemaStore((state) => state.schema);
+  const highlightBlock = useSchemaStore((state) => state.highlightBlock);
 
   if (!schema) {
     return null;
@@ -87,8 +88,17 @@ export default function Sidebar({ }: SidebarProps) {
     };
   }, [navItems]);
 
-  // 点击导航项，平滑滚动到对应 block 并高亮
+  // 点击导航项，根据布局类型决定行为
   const scrollToBlock = (blockId: string) => {
+    const layoutType = schema?.layout?.type || 'single';
+
+    // 如果是 tabs 布局，只需要触发高亮（SchemaLayoutRenderer 会自动切换标签页）
+    if (layoutType === 'tabs') {
+      highlightBlock(blockId);
+      return;
+    }
+
+    // 其他布局类型（single, grid, flex, accordion），滚动到对应 block
     const element = document.getElementById(`block-${blockId}`);
     if (element) {
       element.scrollIntoView({

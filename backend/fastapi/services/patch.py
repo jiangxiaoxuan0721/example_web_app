@@ -2,6 +2,8 @@
 
 import re
 from typing import Any
+
+from backend.fastapi.models.schema_models import LayoutInfo
 from ..models import (
     # 枚举定义
     FieldType, PatchOperationType,
@@ -649,7 +651,6 @@ def apply_patch_to_schema(schema: UISchema, patch: dict[str, object]) -> None:
         if len(keys) == 1 and keys[0] == 'blocks':
             print(f"[PatchService] 匹配到 blocks 路径（替换整个数组）")
             try:
-                from ..models import Block
                 if isinstance(value, list):
                     # 确保所有元素都是 Block 对象
                     blocks_list = []
@@ -708,8 +709,6 @@ def apply_patch_to_schema(schema: UISchema, patch: dict[str, object]) -> None:
                 action_index = int(keys[1])
 
                 if action_index < len(schema.actions):
-                    from ..models import ActionConfig
-
                     # 如果是 dict，转换为 ActionConfig 对象
                     if isinstance(value, dict):
                         new_action = ActionConfig(**value)
@@ -748,7 +747,6 @@ def apply_patch_to_schema(schema: UISchema, patch: dict[str, object]) -> None:
         elif len(keys) == 1 and keys[0] == 'layout':
             print(f"[PatchService] 匹配到 layout 路径（替换整个对象）")
             try:
-                from ..models import LayoutInfo
                 if isinstance(value, dict):
                     new_layout = LayoutInfo(**value)
                 elif isinstance(value, LayoutInfo):
@@ -787,7 +785,6 @@ def apply_patch_to_schema(schema: UISchema, patch: dict[str, object]) -> None:
                         print(f"[PatchService] Updated block[{block_index}].{block_attr} = {value}")
                     else:
                         # 替换整个 block
-                        from ..models import Block
                         if isinstance(value, dict):
                             new_block = Block(**value)
                         elif isinstance(value, Block):
@@ -843,7 +840,6 @@ def apply_patch_to_schema(schema: UISchema, patch: dict[str, object]) -> None:
                                     print(f"[PatchService] fields value must be a list, got: {type(value)}")
                             # 特殊处理 actions 属性
                             elif props_attr == 'actions':
-                                from ..models import ActionConfig
                                 if isinstance(value, list):
                                     # 转换为 ActionConfig 列表
                                     actions_list = []

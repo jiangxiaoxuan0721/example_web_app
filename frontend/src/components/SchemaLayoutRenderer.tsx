@@ -3,7 +3,7 @@
  * 根据 layout.type 决定如何排列 blocks 和全局 actions
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { UISchema } from '../types/schema';
 import BlockRenderer from './BlockRenderer';
 import ActionButton from './ActionButton';
@@ -11,6 +11,7 @@ import ActionButton from './ActionButton';
 interface SchemaLayoutRendererProps {
   schema: UISchema | null | undefined;
   onNavigate: (instanceId: string) => void;
+  onNavigateBlock?: (targetBlock: string) => void;  // 导航到 block 的回调
   highlightField?: string | null;
   highlightBlockId?: string | null;
   highlightActionId?: string | null;
@@ -22,6 +23,7 @@ interface SchemaLayoutRendererProps {
 const SingleLayout = ({
   schema,
   onNavigate,
+  onNavigateBlock,
   highlightField,
   highlightBlockId,
   highlightActionId,
@@ -36,6 +38,7 @@ const SingleLayout = ({
           highlightField={highlightField}
           highlightBlockId={highlightBlockId}
           onNavigate={onNavigate}
+          onNavigateBlock={onNavigateBlock}
         />
       ))}
 
@@ -48,6 +51,7 @@ const SingleLayout = ({
               action={action}
               highlighted={action.id === highlightActionId}
               onNavigate={onNavigate}
+              onNavigateBlock={onNavigateBlock}
             />
           ))}
         </div>
@@ -62,6 +66,7 @@ const SingleLayout = ({
 const GridLayout = ({
   schema,
   onNavigate,
+  onNavigateBlock,
   highlightField,
   highlightBlockId,
   highlightActionId,
@@ -87,6 +92,7 @@ const GridLayout = ({
             highlightField={highlightField}
             highlightBlockId={highlightBlockId}
             onNavigate={onNavigate}
+            onNavigateBlock={onNavigateBlock}
           />
         ))}
       </div>
@@ -100,6 +106,7 @@ const GridLayout = ({
               action={action}
               highlighted={action.id === highlightActionId}
               onNavigate={onNavigate}
+              onNavigateBlock={onNavigateBlock}
             />
           ))}
         </div>
@@ -114,6 +121,7 @@ const GridLayout = ({
 const FlexLayout = ({
   schema,
   onNavigate,
+  onNavigateBlock,
   highlightField,
   highlightBlockId,
   highlightActionId,
@@ -138,6 +146,7 @@ const FlexLayout = ({
               highlightField={highlightField}
               highlightBlockId={highlightBlockId}
               onNavigate={onNavigate}
+              onNavigateBlock={onNavigateBlock}
             />
           </div>
         ))}
@@ -152,6 +161,7 @@ const FlexLayout = ({
               action={action}
               highlighted={action.id === highlightActionId}
               onNavigate={onNavigate}
+              onNavigateBlock={onNavigateBlock}
             />
           ))}
         </div>
@@ -166,11 +176,22 @@ const FlexLayout = ({
 const TabsLayout = ({
   schema,
   onNavigate,
+  onNavigateBlock,
   highlightField,
   highlightBlockId,
   highlightActionId,
 }: Omit<SchemaLayoutRendererProps, 'schema'> & { schema: UISchema }) => {
   const [activeTab, setActiveTab] = useState(0);
+
+  // 监听 highlightBlockId，自动切换到对应的标签页
+  useEffect(() => {
+    if (highlightBlockId && schema.blocks) {
+      const targetIndex = schema.blocks.findIndex(block => block.id === highlightBlockId);
+      if (targetIndex !== -1 && targetIndex !== activeTab) {
+        setActiveTab(targetIndex);
+      }
+    }
+  }, [highlightBlockId, schema.blocks, activeTab]);
 
   // 将 blocks 分配到不同标签页
   // 每个 block 独占一个标签页
@@ -231,6 +252,7 @@ const TabsLayout = ({
             highlightField={highlightField}
             highlightBlockId={highlightBlockId}
             onNavigate={onNavigate}
+            onNavigateBlock={onNavigateBlock}
           />
         ))}
       </div>
@@ -254,6 +276,7 @@ const TabsLayout = ({
               action={action}
               highlighted={action.id === highlightActionId}
               onNavigate={onNavigate}
+              onNavigateBlock={onNavigateBlock}
             />
           ))}
         </div>

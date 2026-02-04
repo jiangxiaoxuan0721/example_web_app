@@ -31,7 +31,7 @@ import "./index.css";
 
 export default function App() {
   const { currentInstanceId, schema: initialSchema, loading, error, loadingText } = useSchema();
-  const { schema: storeSchema, setSchema, applyPatch, setInstanceId, highlightBlockId, highlightFieldKey, highlightActionId } = useSchemaStore();
+  const { schema: storeSchema, setSchema, applyPatch, setInstanceId, highlightBlockId, highlightFieldKey, highlightActionId, highlightBlock } = useSchemaStore();
   const { setInstance: setMultiInstance } = useMultiInstanceStore();
   const { emitInstanceSwitch } = useEventEmitter();
 
@@ -109,6 +109,10 @@ export default function App() {
         // schema 更新时也加载 patch 历史
         loadPatches(instanceId);
       }
+    },
+    // 处理 block 高亮
+    (blockId) => {
+      highlightBlock(blockId);
     }
   );
 
@@ -116,7 +120,22 @@ export default function App() {
   const handleInstanceSwitch = (newInstanceId: string) => {
     emitInstanceSwitch(newInstanceId);
   };
-  
+
+  // 处理 block 导航（滚动到指定 block）
+  const handleNavigateBlock = (targetBlockId: string) => {
+    // 先滚动到目标位置
+    const element = document.getElementById(`block-${targetBlockId}`);
+    if (element) {
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+    }
+
+    // 使用高亮机制（高亮会自动处理视觉效果和标签页切换）
+    highlightBlock(targetBlockId);
+  };
+
   // 加载中
   if (loading) {
     return <Loading text={loadingText} />;
@@ -149,6 +168,7 @@ export default function App() {
           <SchemaLayoutRenderer
             schema={storeSchema}
             onNavigate={handleInstanceSwitch}
+            onNavigateBlock={handleNavigateBlock}
             highlightField={highlightFieldKey}
             highlightBlockId={highlightBlockId}
             highlightActionId={highlightActionId}

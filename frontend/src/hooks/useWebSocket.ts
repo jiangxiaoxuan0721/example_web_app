@@ -9,28 +9,31 @@ import { useSchema } from './useSchema';
 
 interface WSMessage {
   highlight: any;
-  type: 'patch' | 'switch_instance' | 'schema_update' | 'access_instance';
+  type: 'patch' | 'switch_instance' | 'highlight_block' | 'schema_update' | 'access_instance';
   instance_name: string;
+  block_id?: string;
   patch_id?: number;
   patch?: Record<string, any>;
   schema?: Record<string, any> & { highlight?: any };
   redirect_url?: string;
 }
 
-export function useWebSocket(onPatch: (patch: Record<string, any>) => void, onSwitchInstance?: (instanceId: string, schema?: Record<string, any>) => void) {
+export function useWebSocket(onPatch: (patch: Record<string, any>) => void, onSwitchInstance?: (instanceId: string, schema?: Record<string, any>) => void, onHighlightBlock?: (blockId: string) => void) {
   const { currentInstanceId } = useSchema();
   const wsRef = useRef<WebSocket | null>(null);
+  const onSwitchInstanceRef = useRef(onSwitchInstance);
+  const onHighlightBlockRef = useRef(onHighlightBlock);
   const reconnectTimerRef = useRef<number | null>(null);
   const onPatchRef = useRef(onPatch);
-  const onSwitchInstanceRef = useRef(onSwitchInstance);
   const instanceIdRef = useRef(currentInstanceId);
   const [connected, setConnected] = useState(false);
 
-  // 始终保持 onPatchRef 和 onSwitchInstanceRef 的最新值
+  // 始终保持 ref 的最新值
   useEffect(() => {
     onPatchRef.current = onPatch;
     onSwitchInstanceRef.current = onSwitchInstance;
-  }, [onPatch, onSwitchInstance]);
+    onHighlightBlockRef.current = onHighlightBlock;
+  }, [onPatch, onSwitchInstance, onHighlightBlock]);
 
   // 连接函数
   const connect = useCallback(() => {
@@ -93,6 +96,11 @@ export function useWebSocket(onPatch: (patch: Record<string, any>) => void, onSw
           if (onSwitchInstanceRef.current) {
             // switch_instance 不再返回 schema，前端需要通过 API 获取
             onSwitchInstanceRef.current(message.instance_name, undefined);
+          }
+        } else if (message.type === 'highlight_block' && message.block_id) {
+          console.log('[WS] 高亮block:', message.block_id);
+          if (onHighlightBlockRef.current) {
+            onHighlightBlockRef.current(message.block_id);
           }
         } else if (message.type === 'access_instance' && message.instance_name) {
           console.log('[WS] 访问实例:', message.instance_name);

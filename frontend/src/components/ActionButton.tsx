@@ -6,11 +6,12 @@ import { useEventEmitter } from '../utils/eventEmitter';
 interface ActionButtonProps {
   action: ActionConfig;
   highlighted?: boolean;
-  onNavigate?: (targetInstance: string) => void;  // 导航操作回调（可选）
+  onNavigate?: (targetInstance: string) => void;  // 实例导航操作回调（可选）
+  onNavigateBlock?: (targetBlock: string) => void;  // block导航操作回调（可选）
   blockId?: string;  // 所属 block ID（用于 block 级别的 actions）
 }
 
-export default function ActionButton({ action, highlighted = false, onNavigate, blockId }: ActionButtonProps) {
+export default function ActionButton({ action, highlighted = false, onNavigate, onNavigateBlock, blockId }: ActionButtonProps) {
   const { emitActionClickWithBlockId } = useEventEmitter();
   const getBackgroundColor = (hover: boolean = false) => {
     if (action.style === 'primary') {
@@ -27,6 +28,9 @@ export default function ActionButton({ action, highlighted = false, onNavigate, 
     if (action.action_type === 'navigate' && onNavigate && action.target_instance) {
       // 导航到目标实例
       onNavigate(action.target_instance);
+    } else if (action.action_type === 'navigate_block' && onNavigateBlock && action.target_block) {
+      // 导航到目标block - 直接使用高亮机制
+      onNavigateBlock(action.target_block);
     } else {
       // 默认为 API 操作，发送事件到后端（传递 blockId）
       emitActionClickWithBlockId(action.id, blockId);
@@ -53,10 +57,14 @@ export default function ActionButton({ action, highlighted = false, onNavigate, 
       onMouseLeave={(e) => {
         e.currentTarget.style.background = getBackgroundColor(false);
       }}
-      title={action.action_type === 'navigate' ? `导航到实例: ${action.target_instance}` : undefined}
+      title={
+        action.action_type === 'navigate' ? `导航到实例: ${action.target_instance}` :
+        action.action_type === 'navigate_block' ? `导航到Block: ${action.target_block}` :
+        undefined
+      }
     >
       {action.label}
-      {action.action_type === 'navigate' && (
+      {(action.action_type === 'navigate' || action.action_type === 'navigate_block') && (
         <span style={{ marginLeft: '5px' }}>→</span>
       )}
     </button>

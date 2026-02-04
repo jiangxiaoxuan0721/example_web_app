@@ -5,7 +5,7 @@
 
 from typing import Any, Optional
 from datetime import datetime
-from pydantic import BaseModel, Field, field_validator
+from pydantic import Field, field_validator
 
 from .base import BaseModelWithConfig
 from .enums import EventType

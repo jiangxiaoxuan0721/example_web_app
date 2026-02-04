@@ -3,7 +3,7 @@
 from backend.fastapi.models.enums import FieldType
 from ..fastapi.models import (
     UISchema, StateInfo, LayoutInfo, Block, ActionConfig,
-    BlockProps, LayoutType, SchemaPatch, PatchOperationType,
+    BlockProps, LayoutType, SchemaPatch, PatchOperationType,ActionType,
     BaseFieldConfig, SelectableFieldConfig, TableFieldConfig, ImageFieldConfig,
     OptionItem, ColumnConfig
 )
@@ -47,11 +47,6 @@ def _create_demo_schema() -> UISchema:
                 # 图片组件
                 avatar_url="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
                 image_url="https://via.placeholder.com/300x200/4A90E2/ffffff?text=Sample+Image",
-                image_captions=[
-                    {"url": "https://via.placeholder.com/200x150/FF6B6B/ffffff?text=Image+1", "caption": "图片1"},
-                    {"url": "https://via.placeholder.com/200x150/4ECDC4/ffffff?text=Image+2", "caption": "图片2"},
-                    {"url": "https://via.placeholder.com/200x150/95E1D3/ffffff?text=Image+3", "caption": "图片3"},
-                ],
                 
                 # 布局字段
                 grid_a="字段A", grid_b="字段B", grid_c="字段C", grid_d="字段D",
@@ -235,6 +230,20 @@ def _create_demo_schema() -> UISchema:
                     panels=[
                         {"title": "面板1", "fields": [{"key": "acc1_q", "label": "问题", "type": "text"}, {"key": "acc1_a", "label": "答案", "type": "textarea"}]},
                         {"title": "面板2", "fields": [{"key": "acc2_q", "label": "问题", "type": "text"}, {"key": "acc2_a", "label": "答案", "type": "textarea"}]},
+                    ]
+                )
+            ),
+
+            # Block 9: 导航功能演示
+            Block(
+                id="navigation_block",
+                layout="form",
+                title="块导航演示",
+                props=BlockProps(  # pyright: ignore[reportCallIssue]
+                    actions=[
+                        ActionConfig(id="nav_to_counter", label="跳转到计数器", style="primary", action_type=ActionType.NAVIGATE_BLOCK, target_block="counter_block"),
+                        ActionConfig(id="nav_to_table", label="跳转到任务列表", style="secondary", action_type=ActionType.NAVIGATE_BLOCK, target_block="table_block"),
+                        ActionConfig(id="nav_to_options", label="跳转到选项组件", style="secondary", action_type=ActionType.NAVIGATE_BLOCK, target_block="options_block"),
                     ]
                 )
             ),

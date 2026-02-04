@@ -47,14 +47,7 @@ export default function PatchHistory({ patches, onReplay }: PatchHistoryProps) {
   };
 
   return (
-    <div style={{
-      padding: '16px',
-      backgroundColor: '#fafafa',
-      border: '1px solid #e5e7eb',
-      borderRadius: '8px',
-      fontSize: '13px',
-      textAlign: 'left'
-    }}>
+    <>
       {/* 标题区域 */}
       <div style={{
         display: 'flex',
@@ -111,7 +104,7 @@ export default function PatchHistory({ patches, onReplay }: PatchHistoryProps) {
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = '#007bff';
-                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 123, 255, 0.1)';
+                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0. 123, 255, 0.1)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.borderColor = '#e5e7eb';
@@ -246,25 +239,7 @@ export default function PatchHistory({ patches, onReplay }: PatchHistoryProps) {
           );
         })}
       </div>
-
-      {/* 滚动条样式 */}
-      <style>{`
-        div::-webkit-scrollbar {
-          width: 6px;
-        }
-        div::-webkit-scrollbar-track {
-          background: #f1f1f1;
-          border-radius: 3px;
-        }
-        div::-webkit-scrollbar-thumb {
-          background: #c1c1c1;
-          border-radius: 3px;
-        }
-        div::-webkit-scrollbar-thumb:hover {
-          background: #a1a1a1;
-        }
-      `}</style>
-    </div>
+    </>
   );
 }
 

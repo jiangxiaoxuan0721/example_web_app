@@ -8,6 +8,7 @@
 - 其他工具（get_schema、list_instances、switch_to_instance、validate_completion）是只读或辅助工具
 """
 
+from httpx._models import Response
 from typing import Any
 import httpx
 from backend.config import settings
@@ -37,7 +38,7 @@ async def apply_patch_to_fastapi(
             if target_instance_name:
                 payload["target_instance_name"] = target_instance_name
 
-            response = await client.post(url, json=payload, timeout=10.0)
+            response: Response = await client.post(url, json=payload, timeout=10.0)
 
             if response.status_code == 200:
                 _ = await switch_to_instance_impl(instance_name)
@@ -138,18 +139,27 @@ async def list_instances_impl() -> dict[str, Any]:
 
 
 async def switch_to_instance_impl(instance_name: str) -> dict[str, Any]:
-    """switch_to_instance 工具的实现"""
+    """switch_to_instance 工具的实现（已废弃，使用 switch_ui_impl）"""
+    return await switch_ui_impl(instance_name=instance_name, block_id=None)
+
+
+async def switch_ui_impl(instance_name: str | None, block_id: str | None) -> dict[str, Any]:
+    """switch_ui 工具的实现"""
     try:
         async with httpx.AsyncClient() as client:
             url = f"{FASTAPI_BASE_URL}/ui/switch"
 
-            payload = {"instance_name": instance_name}
+            payload = {}
+            if instance_name:
+                payload["instance_name"] = instance_name
+            if block_id:
+                payload["block_id"] = block_id
 
-            response = await client.post(url, json=payload, timeout=10.0)
+            response: Response = await client.post(url, json=payload, timeout=10.0)
 
             if response.status_code == 200:
                 result = response.json()
-                print(f"[MCP] 切换实例: instance_name={instance_name}, result={result}")
+                print(f"[MCP] 切换UI: instance_name={instance_name}, block_id={block_id}, result={result}")
                 return result
             else:
                 return {

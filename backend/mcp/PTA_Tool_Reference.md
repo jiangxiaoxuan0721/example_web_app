@@ -134,9 +134,10 @@ action 包含以下键:
   - "id": 字符串,不显示的唯一标识
   - "label": 字符串,显示的标签
   - "style": 字符串,按钮样式,可选值:primary/secondary/danger/warning/success,默认 secondary
-  - "action_type": 字符串,点击触发的事件类型,可选值:apply_patch/navigate/api/modal
+  - "action_type": 字符串,点击触发的事件类型,可选值:apply_patch/navigate/navigate_block/api/modal
   - "patches": action_type=apply_patch时,将执行的patch数组,详见 **PATCH_DESCRIPTION**
-  - "target_instance": action_type=navigate时跳转到target_instance
+  - "target_instance": action_type=navigate时跳转到target_instance（实例导航）
+  - "target_block": action_type=navigate_block时跳转到target_block（block导航，同实例内滚动到指定block）
   - "api": action_type=api 时,将执行的api调用
   - "disabled": 布尔值,默认 false,是否禁用
 </ACTION_STRUCTURE>

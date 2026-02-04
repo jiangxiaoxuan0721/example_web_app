@@ -130,8 +130,9 @@ export interface ActionConfig {
   id: string;
   label: string;
   style: string;
-  action_type?: string;  // 'api'（默认）或 'navigate'
+  action_type?: string;  // 'apply_patch'（默认）、'navigate'（实例导航）或 'navigate_block'（block导航）
   target_instance?: string;  // 目标实例ID（当action_type=navigate时使用）
+  target_block?: string;  // 目标block ID（当action_type=navigate_block时使用）
   patches?: UnifiedPatch[];  // patch 数组，统一格式
   disabled?: boolean;  // 是否禁用
 }
