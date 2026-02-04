@@ -50,6 +50,9 @@ class ColumnConfig(BaseModelWithConfig):
         default=None,
         description="混合渲染组件配置（用于mixed类型，支持 text, tag, badge, progress, image, button, spacer）"
     )
+    editable: bool = Field(default=True, description="该列是否可编辑（仅当 tableEditable 为 true 时生效）")
+    edit_type: Literal["text", "number", "select"] = Field(default="text", alias="editType", description="编辑器类型: text/number/select")
+    options: list[OptionItem] | None = Field(default=None, description="编辑器选项（仅 editType=select 时使用）")
 
 
 class _BaseFieldConfig(BaseModelWithConfig):

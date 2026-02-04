@@ -744,6 +744,24 @@ def apply_patch_to_schema(schema: UISchema, patch: dict[str, object]) -> None:
                     schema.state.runtime = {}
                 schema.state.runtime[target_key] = value
 
+        # 路径格式：layout - 替换整个 layout 对象
+        elif len(keys) == 1 and keys[0] == 'layout':
+            print(f"[PatchService] 匹配到 layout 路径（替换整个对象）")
+            try:
+                from ..models import LayoutInfo
+                if isinstance(value, dict):
+                    new_layout = LayoutInfo(**value)
+                elif isinstance(value, LayoutInfo):
+                    new_layout = value
+                else:
+                    print(f"[PatchService] Unsupported value type for layout: {type(value)}")
+                    return
+
+                schema.layout = new_layout
+                print(f"[PatchService] Replaced layout: type={new_layout.type}, columns={new_layout.columns}, gap={new_layout.gap}")
+            except (ValueError, AttributeError) as e:
+                print(f"[PatchService] Error applying set operation for path '{path}': {e}")
+
         # 路径格式：layout.type, layout.columns, layout.gap 等
         elif len(keys) >= 2 and keys[0] == 'layout':
             layout_attr = keys[1]

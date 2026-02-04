@@ -204,63 +204,229 @@ op 参数可选的值及示例使用如下:
   - "toggle": 切换布尔值
     - 参数: path(string)
     - 示例: {"op": "toggle", "path": "state.params.visible"}
-
-  - 模板使用: 支持${path}语法引用state值,支持字符串/字典/列表中的嵌套模板
-    - 基础state引用:
-      {"op": "set", "path": "state.params.message", "value": "姓名: ${state.params.name}"}
-    - 选项组件引用(支持.label获取标签):
-      {"op": "set", "path": "state.params.status_display", "value": "状态: ${state.params.status.label} (${state.params.status})"}
-      {"op": "set", "path": "state.params.categories_display", "value": "分类: ${state.params.categories.label}"}
-    - 嵌套引用(字典/列表中的模板):
-      {"op": "append_to_list", "path": "state.params.users",
-       "value": {"id": "${state.params.next_id}", "name": "${state.params.new_name}", "status": "${state.params.status.label}"}}
-    - 综合示例(动态添加数据):
-      {
-        "op": "append_to_list", "path": "state.params.dynamic_users",
-        "value": {"id": "${state.params.next_id}", "name": "${state.params.new_name}", "email": "${state.params.new_email}", "added_at": "${state.runtime.timestamp}"}
-      }
-
-  - 创建新实例:
-    - 使用 "__CREATE__" 作为 instance_name 创建新实例
-    - 必须提供 new_instance_name 参数
-    - 使用 "set" 操作定义实例结构(meta/state/blocks/actions)
-    - 示例:
-      {
-        "instance_name": "__CREATE__",
-        "new_instance_name": "my_app",
-        "patches": [
-          {"op": "set", "path": "meta", "value": {"page_key": "my_app"}},
-          {"op": "set", "path": "state", "value": {"params": {}, "runtime": {}}},
-          {"op": "set", "path": "blocks", "value": [
-            {"id": "main_block", "layout": "form", "props": {"fields": [{"key": "name", "label": "姓名", "type": "text"}], "actions": []}}
-          ]},
-          {"op": "set", "path": "actions", "value": []}
-        ]
-      }
-
-  - 删除实例:
-    - 使用 "__DELETE__" 作为 instance_name 删除实例
-    - 必须提供 target_instance_name 参数
-    - 示例:
-      {
-        "instance_name": "__DELETE__",
-        "target_instance_name": "my_app",
-        "patches": []
-      }
+more example: see **COMPREHENSIVE_EXAMPLE**
 </PATCH_EXAMPLE>
+
+<COMPREHENSIVE_EXAMPLE>
+- 模板使用: 支持${path}语法引用state值,支持字符串/字典/列表中的嵌套模板
+  - 基础state引用:
+    {"op": "set", "path": "state.params.message", "value": "姓名: ${state.params.name}"}
+  - 选项组件引用(支持.label获取标签):
+    {"op": "set", "path": "state.params.status_display", "value": "状态: ${state.params.status.label} (${state.params.status})"}
+    {"op": "set", "path": "state.params.categories_display", "value": "分类: ${state.params.categories.label}"}
+  - 嵌套引用(字典/列表中的模板):
+    {"op": "append_to_list", "path": "state.params.users",
+      "value": {"id": "${state.params.next_id}", "name": "${state.params.new_name}", "status": "${state.params.status.label}"}}
+  - 综合示例(动态添加数据):
+    {
+      "op": "append_to_list", "path": "state.params.dynamic_users",
+      "value": {"id": "${state.params.next_id}", "name": "${state.params.new_name}", "email": "${state.params.new_email}", "added_at": "${state.runtime.timestamp}"}
+    }
+
+- 创建新实例:
+  - 使用 "__CREATE__" 作为 instance_name 创建新实例
+  - 必须提供 new_instance_name 参数
+  - 使用 "set" 操作定义实例结构(meta/state/blocks/actions)
+  - 示例:
+    {
+      "instance_name": "__CREATE__",
+      "new_instance_name": "my_app",
+      "patches": [
+        {"op": "set", "path": "meta", "value": {"page_key": "my_app"}},
+        {"op": "set", "path": "state", "value": {"params": {}, "runtime": {}}},
+        {"op": "set", "path": "blocks", "value": [
+          {"id": "main_block", "layout": "form", "props": {"fields": [{"key": "name", "label": "姓名", "type": "text"}], "actions": []}}
+        ]},
+        {"op": "set", "path": "actions", "value": []}
+      ]
+    }
+
+- 删除实例:
+  - 使用 "__DELETE__" 作为 instance_name 删除实例
+  - 必须提供 target_instance_name 参数
+  - 示例:
+    {
+      "instance_name": "__DELETE__",
+      "target_instance_name": "my_app",
+      "patches": []
+    }
+
+- 创建复杂表格示例（包含多种列类型和可编辑功能）:
+  - 示例: 创建一个任务管理表格，包含状态标签、进度条、图片头像、操作按钮和可编辑列
+  {
+    "instance_name": "__CREATE__",
+    "new_instance_name": "task_manager",
+    "patches": [
+      {"op": "set", "path": "meta", "value": {"page_key": "task_manager"}},
+      {"op": "set", "path": "state", "value": {
+        "params": {
+          "tasks": [
+            {"id": "1", "name": "完成文档编写", "status": "active", "progress": {"current": 80, "total": 100}, "assignee": "张三", "priority": "high"},
+            {"id": "2", "name": "代码审查", "status": "pending", "progress": {"current": 30, "total": 100}, "assignee": "李四", "priority": "medium"},
+            {"id": "3", "name": "部署上线", "status": "completed", "progress": {"current": 100, "total": 100}, "assignee": "王五", "priority": "low"}
+          ]
+        },
+        "runtime": {}
+      }},
+      {"op": "set", "path": "blocks", "value": [
+        {
+          "id": "task_block",
+          "layout": "form",
+          "props": {
+            "fields": [{
+              "key": "tasks",
+              "label": "任务列表",
+              "type": "table",
+              "tableEditable": true,
+              "showPagination": true,
+              "pageSize": 10,
+              "bordered": true,
+              "striped": true,
+              "hover": true,
+              "columns": [
+                {"key": "id", "title": "ID", "width": "80px", "sortable": true},
+                {"key": "name", "title": "任务名称", "width": "200px", "editable": true},
+                {
+                  "key": "status",
+                  "title": "状态",
+                  "width": "120px",
+                  "renderType": "tag",
+                  "tagType": "value => value === 'active' ? 'success' : value === 'completed' ? 'success' : 'warning'",
+                  "editable": true,
+                  "editType": "select",
+                  "options": [{"label": "进行中", "value": "active"}, {"label": "待处理", "value": "pending"}, {"label": "已完成", "value": "completed"}]
+                },
+                {
+                  "key": "progress",
+                  "title": "进度",
+                  "width": "150px",
+                  "renderType": "progress"
+                },
+                {
+                  "key": "assignee",
+                  "title": "负责人",
+                  "width": "100px",
+                  "editable": true
+                },
+                {
+                  "key": "priority",
+                  "title": "优先级",
+                  "width": "100px",
+                  "renderType": "tag",
+                  "tagType": "value => value === 'high' ? 'error' : value === 'medium' ? 'warning' : 'default'",
+                  "editable": true,
+                  "editType": "select",
+                  "options": [{"label": "高", "value": "high"}, {"label": "中", "value": "medium"}, {"label": "低", "value": "low"}]
+                },
+                {
+                  "key": "actions",
+                  "title": "操作",
+                  "width": "180px",
+                  "renderType": "mixed",
+                  "components": [
+                    {"type": "button", "buttonLabel": "编辑", "buttonStyle": "primary", "actionId": "edit_task"},
+                    {"type": "spacer", "width": "8px"},
+                    {"type": "button", "buttonLabel": "删除", "buttonStyle": "danger", "actionId": "delete_task", "confirmMessage": "确认删除此任务？"}
+                  ]
+                }
+              ]
+            }],
+            "actions": [
+              {"id": "add_task", "label": "添加任务", "style": "primary", "action_type": "apply_patch", "patches": [
+                {"op": "append_to_list", "path": "state.params.tasks", "value": {"id": "${state.runtime.next_id}", "name": "新任务", "status": "pending", "progress": {"current": 0, "total": 100}, "assignee": "", "priority": "medium"}}
+              ]}
+            ]
+          }
+        }
+      ]},
+      {"op": "set", "path": "actions", "value": []}
+    ]
+  }
+
+- 布局使用示例:
+  - Grid布局示例（2列网格）:
+    {
+      "instance_name": "my_app",
+      "patches": [
+        {"op": "set", "path": "layout", "value": {"type": "grid", "columns": 2, "gap": "20px"}},
+        {"op": "set", "path": "blocks", "value": [
+          {"id": "block1", "layout": "form", "props": {"fields": [{"key": "field1", "label": "字段1", "type": "text"}], "actions": []}},
+          {"id": "block2", "layout": "form", "props": {"fields": [{"key": "field2", "label": "字段2", "type": "number"}], "actions": []}}
+        ]}
+      ]
+    }
+
+  - Tabs布局示例（多个标签页）:
+    {
+      "instance_name": "my_app",
+      "patches": [
+        {"op": "set", "path": "layout", "value": {"type": "tabs"}},
+        {"op": "set", "path": "blocks", "value": [
+          {
+            "id": "tabs_block",
+            "layout": "tabs",
+            "props": {
+              "tabs": [
+                {"label": "基本信息", "fields": [{"key": "name", "label": "姓名", "type": "text"}], "actions": []},
+                {"label": "联系方式", "fields": [{"key": "email", "label": "邮箱", "type": "text"}], "actions": []},
+                {"label": "系统设置", "fields": [{"key": "theme", "label": "主题", "type": "select", "options": [{"label": "亮色", "value": "light"}, {"label": "暗色", "value": "dark"}]}], "actions": []}
+              ]
+            }
+          }
+        ]}
+      ]
+    }
+
+  - Flex布局示例（自适应排列）:
+    {
+      "instance_name": "my_app",
+      "patches": [
+        {"op": "set", "path": "layout", "value": {"type": "flex", "gap": "16px"}},
+        {"op": "set", "path": "blocks", "value": [
+          {"id": "block1", "layout": "form", "props": {"fields": [{"key": "field1", "label": "字段1", "type": "text"}], "actions": []}},
+          {"id": "block2", "layout": "form", "props": {"fields": [{"key": "field2", "label": "字段2", "type": "number"}], "actions": []}},
+          {"id": "block3", "layout": "form", "props": {"fields": [{"key": "field3", "label": "字段3", "type": "select"}], "actions": []}}
+        ]}
+      ]
+    }
+
+  - Accordion布局示例（可折叠面板）:
+    {
+      "instance_name": "my_app",
+      "patches": [
+        {"op": "set", "path": "layout", "value": {"type": "single"}},
+        {"op": "set", "path": "blocks", "value": [
+          {
+            "id": "accordion_block",
+            "layout": "accordion",
+            "props": {
+              "panels": [
+                {"title": "个人资料", "fields": [{"key": "name", "label": "姓名", "type": "text"}], "actions": []},
+                {"title": "工作信息", "fields": [{"key": "department", "label": "部门", "type": "text"}], "actions": []},
+                {"title": "其他设置", "fields": [{"key": "timezone", "label": "时区", "type": "text"}], "actions": []}
+              ]
+            }
+          }
+        ]}
+      ]
+    }
+</COMPREHENSIVE_EXAMPLE>
 
 <COLUMN_STRUCTURE>
 "columns": 列配置数组,每列包含
   - key: string - 列的键
-  - title: string - 列的标题 
+  - title: string - 列的标题
   - width: string - 列的宽度
   - sortable: bool - 是否可排序,默认false
-  - filterable: bool - 是否可过滤,默认false 
+  - filterable: bool - 是否可过滤,默认false
   - align: string - 对齐方式,可选值:left/center/right
   - renderType: string - 渲染类型,可选值:text/tag/bage/progress/image/mixed
   - tagType: string - 标签类型,当renderType=tag时使用,用于tag渲染,支持表达式如:'value => value === \"active\" ? \"success\" : \"default\"'
   - badge_color:string - 徽标颜色,当renderType=badge时使用,用于badge渲染,如'#1890ff'
   - components: list[dict[str, Any]] - 混合渲染组件配置,当renderType=mixed时使用,支持 text, tag, badge, progress, image, button, spacer
+  - editable: bool - 该列是否可编辑,默认true,仅当tableEditable=true时生效
+  - editType: string - 编辑器类型,可选值:text/number/select,默认text
+  - options: list[{label: string, value: string}] - 选项列表,仅当editType=select时使用
 </COLUMN_STRUCTURE>
 
 <NOTE>

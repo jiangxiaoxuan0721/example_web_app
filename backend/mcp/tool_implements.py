@@ -248,12 +248,13 @@ async def validate_completion_impl(instance_name: str) -> dict[str, Any]:
         # 收集动作详细信息
         for action in block_actions:
             action_id = action.get("id", "")
-            patches = action.get("patches", [])
+            patches = action.get("patches")
+            patch_count = len(patches) if isinstance(patches, list) else 0
             all_actions.append({
                 "id": action_id,
                 "label": action.get("label", ""),
                 "type": action.get("action_type"),
-                "patch_count": len(patches)
+                "patch_count": patch_count
             })
     
     # 全局 actions（顶层）
@@ -275,12 +276,13 @@ async def validate_completion_impl(instance_name: str) -> dict[str, Any]:
         if not isinstance(action, dict):
             continue
         action_id = action.get("id", "")
-        patches = action.get("patches", [])
+        patches = action.get("patches")
+        patch_count = len(patches) if isinstance(patches, list) else 0
         all_actions.append({
             "id": action_id,
             "label": action.get("label", ""),
             "type": action.get("action_type"),
-            "patch_count": len(patches) if isinstance(patches, list) else 0,
+            "patch_count": patch_count,
             "scope": "global"
         })
 

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useEventEmitter } from '../utils/eventEmitter';
+import { useFieldPatch } from '../store/schemaStore';
 import ImageModal from './ImageModal';
 import { renderTemplate } from '../utils/template';
 import type { FieldConfig, TableColumn } from '../types/schema';
@@ -11,6 +12,9 @@ export interface Column extends Omit<TableColumn, 'components' | 'tagType'> {
   tagType?: string | ((val: any) => string);
   renderText?: string | ((val: any) => string);
   components?: MixedComponent[];
+  editable?: boolean;
+  editType?: 'text' | 'number' | 'select';
+  options?: Array<{ label: string; value: string }>;
 }
 
 // 混合渲染组件配置
@@ -35,7 +39,7 @@ interface MixedComponent {
 }
 
 interface TableProps {
-  field: Pick<FieldConfig, 'key' | 'label' | 'columns' | 'rowKey' | 'bordered' | 'striped' | 'hover' | 'emptyText' | 'showHeader' | 'compact' | 'maxHeight' | 'showPagination' | 'pageSize'>;
+  field: Pick<FieldConfig, 'key' | 'label' | 'columns' | 'rowKey' | 'bordered' | 'striped' | 'hover' | 'emptyText' | 'showHeader' | 'compact' | 'maxHeight' | 'showPagination' | 'pageSize' | 'tableEditable'>;
   value: any[];
 }
 
@@ -44,8 +48,11 @@ export default function Table({ field, value }: TableProps) {
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [currentImage, setCurrentImage] = useState<{ url: string; title?: string; alt?: string; isHtml?: boolean } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [editingCell, setEditingCell] = useState<{ rowIndex: number; columnKey: string } | null>(null);
+  const [editingValue, setEditingValue] = useState<string>('');
 
   const { emitTableButtonClick } = useEventEmitter();
+  const fieldPatch = useFieldPatch();
 
   const columns: Column[] = (field.columns as Column[]) || [];
   const data = Array.isArray(value) ? value : [];
@@ -59,6 +66,7 @@ export default function Table({ field, value }: TableProps) {
   const maxHeight = field.maxHeight;
   const showPagination = field.showPagination !== false;
   const pageSize = field.pageSize || 10;
+  const tableEditable = field.tableEditable || false;
 
   // 排序处理
   const handleSort = (columnKey: string) => {
@@ -103,6 +111,83 @@ export default function Table({ field, value }: TableProps) {
   useMemo(() => {
     setCurrentPage(1);
   }, [data.length]);
+
+  // 处理单元格编辑
+  const handleCellEdit = (rowIndex: number, columnKey: string, newValue: any) => {
+    // 更新表格数据中的对应单元格
+    const updatedData = [...data];
+    updatedData[startIndex + rowIndex] = {
+      ...updatedData[startIndex + rowIndex],
+      [columnKey]: newValue
+    };
+
+    // 通过 fieldPatch 更新到 state
+    fieldPatch('state.params', field.key, updatedData);
+
+    console.log(`[Table] 单元格编辑: row=${rowIndex}, column=${columnKey}, newValue=${newValue}`);
+  };
+
+  // 开始编辑
+  const startEditing = (rowIndex: number, columnKey: string) => {
+    const record = data[startIndex + rowIndex];
+    const value = record[columnKey];
+    
+    // 如果列有 renderType（如 progress、tag 等），则不允许编辑
+    const column = columns.find(col => col.key === columnKey);
+    if (column?.renderType==="progress") {
+      return;
+    }
+    
+    setEditingValue(String(value ?? ''));
+    setEditingCell({ rowIndex, columnKey });
+  };
+
+  // 取消编辑
+  const cancelEditing = () => {
+    setEditingCell(null);
+    setEditingValue('');
+  };
+
+  // 保存编辑
+  const saveEditing = () => {
+    if (!editingCell) return;
+
+    const { rowIndex, columnKey } = editingCell;
+    const column = columns.find(col => col.key === columnKey);
+
+    if (column) {
+      let parsedValue: any = editingValue;
+
+      // 根据编辑类型解析值
+      switch (column.editType) {
+        case 'number':
+          parsedValue = editingValue !== '' ? parseFloat(editingValue) : null;
+          break;
+        case 'select':
+          // select 类型直接使用值
+          parsedValue = editingValue;
+          break;
+        default:
+          // text 类型直接使用字符串
+          parsedValue = editingValue;
+      }
+
+      handleCellEdit(rowIndex, columnKey, parsedValue);
+    }
+
+    cancelEditing();
+  };
+
+  // 处理键盘事件（回车保存，Escape 取消）
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveEditing();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelEditing();
+    }
+  };
 
   // 简单的表达式求值器
   const evaluateExpression = (expr: string, val: any): any => {
@@ -668,7 +753,14 @@ export default function Table({ field, value }: TableProps) {
     }
 
     // 默认文本渲染
-    return String(val || '');
+    if (val === null || val === undefined) {
+      return '';
+    }
+    if (typeof val === 'object') {
+      // 空对象显示为空字符串，非空对象显示为 JSON 字符串
+      return Object.keys(val).length === 0 ? '' : JSON.stringify(val);
+    }
+    return String(val);
   };
 
   if (!data || data.length === 0) {
@@ -783,6 +875,9 @@ export default function Table({ field, value }: TableProps) {
                 >
                   {columns.map((column: Column) => {
                     const val = record[column.key];
+                    const isEditable = tableEditable && column.editable !== false;
+                    const isEditing = editingCell?.rowIndex === index && editingCell?.columnKey === column.key;
+
                     return (
                       <td
                         key={column.key}
@@ -791,10 +886,94 @@ export default function Table({ field, value }: TableProps) {
                           textAlign: column.align || 'left',
                           fontSize: '14px',
                           color: '#212529',
-                          borderBottom: bordered ? '1px solid #dee2e6' : 'none'
+                          borderBottom: bordered ? '1px solid #dee2e6' : 'none',
+                          background: isEditing ? '#fff7e6' : undefined
+                        }}
+                        onClick={() => {
+                          if (isEditable && !isEditing && !column.renderType) {
+                            startEditing(index, column.key);
+                          }
+                        }}
+                        onDoubleClick={() => {
+                          if (isEditable && !isEditing && column.renderType !== "progress") {
+                            startEditing(index, column.key);
+                          }
                         }}
                       >
-                        {renderCell(column, val, record, actualIndex)}
+                        {isEditing ? (
+                          // 可编辑输入框
+                          <div
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {column.editType === 'select' ? (
+                              <select
+                                value={editingValue}
+                                onChange={(e) => setEditingValue(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                onBlur={saveEditing}
+                                autoFocus
+                                style={{
+                                  padding: '4px 8px',
+                                  fontSize: '14px',
+                                  border: '1px solid #007bff',
+                                  borderRadius: '4px',
+                                  outline: 'none',
+                                  width: '100%',
+                                  minWidth: '80px'
+                                }}
+                              >
+                                <option value="">请选择</option>
+                                {column.options?.map((opt, optIdx) => (
+                                  <option key={optIdx} value={opt.value}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <input
+                                type={column.editType === 'number' ? 'number' : 'text'}
+                                value={editingValue}
+                                onChange={(e) => setEditingValue(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                onBlur={saveEditing}
+                                autoFocus
+                                style={{
+                                  padding: '4px 8px',
+                                  fontSize: '14px',
+                                  border: '1px solid #007bff',
+                                  borderRadius: '4px',
+                                  outline: 'none',
+                                  width: '100%',
+                                  minWidth: '80px'
+                                }}
+                              />
+                            )}
+                          </div>
+                        ) : isEditable && !column.renderType ? (
+                          // 可编辑但不在编辑状态
+                          <div
+                            style={{
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              transition: 'background 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#e9ecef';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'transparent';
+                            }}
+                          >
+                            {renderCell(column, val, record, actualIndex)}
+                          </div>
+                        ) : (
+                          // 不可编辑
+                          <div>
+                            {renderCell(column, val, record, actualIndex)}
+                          </div>
+                        )}
                       </td>
                     );
                   })}

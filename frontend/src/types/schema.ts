@@ -26,6 +26,8 @@ export interface TableColumn {
   sortable?: boolean;  // 是否可排序
   filterable?: boolean;  // 是否可过滤
   editable?: boolean;  // 列是否可编辑
+  editType?: 'text' | 'number' | 'select';  // 编辑器类型
+  options?: Array<{ label: string; value: string }>;  // 选项列表（editType=select 时使用）
   render?: string | ((value: any, record: any, index: number) => React.ReactNode);
   // 渲染类型，用于在 JSON 中指定简单的渲染逻辑
   renderType?: 'text' | 'tag' | 'badge' | 'progress' | 'image' | 'mixed';
