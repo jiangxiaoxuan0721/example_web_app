@@ -83,9 +83,13 @@ def register_schema_routes(app:FastAPI, schema_manager: SchemaManager, default_i
         if dumped_schema.get('blocks'):
             first_block = dumped_schema['blocks'][0]
             if 'props' in first_block and 'fields' in first_block['props']:
-                first_field = first_block['props']['fields'][0]
-                if 'columns' in first_field:
-                    print(f"[SchemaRoutes] columns 数据: {first_field['columns'][2]}")  # 打印第3列（avatar）
+                fields_list = first_block['props']['fields']
+                if fields_list and len(fields_list) > 0:
+                    first_field = fields_list[0]
+                    if 'columns' in first_field:
+                        print(f"[SchemaRoutes] columns 数据: {first_field['columns'][2]}")  # 打印第3列（avatar）
+                else:
+                    print(f"[SchemaRoutes] fields 为空，跳过检查 columns")
 
         return {
             "status": "success",
@@ -107,8 +111,8 @@ def register_schema_routes(app:FastAPI, schema_manager: SchemaManager, default_i
     @app.post("/ui/switch")
     async def switch_ui(request: dict[Any, Any]):
         """切换到指定实例或实例内的指定block"""
-        instance_name = request.get("instance_name")
-        block_id = request.get("block_id")
+        instance_name = request.get("instance_name", "").strip() if request.get("instance_name") else None
+        block_id = request.get("block_id", "").strip() if request.get("block_id") else None
 
         # 至少需要提供一个参数
         if not instance_name and not block_id:

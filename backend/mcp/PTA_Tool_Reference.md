@@ -52,10 +52,15 @@ state     :  ui_schema中数据存储的地方,由params(原始数据)和runtime
 </TOOL_DEFINITION>
 
 <TOOL_DEFINITION>
-- NAME: switch_to_instance
-- DESCRIPTION: 切换到实例
+- NAME: switch_ui
+- DESCRIPTION: 切换UI界面，支持切换到指定实例或切换到实例内的指定block
 - PARAMETERS:
-  instance_name: str - 要访问的实例名
+  instance_name: str | None - 要切换到的实例名，不传则不切换实例
+  block_id: str | None - 要切换到的block ID，不传则不切换block（例如在Tabs布局中切换标签页）
+- 使用方式：
+  1. 切换到实例: {"instance_name": "demo"}
+  2. 切换到实例内的block: {"instance_name": "demo", "block_id": "counter_block"}
+  3. 仅切换当前实例内的block: {"block_id": "counter_block"}
 </TOOL_DEFINITION>
 
 <PATCH_DESCRIPTION>

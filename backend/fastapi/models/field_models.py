@@ -79,6 +79,14 @@ class SelectableFieldConfig(_BaseFieldConfig):
     multiple: bool = Field(default=False, description="是否多选（仅select类型）")
 
 
+class TagFieldConfig(_BaseFieldConfig):
+    """标签字段配置（tag, badge, progress 类型）"""
+    type: Literal[FieldType.TAG, FieldType.BADGE, FieldType.PROGRESS]
+    options: list[OptionItem] = Field(default_factory=list, description="选项列表")
+    color: str | None = Field(default=None, description="颜色")
+    size: str | None = Field(default="default", description="大小：default | small | large")
+
+
 class ImageFieldConfig(_BaseFieldConfig):
     """图片字段配置"""
     type: Literal[FieldType.IMAGE]
@@ -125,6 +133,7 @@ class ComponentFieldConfig(_BaseFieldConfig):
 FieldConfig: TypeAlias = Union[
     BaseFieldConfig,
     SelectableFieldConfig,
+    TagFieldConfig,
     ImageFieldConfig,
     TableFieldConfig,
     ComponentFieldConfig

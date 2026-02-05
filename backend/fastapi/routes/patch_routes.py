@@ -1,5 +1,6 @@
 """Patch 相关 API 路由"""
 
+from backend.fastapi.models.enums import LayoutType
 from fastapi import FastAPI, Query
 from typing import Any
 from ...core.history import PatchHistoryManager
@@ -667,10 +668,10 @@ def register_patch_routes(
         - 创建实例: {"instance_name": "__CREATE__", "new_instance_name": "my_instance", "patches": [...]}
         - 删除实例: {"instance_name": "__DELETE__", "target_instance_name": "my_instance", "patches": []}
         """
-        instance_name = request.get("instance_name")
+        instance_name = request.get("instance_name", "").strip() if request.get("instance_name") else ""
         patches = request.get("patches", [])
-        new_instance_name = request.get("new_instance_name")
-        target_instance_name = request.get("target_instance_name")
+        new_instance_name = request.get("new_instance_name", "").strip() if request.get("new_instance_name") else None
+        target_instance_name = request.get("target_instance_name", "").strip() if request.get("target_instance_name") else None
 
         print(f"[PatchRoutes] /ui/patch 收到请求: instance_name={instance_name}")
 
@@ -713,6 +714,20 @@ def register_patch_routes(
                         new_schema.state = StateInfo(
                             params=state_data.get("params", {}),
                             runtime=state_data.get("runtime", {})
+                        )
+                    elif path == "layout" and new_schema:
+                        # Update layout configuration
+                        layout_data = value
+                        layout_type_str = layout_data.get("type", "single")
+                        # Convert string to LayoutType enum
+                        try:
+                            layout_type: LayoutType = LayoutType(layout_type_str)
+                        except ValueError:
+                            layout_type = LayoutType.SINGLE
+                        new_schema.layout = LayoutInfo(
+                            type=layout_type,
+                            columns=layout_data.get("columns"),
+                            gap=layout_data.get("gap")
                         )
                     elif path == "blocks" and new_schema:
                         # Convert dict list to Block objects

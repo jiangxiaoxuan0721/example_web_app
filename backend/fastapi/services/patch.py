@@ -12,7 +12,7 @@ from ..models import (
     # Block 相关
     Block, BlockProps, ActionConfig,
     # 字段相关
-    BaseFieldConfig, SelectableFieldConfig, ImageFieldConfig,
+    BaseFieldConfig, SelectableFieldConfig, TagFieldConfig, ImageFieldConfig,
     TableFieldConfig, ComponentFieldConfig, FieldConfig
 )
 
@@ -242,6 +242,7 @@ def render_field_template(schema: UISchema, field_dict: dict[str, Any]) -> dict[
 def parse_field_config(field_data: dict[str, Any]) -> (
     BaseFieldConfig |
     SelectableFieldConfig |
+    TagFieldConfig |
     ImageFieldConfig |
     TableFieldConfig |
     ComponentFieldConfig
@@ -270,6 +271,12 @@ def parse_field_config(field_data: dict[str, Any]) -> (
             field_data['options'] = []
         return SelectableFieldConfig(**field_data)
 
+    elif field_type in [FieldType.TAG, FieldType.BADGE, FieldType.PROGRESS]:
+        # tag/badge/progress 类型可能需要 options 属性
+        if 'options' not in field_data or field_data['options'] is None:
+            field_data['options'] = []
+        return TagFieldConfig(**field_data)
+
     elif field_type == FieldType.IMAGE:
         return ImageFieldConfig(**field_data)
 
@@ -282,7 +289,7 @@ def parse_field_config(field_data: dict[str, Any]) -> (
 
 def init_field_state(
     schema: UISchema,
-    field: (BaseFieldConfig | SelectableFieldConfig | ImageFieldConfig | TableFieldConfig | ComponentFieldConfig),
+    field: (BaseFieldConfig | SelectableFieldConfig | TagFieldConfig | ImageFieldConfig | TableFieldConfig | ComponentFieldConfig),
     old_fields: list[BaseFieldConfig] | None = None
 ) -> None:
     """初始化字段的 state.params

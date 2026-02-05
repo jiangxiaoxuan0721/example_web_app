@@ -41,7 +41,9 @@ async def apply_patch_to_fastapi(
             response: Response = await client.post(url, json=payload, timeout=10.0)
 
             if response.status_code == 200:
-                _ = await switch_to_instance_impl(instance_name)
+                # 创建成功后，切换到新创建的实例
+                actual_instance = new_instance_name if new_instance_name else instance_name
+                _ = await switch_to_instance_impl(actual_instance)
                 return response.json()
             else:
                 return {
@@ -224,10 +226,10 @@ async def validate_completion_impl(instance_name: str) -> dict[str, Any]:
         block_id = block.get("id", f"block_{idx}")
         block_layout = block.get("layout", "unknown")
         block_title = block.get("title", "")
-        props = block.get("props", {})
+        props = block.get("props", {}) or {}
 
-        block_fields = props.get("fields", [])
-        block_actions = props.get("actions", [])
+        block_fields = props.get("fields", []) or []
+        block_actions = props.get("actions", []) or []
 
         field_count += len(block_fields) if isinstance(block_fields, list) else 0
         action_count += len(block_actions) if isinstance(block_actions, list) else 0
@@ -243,36 +245,38 @@ async def validate_completion_impl(instance_name: str) -> dict[str, Any]:
         structure_summary.append(block_summary)
 
         # 收集字段详细信息
-        for field in block_fields:
-            field_key = field.get("key", "")
-            field_path = f"state.params.{field_key}" if field_key else "unknown"
-            has_value = field_key in params or field.get("value") is not None
-            all_fields.append({
-                "key": field_key,
-                "type": field.get("type"),
-                "label": field.get("label", ""),
-                "path": field_path,
-                "has_value": has_value
-            })
+        if isinstance(block_fields, list):
+            for field in block_fields:
+                field_key = field.get("key", "")
+                field_path = f"state.params.{field_key}" if field_key else "unknown"
+                has_value = field_key in params or field.get("value") is not None
+                all_fields.append({
+                    "key": field_key,
+                    "type": field.get("type"),
+                    "label": field.get("label", ""),
+                    "path": field_path,
+                    "has_value": has_value
+                })
         
         # 收集动作详细信息
-        for action in block_actions:
-            action_id = action.get("id", "")
-            patches = action.get("patches")
-            patch_count = len(patches) if isinstance(patches, list) else 0
-            all_actions.append({
-                "id": action_id,
-                "label": action.get("label", ""),
-                "type": action.get("action_type"),
-                "patch_count": patch_count
-            })
+        if isinstance(block_actions, list):
+            for action in block_actions:
+                action_id = action.get("id", "")
+                patches = action.get("patches")
+                patch_count = len(patches) if isinstance(patches, list) else 0
+                all_actions.append({
+                    "id": action_id,
+                    "label": action.get("label", ""),
+                    "type": action.get("action_type"),
+                    "patch_count": patch_count
+                })
     
     # 全局 actions（顶层）
-    global_actions = schema.get("actions", [])
+    global_actions = schema.get("actions", []) or []
     action_count += len(global_actions) if isinstance(global_actions, list) else 0
 
     # 将全局 actions 添加到 structure_summary 的第一项（作为特殊的顶层块）
-    if global_actions:
+    if global_actions and isinstance(global_actions, list):
         structure_summary.insert(0, {
             "id": "__global__",
             "title": "全局操作 (Global Actions)",
@@ -282,19 +286,20 @@ async def validate_completion_impl(instance_name: str) -> dict[str, Any]:
         })
 
     # 收集全局 actions 到 all_actions
-    for action in global_actions:
-        if not isinstance(action, dict):
-            continue
-        action_id = action.get("id", "")
-        patches = action.get("patches")
-        patch_count = len(patches) if isinstance(patches, list) else 0
-        all_actions.append({
-            "id": action_id,
-            "label": action.get("label", ""),
-            "type": action.get("action_type"),
-            "patch_count": patch_count,
-            "scope": "global"
-        })
+    if isinstance(global_actions, list):
+        for action in global_actions:
+            if not isinstance(action, dict):
+                continue
+            action_id = action.get("id", "")
+            patches = action.get("patches")
+            patch_count = len(patches) if isinstance(patches, list) else 0
+            all_actions.append({
+                "id": action_id,
+                "label": action.get("label", ""),
+                "type": action.get("action_type"),
+                "patch_count": patch_count,
+                "scope": "global"
+            })
 
     # 生成提示
     hints = []
