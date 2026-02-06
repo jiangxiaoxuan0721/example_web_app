@@ -1,7 +1,7 @@
 ---
 name: pta_n-1
 type: knowledge
-version: 0.36.3
+version: 0.37.0
 agent: CodeActAgent
 triggers:
   - n-1 PTA
@@ -11,7 +11,7 @@ demand_mcp_tool_name: [initModelAndCreateSACanvas,power_flow_sample_simple_ramdo
 belong_mcp_server: FastMCP
 ---
 
-# N-1 仿真 PTA 交互指南（简化版）
+# N-1 仿真 PTA 交互指南
 
 ## 核心原则
 
@@ -19,6 +19,7 @@ belong_mcp_server: FastMCP
 2. **对话辅助**：对话框仅用于流程引导、状态说明和异常处理
 3. **单一实例**：整个仿真过程只使用一个 PTA 实例
 4. **全局 tabs 布局**：使用全局 `layout.type = "tabs"`，每个步骤独占一个标签页
+5. **实时同步**：每次执行下一步前，必须调用 `validate_completion` 获取用户在界面上的实际修改值
 
 ---
 
@@ -29,7 +30,6 @@ belong_mcp_server: FastMCP
 **对话模板**：
 ```
 您好！欢迎使用 N-1 仿真系统。请选择仿真模式：
-
 1. 单次 N-1 仿真 - 对单个故障场景进行详细仿真
 2. 批量 N-1 仿真 - 对多个故障场景进行批量仿真
 
@@ -39,59 +39,6 @@ belong_mcp_server: FastMCP
 根据用户回复，执行对应模式的流程：
 - Model A：单次 N-1 仿真
 - Model B：批量 N-1 仿真
-
----
-
-## PTA 实例初始化模板
-
-### Model A（单次仿真）初始化模板
-
-```json
-{
-  "instance_name": "__CREATE__",
-  "new_instance_name": "n1_simulation",
-  "patches": [
-    {"op": "set", "path": "meta", "value": {"page_key": "n1_simulation"}},
-    {"op": "set", "path": "state", "value": {"params": {}, "runtime": {}}},
-    {"op": "set", "path": "layout", "value": {"type": "tabs"}},
-    {"op": "set", "path": "blocks", "value": [
-      {"id": "step1_init", "layout": "form", "title": "步骤1: 模型初始化", "props": {"fields": [], "actions": []}},
-      {"id": "step2_powerflow", "layout": "form", "title": "步骤2: 潮流计算", "props": {"fields": [], "actions": []}},
-      {"id": "step3_flow_result", "layout": "form", "title": "步骤3: 潮流计算结果", "props": {"fields": [], "actions": []}},
-      {"id": "step4_fault", "layout": "form", "title": "步骤4: 故障参数", "props": {"fields": [], "actions": []}},
-      {"id": "step5_emt", "layout": "form", "title": "步骤5: 电磁暂态计算", "props": {"fields": [], "actions": []}},
-      {"id": "step6_measures", "layout": "form", "title": "步骤6: 量测信号", "props": {"fields": [], "actions": []}},
-      {"id": "step7_run", "layout": "form", "title": "步骤7: 执行仿真", "props": {"fields": [], "actions": []}},
-      {"id": "step8_result", "layout": "form", "title": "步骤8: 结果分析", "props": {"fields": [], "actions": []}}
-    ]},
-    {"op": "set", "path": "actions", "value": []}
-  ]
-}
-```
-
-### Model B（批量仿真）初始化模板
-
-```json
-{
-  "instance_name": "__CREATE__",
-  "new_instance_name": "n1_simulation_batch",
-  "patches": [
-    {"op": "set", "path": "meta", "value": {"page_key": "n1_simulation_batch"}},
-    {"op": "set", "path": "state", "value": {"params": {}, "runtime": {}}},
-    {"op": "set", "path": "layout", "value": {"type": "tabs"}},
-    {"op": "set", "path": "blocks", "value": [
-      {"id": "step1_default_config", "layout": "form", "title": "步骤1: 默认配置", "props": {"fields": [], "actions": []}},
-      {"id": "step2_flow_template", "layout": "form", "title": "步骤2: 流程模板", "props": {"fields": [], "actions": []}},
-      {"id": "step3_params_explanation", "layout": "form", "title": "步骤3: 参数说明", "props": {"fields": [], "actions": []}},
-      {"id": "step4_batch_config", "layout": "form", "title": "步骤4: 批量配置", "props": {"fields": [], "actions": []}},
-      {"id": "step5_batch_count", "layout": "form", "title": "步骤5: 批量次数", "props": {"fields": [], "actions": []}},
-      {"id": "step6_submit_task", "layout": "form", "title": "步骤6: 提交任务", "props": {"fields": [], "actions": []}},
-      {"id": "step7_query_result", "layout": "form", "title": "步骤7: 结果查询", "props": {"fields": [], "actions": []}}
-    ]},
-    {"op": "set", "path": "actions", "value": []}
-  ]
-}
-```
 
 ---
 
@@ -125,8 +72,14 @@ switch_ui({"instance_name": "n1_simulation", "block_id": "step2_powerflow"})
 
 **操作**：
 1. 调用 `getCurrentJob` 和 `getCurrentConfig` 获取当前潮流计算配置
-2. 在对话框中以 Markdown 表格形式展示配置（禁止使用代码块包裹）
-3. 在 PTA 中展示可编辑的配置表格
+2. 在 PTA 中展示可编辑的配置表格
+3. **用户确认后必须获取修改后的配置**：
+
+```python
+result = validate_completion({"instance_name": "n1_simulation"})
+config_table = result['state_summary']['params']['powerflow_config']
+createOrUpdateConfig({"config_data": config_table})
+```
 
 **PTA 更新**：
 ```json
@@ -163,20 +116,6 @@ switch_ui({"instance_name": "n1_simulation", "block_id": "step2_powerflow"})
     ]}
   ]
 }
-```
-
-**对话引导**：
-```
-已在「步骤2: 潮流计算」标签页中展示当前配置，同时在上面的表格中显示。
-
-您可以直接在 PTA 表格中编辑参数值，点击「确认配置并继续」按钮完成配置。
-或者直接回复「下一步」使用默认配置继续。
-```
-
-**获取用户修改**：
-```python
-result = validate_completion({"instance_name": "n1_simulation"})
-config_table = result['state_summary']['params']['powerflow_config']
 ```
 
 ---
@@ -223,6 +162,20 @@ switch_ui({"instance_name": "n1_simulation", "block_id": "step4_fault"})
 请回复 1 或 2。
 ```
 
+**操作**：根据用户选择调用 `generate_random_fault_params_set_N_1` 或 `setN_1_GroundFault`
+
+**重要**：在调用工具前，必须获取用户在界面上的实际输入：
+```python
+result = validate_completion({"instance_name": "n1_simulation"})
+fault_mode = result['state_summary']['params']['fault_mode']
+fault_params = result['state_summary']['params']['fault_params']
+
+if fault_mode == 'custom':
+    setN_1_GroundFault({"fault_params": fault_params})
+else:
+    generate_random_fault_params_set_N_1({})
+```
+
 **PTA 更新**：
 ```json
 {
@@ -267,8 +220,6 @@ switch_ui({"instance_name": "n1_simulation", "block_id": "step4_fault"})
 }
 ```
 
-**操作**：根据用户选择调用 `generate_random_fault_params_set_N_1` 或 `setN_1_GroundFault`
-
 **切换标签页**：
 ```python
 switch_ui({"instance_name": "n1_simulation", "block_id": "step5_emt"})
@@ -280,8 +231,14 @@ switch_ui({"instance_name": "n1_simulation", "block_id": "step5_emt"})
 
 **操作**：
 1. 调用 `getCurrentConfig` 获取电磁暂态计算配置
-2. 在对话框中以 Markdown 表格形式展示配置（禁止使用代码块包裹）
-3. 在 PTA 中展示可编辑的配置表格
+2. 在 PTA 中展示可编辑的配置表格
+3. **用户确认后必须获取修改后的配置**：
+
+```python
+result = validate_completion({"instance_name": "n1_simulation"})
+emt_config = result['state_summary']['params']['emt_config']
+createOrUpdateConfig({"config_data": emt_config})
+```
 
 **PTA 更新**：
 ```json
@@ -317,14 +274,6 @@ switch_ui({"instance_name": "n1_simulation", "block_id": "step5_emt"})
     ]}
   ]
 }
-```
-
-**对话引导**：
-```
-已在「步骤5: 电磁暂态计算」标签页中展示当前配置，同时在上面的表格中显示。
-
-您可以直接在 PTA 表格中编辑参数值，点击「确认配置并继续」按钮完成配置。
-或者直接回复「下一步」使用默认配置继续。
 ```
 
 ---
@@ -388,6 +337,18 @@ switch_ui({"instance_name": "n1_simulation", "block_id": "step5_emt"})
 
 **操作**：调用 `addComponentOutputMeasures` 添加量测（注意：必须按顺序，不设置 dim 参数）
 
+**重要**：在调用工具前，必须获取用户在界面上的确认状态：
+```python
+result = validate_completion({"instance_name": "n1_simulation"})
+measures_confirmed = result['state_summary']['params']['measures_confirmed']
+
+if measures_confirmed:
+    addComponentOutputMeasures({"rid": "model/CloudPSS/_newBus_3p", "key": "Vrms"})
+    addComponentOutputMeasures({"rid": "model/CloudPSS/SyncGeneratorRouter", "key": "PT_o"})
+    addComponentOutputMeasures({"rid": "model/CloudPSS/SyncGeneratorRouter", "key": "wr_o"})
+    addComponentOutputMeasures({"rid": "model/CloudPSS/SyncGeneratorRouter", "key": "theta_o"})
+```
+
 **切换标签页**：
 ```python
 switch_ui({"instance_name": "n1_simulation", "block_id": "step7_run"})
@@ -428,6 +389,16 @@ switch_ui({"instance_name": "n1_simulation", "block_id": "step7_run"})
 1. 调用 `runProject` 执行仿真
 2. 调用 `save_flow_emt_hdf5` 保存结果
 
+**重要**：在执行仿真前，必须获取用户确认状态：
+```python
+result = validate_completion({"instance_name": "n1_simulation"})
+run_simulation = result['state_summary']['params']['run_simulation']
+
+if run_simulation:
+    runProject({})
+    save_flow_emt_hdf5({})
+```
+
 ---
 
 ### 步骤 8：结果分析与输出 `[自动执行]`
@@ -435,8 +406,7 @@ switch_ui({"instance_name": "n1_simulation", "block_id": "step7_run"})
 **操作**：
 1. 调用 `extract_and_check_data` 检查稳定性
 2. 获取结果图片路径和文件路径
-3. 在对话框中以表格形式展示结果，图片使用 Markdown 语法 `![]()` 输出
-4. 文件链接使用 Markdown 超链接形式
+3. 在 PTA 中展示结果
 
 **PTA 更新**：
 ```json
@@ -461,7 +431,7 @@ switch_ui({"instance_name": "n1_simulation", "block_id": "step7_run"})
 
 | 序号 | 稳定性 | 结果文件 | 电压曲线 | 功率曲线 | 转速曲线 | 攻角曲线 |
 |------|--------|----------|----------|----------|----------|----------|
-| 1 | 稳定 | [下载](https://minio.example.com/results.hdf5) | ![电压](https://minio.example.com/voltage.png) | ![功率](https://minio.example.com/power.png) | ![转速](https://minio.example.com/speed.png) | ![攻角](https://minio.example.com/angle.png) |
+| 1 | 稳定 | ![下载](https://minio.example.com/results.hdf5) | ![电压](https://minio.example.com/voltage.png) | ![功率](https://minio.example.com/power.png) | ![转速](https://minio.example.com/speed.png) | ![攻角](https://minio.example.com/angle.png) |
 
 在「步骤8: 结果分析」标签页中也可查看所有结果。
 ```
@@ -477,396 +447,43 @@ switch_ui({"instance_name": "n1_simulation", "block_id": "step7_run"})
 
 ---
 
-### 步骤 1：查看默认配置 `[自动执行 + 等待确认]`
+### 步骤 1-3：配置收集与确认
 
-**操作**：调用 `get_default_config` 获取默认配置
+依次展示默认配置、流程模板、参数说明，并在每个步骤后调用 `validate_completion` 获取用户的确认状态。
 
-**对话引导**：
-```
-默认批量仿真配置如下：
-
-| 工具名称 | 参数名 | 默认值 | 说明 |
-|----------|--------|---------|------|
-| load_data | case_name | IEEE14 | 系统案例名称 |
-| run_power_flow | iterations | 10 | 迭代次数 |
-
-您可以在「步骤1: 默认配置」标签页中查看。
-如需修改，请回复修改内容；无需修改请回复「下一步」。
-```
-
-**PTA 更新**：
-```json
-{
-  "instance_name": "n1_simulation_batch",
-  "patches": [
-    {"op": "set", "path": "blocks.0.props.fields", "value": [
-      {
-        "key": "default_config",
-        "label": "默认批量仿真配置（查看）",
-        "type": "table",
-        "tableEditable": false,
-        "columns": [
-          {"key": "tool", "title": "工具名称", "width": "200px"},
-          {"key": "param", "title": "参数名", "width": "150px"},
-          {"key": "default_value", "title": "默认值", "width": "150px"},
-          {"key": "description", "title": "说明", "width": "250px"}
-        ],
-        "value": [
-          {"tool": "load_data", "param": "case_name", "default_value": "IEEE14", "description": "系统案例名称"},
-          {"tool": "run_power_flow", "param": "iterations", "default_value": "10", "description": "迭代次数"}
-        ]
-      }
-    ]},
-    {"op": "set", "path": "blocks.0.props.actions", "value": [
-      {
-        "id": "next_step",
-        "label": "下一步",
-        "style": "primary",
-        "action_type": "apply_patch",
-        "patches": [{"op": "set", "path": "state.params.step1_confirmed", "value": true}]
-      }
-    ]}
-  ]
-}
-```
-
-**注意**：此处仅记录用户的修改意图，不实际调用修改工具
-
----
-
-### 步骤 2：确认单次仿真流程模板 `[自动执行 + 等待确认]`
-
-**对话引导**：
-```
-单次仿真流程模板如下：
-
-1. load_data - 加载系统数据
-2. run_power_flow - 执行潮流计算
-3. fault_analysis - 故障分析
-4. run_emt - 电磁暂态仿真
-5. save_results - 保存结果
-
-在「步骤2: 流程模板」标签页中可查看涉及的工具。
-确认流程无误请回复「确认」；如需调整请描述需求。
-```
-
-**PTA 更新**：
-```json
-{
-  "instance_name": "n1_simulation_batch",
-  "patches": [
-    {"op": "set", "path": "blocks.1.props.fields", "value": [
-      {
-        "key": "flow_template",
-        "label": "单次仿真流程模板",
-        "type": "json",
-        "value": "{\"steps\": [\"load_data\", \"run_power_flow\", \"fault_analysis\", \"run_emt\", \"save_results\"]}"
-      },
-      {
-        "key": "tool_list",
-        "label": "涉及的工具",
-        "type": "multiselect",
-        "options": [
-          {"label": "加载系统数据", "value": "load_data"},
-          {"label": "执行潮流计算", "value": "run_power_flow"},
-          {"label": "故障分析", "value": "fault_analysis"},
-          {"label": "电磁暂态仿真", "value": "run_emt"},
-          {"label": "保存结果", "value": "save_results"}
-        ],
-        "value": ["load_data", "run_power_flow", "fault_analysis", "run_emt", "save_results"]
-      }
-    ]},
-    {"op": "set", "path": "blocks.1.props.actions", "value": [
-      {
-        "id": "confirm_flow",
-        "label": "确认流程",
-        "style": "primary",
-        "action_type": "apply_patch",
-        "patches": [{"op": "set", "path": "state.params.step2_confirmed", "value": true}]
-      }
-    ]}
-  ]
-}
-```
-
----
-
-### 步骤 3：工具参数说明 `[自动执行 + 等待确认]`
-
-**对话引导**：
-```
-流程中各工具的参数说明如下：
-
-| 工具 | 参数名 | 类型 | 取值范围 | 默认值 | 说明 |
-|------|--------|------|----------|---------|------|
-| load_data | case_name | string | 系统案例名 | IEEE14 | 要加载的系统案例 |
-| run_power_flow | iterations | int | 1-100 | 10 | 最大迭代次数 |
-
-在「步骤3: 参数说明」标签页中可查看完整参数说明。
-了解参数后回复「下一步」继续生成批量配置。
-```
-
-**PTA 更新**：
-```json
-{
-  "instance_name": "n1_simulation_batch",
-  "patches": [
-    {"op": "set", "path": "blocks.2.props.fields", "value": [
-      {
-        "key": "params_explanation",
-        "label": "工具参数说明",
-        "type": "table",
-        "tableEditable": false,
-        "columns": [
-          {"key": "tool", "title": "工具", "width": "150px"},
-          {"key": "param", "title": "参数名", "width": "120px"},
-          {"key": "type", "title": "类型", "width": "100px"},
-          {"key": "range", "title": "取值范围", "width": "150px"},
-          {"key": "default", "title": "默认值", "width": "100px"},
-          {"key": "description", "title": "说明", "width": "200px"}
-        ],
-        "value": [
-          {"tool": "load_data", "param": "case_name", "type": "string", "range": "系统案例名", "default": "IEEE14", "description": "要加载的系统案例"},
-          {"tool": "run_power_flow", "param": "iterations", "type": "int", "range": "1-100", "default": "10", "description": "最大迭代次数"}
-        ]
-      }
-    ]},
-    {"op": "set", "path": "blocks.2.props.actions", "value": [
-      {
-        "id": "next_step",
-        "label": "下一步",
-        "style": "primary",
-        "action_type": "apply_patch",
-        "patches": [{"op": "set", "path": "state.params.step3_confirmed", "value": true}]
-      }
-    ]}
-  ]
-}
-```
-
-**注意**：此处仅记录用户的参数配置意图，不执行任何工具
-
----
-
-### 步骤 4：生成批量配置 JSON `[自动执行 + 等待确认]`
+### 步骤 4：生成批量配置 JSON
 
 **操作**：根据前面步骤收集的信息，生成批量仿真配置 JSON
 
-**对话引导**：
-```
-根据前面收集的信息，已生成批量仿真配置 JSON：
+**重要**：在生成配置前，必须获取用户在前面的步骤中修改的参数：
+```python
+result = validate_completion({"instance_name": "n1_simulation_batch"})
+step1_confirmed = result['state_summary']['params']['step1_confirmed']
+step2_confirmed = result['state_summary']['params']['step2_confirmed']
+step3_confirmed = result['state_summary']['params']['step3_confirmed']
 
-```json
-{
-  "steps": [
-    {
-      "name": "load_data",
-      "params": {"case_name": "IEEE14"}
-    },
-    {
-      "name": "run_power_flow",
-      "params": {"iterations": {"range": {"start": 5, "end": 15, "step": 5}}}
-    },
-    {
-      "name": "fault_analysis",
-      "params": {
-        "fault_bus": {"choices": [1, 2, 3]},
-        "fault_type": {"choices": ["a", "b", "c"]}
-      }
-    }
-  ],
-  "zip": [["fault_analysis.fault_bus", "fault_analysis.fault_type"]]
-}
+if step1_confirmed and step2_confirmed and step3_confirmed:
+    batch_config = generate_batch_config()
 ```
 
-支持的参数取值方式：
-- 固定值：直接赋值，如 "case_name": "IEEE14"
-- choices（枚举）：从列表中选择，如 {"choices": [1, 2, 3]}
-- range（范围）：按步长遍历，如 {"range": {"start": 5, "end": 15, "step": 5}}
-- random（随机）：在范围内随机采样
+### 步骤 5：提交批量任务
 
-在「步骤4: 批量配置」标签页中可查看和编辑配置。
-确认无误请回复「确认」；如需修改请描述修改内容。
+**重要**：在提交前，必须获取用户在界面上的最终确认：
+```python
+result = validate_completion({"instance_name": "n1_simulation_batch"})
+step4_confirmed = result['state_summary']['params']['step4_confirmed']
+batch_count = result['state_summary']['params'].get('batch_count', 9)
+
+if step4_confirmed:
+    submit_batch_simulation({
+        "batch_config": batch_config,
+        "batch_count": batch_count
+    })
 ```
 
-**PTA 更新**：
-```json
-{
-  "instance_name": "n1_simulation_batch",
-  "patches": [
-    {"op": "set", "path": "blocks.3.props.fields", "value": [
-      {
-        "key": "batch_config",
-        "label": "批量仿真配置（可编辑）",
-        "type": "json",
-        "value": "{\n  \"steps\": [\n    {\n      \"name\": \"load_data\",\n      \"params\": {\"case_name\": \"IEEE14\"}\n    },\n    {\n      \"name\": \"run_power_flow\",\n      \"params\": {\"iterations\": {\"range\": {\"start\": 5, \"end\": 15, \"step\": 5}}}\n    },\n    {\n      \"name\": \"fault_analysis\",\n      \"params\": {\n        \"fault_bus\": {\"choices\": [1, 2, 3]},\n        \"fault_type\": {\"choices\": [\"a\", \"b\", \"c\"]}\n      }\n    }\n  ],\n  \"zip\": [[\"fault_analysis.fault_bus\", \"fault_analysis.fault_type\"]]\n}",
-        "description": "可直接编辑 JSON 配置，参数取值方式支持：固定值、choices、range、random"
-      }
-    ]},
-    {"op": "set", "path": "blocks.3.props.actions", "value": [
-      {
-        "id": "edit_config",
-        "label": "修改配置",
-        "style": "secondary",
-        "action_type": "apply_patch",
-        "patches": [{"op": "set", "path": "state.params.config_editing", "value": true}]
-      },
-      {
-        "id": "confirm_config",
-        "label": "确认配置",
-        "style": "primary",
-        "action_type": "apply_patch",
-        "patches": [{"op": "set", "path": "state.params.step4_confirmed", "value": true}]
-      }
-    ]}
-  ]
-}
-```
+### 步骤 6：结果查询
 
----
-
-### 步骤 5：参数检查与批量次数确认 `[自动执行 + 等待确认]`
-
-**操作**：检查配置是否使用了 choices、range 或 random
-
-**对话引导**：
-```
-配置检查完成：
-- 预计执行 9 次批量仿真
-- 变参数：iterations (3个值) × fault_bus (3个值)
-
-在「步骤5: 批量次数」标签页中可查看详细信息。
-确认后回复「确认」继续提交任务。
-```
-
-**PTA 更新**：
-```json
-{
-  "instance_name": "n1_simulation_batch",
-  "patches": [
-    {"op": "set", "path": "blocks.4.props.fields", "value": [
-      {
-        "key": "batch_info",
-        "label": "批量仿真信息",
-        "type": "html",
-        "value": "<p><strong>预计批量次数：</strong>9 次</p><p><strong>变参数：</strong>iterations (3个值) × fault_bus (3个值)</p>"
-      },
-      {
-        "key": "batch_count",
-        "label": "批量次数",
-        "type": "number",
-        "value": 9,
-        "description": "如需修改批量次数，请在此处输入",
-        "editable": true
-      }
-    ]},
-    {"op": "set", "path": "blocks.4.props.actions", "value": [
-      {
-        "id": "confirm_batch",
-        "label": "确认并提交",
-        "style": "primary",
-        "action_type": "apply_patch",
-        "patches": [{"op": "set", "path": "state.params.step5_confirmed", "value": true}]
-      }
-    ]}
-  ]
-}
-```
-
----
-
-### 步骤 6：提交批量仿真任务 `[询问后执行]`
-
-**对话引导**：
-```
-准备提交批量仿真任务。
-确认提交？回复「确认」或「取消」。
-```
-
-**操作**：调用 `submit_batch_simulation` 提交任务
-
-**PTA 更新**：
-```json
-{
-  "instance_name": "n1_simulation_batch",
-  "patches": [
-    {"op": "set", "path": "blocks.5.props.fields", "value": [
-      {
-        "key": "task_id",
-        "label": "任务 ID",
-        "type": "text",
-        "value": "batch_20250204_001",
-        "description": "请保存此任务 ID 用于后续查询"
-      },
-      {
-        "key": "task_status",
-        "label": "任务状态",
-        "type": "tag",
-        "value": "submitted",
-        "options": [{"label": "已提交", "value": "submitted"}]
-      }
-    ]}
-  ]
-}
-```
-
-**对话引导**：
-```
-✅ 批量仿真任务已成功提交！
-任务 ID：batch_20250204_001
-
-您可以使用以下命令查询任务状态和结果：
-- 查询状态：查询任务状态
-- 获取结果：获取仿真结果
-- 查看所有任务：查看批量任务列表
-```
-
----
-
-### 步骤 7：结果查询与结构化输出 `[询问后执行]`
-
-**操作**：
-1. 调用 `query_batch_simulation_status` 查询状态
-2. 如完成，调用 `get_batch_simulation_result` 获取结果
-
-**对话引导**：
-```
-批量仿真已完成！结果如下：
-
-| 序号 | 稳定性 | 结果文件 | 电压曲线 | 功率曲线 |
-|------|--------|----------|----------|----------|
-| 1 | 稳定 | [下载](results_001.hdf5) | ![电压](voltage_001.png) | ![功率](power_001.png) |
-| 2 | 不稳定 | [下载](results_002.hdf5) | ![电压](voltage_002.png) | ![功率](power_002.png) |
-
-在「步骤7: 结果查询」标签页中也可查看所有结果。
-```
-
-**PTA 更新**：
-```json
-{
-  "instance_name": "n1_simulation_batch",
-  "patches": [
-    {"op": "set", "path": "blocks.6.props.fields", "value": [
-      {
-        "key": "batch_results",
-        "label": "批量仿真结果汇总",
-        "type": "table",
-        "columns": [
-          {"key": "index", "title": "序号", "width": "80px"},
-          {"key": "stability", "title": "稳定性", "width": "100px", "renderType": "tag", "tagType": "value => value === 'stable' ? 'success' : 'error'"},
-          {"key": "result_file", "title": "结果文件", "width": "250px", "renderType": "text"},
-          {"key": "voltage_chart", "title": "电压曲线", "width": "200px", "renderType": "image"},
-          {"key": "power_chart", "title": "功率曲线", "width": "200px", "renderType": "image"}
-        ],
-        "value": [
-          {"index": 1, "stability": "stable", "result_file": "results_001.hdf5", "voltage_chart": "https://minio.example.com/voltage_001.png", "power_chart": "https://minio.example.com/power_001.png"},
-          {"index": 2, "stability": "unstable", "result_file": "results_002.hdf5", "voltage_chart": "https://minio.example.com/voltage_002.png", "power_chart": "https://minio.example.com/power_002.png"}
-        ]
-      }
-    ]}
-  ]
-}
-```
+调用 `query_batch_simulation_status` 和 `get_batch_simulation_result` 查询和获取结果。
 
 ---
 
@@ -876,62 +493,24 @@ switch_ui({"instance_name": "n1_simulation", "block_id": "step7_run"})
 
 **获取用户输入**：
 ```python
-# 使用 validate_completion
 result = validate_completion({"instance_name": "n1_simulation"})
 state = result['state_summary']['params']
 ```
 
 **切换标签页**：
 ```python
-# 切换到指定的 block（标签页）
 switch_ui({"instance_name": "n1_simulation", "block_id": "step2_powerflow"})
-```
-
-### 错误处理
-
-如果仿真失败，在 PTA 中展示错误信息：
-
-```json
-{
-  "instance_name": "n1_simulation",
-  "patches": [
-    {"op": "set", "path": "blocks.6.props.fields", "value": [
-      {
-        "key": "error_message",
-        "label": "错误信息",
-        "type": "html",
-        "value": "<div style=\"color: #f5222d;\"><strong>仿真失败：</strong><p>潮流计算不收敛，请检查参数配置。</p></div>"
-      }
-    ]},
-    {"op": "set", "path": "blocks.6.props.actions", "value": [
-      {
-        "id": "retry",
-        "label": "重新尝试",
-        "style": "primary",
-        "action_type": "apply_patch",
-        "patches": [{"op": "set", "path": "state.params.retry", "value": true}]
-      }
-    ]}
-  ]
-}
 ```
 
 ---
 
 ## 总结
 
-本指南提供了使用 PTA 可视化组件完成 N-1 仿真的完整流程，包括：
-
-1. **PTA 实例初始化**：使用全局 tabs 布局，每个步骤一个标签页
-2. **参数配置**：使用可编辑表格收集用户输入，在对话框中以 Markdown 表格形式展示
-3. **结果展示**：使用表格和图片组件展示仿真结果，图片使用 Markdown 语法输出
-4. **状态管理**：使用 `validate_completion` 获取用户修改
-5. **错误处理**：在 PTA 中展示错误信息并提供重试选项
-
 关键要点：
 - 所有交互都通过 PTA 完成，对话框仅用于流程引导
 - 使用表格的 `tableEditable` 属性实现可编辑配置
-- 使用 `validate_completion` 获取用户修改后的数据
+- **每次执行下一步前都必须调用 `validate_completion` 获取用户在界面上的实际修改值**
+- **不能假设用户没有修改界面上的参数，必须同步最新的配置到系统**
 - 使用 `image` 组件展示仿真结果图片
 - 使用 `switch_ui` 在不同步骤间切换
 - Model A 和 Model B 的工具禁止混用

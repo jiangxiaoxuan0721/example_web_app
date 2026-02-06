@@ -104,10 +104,10 @@ field 包含以下键:
   - "placeholder": 字符串|None,占位符（可选）
 
 根据type的不同有额外字段:
-  select/radio/multiselect 类型:用于渲染选择器
+  - select/radio/multiselect 类型:用于渲染选择器
     - "options": 选项对象数组,每个选项包含 {label: string, value: string, disabled: bool, description: string}
     - "multiple": select 类型可选,布尔值,默认 false,是否多选
-  image 类型:用于渲染图片或HTML
+  - image 类型:用于渲染图片或HTML
     - "showFullscreen": 布尔值,默认 true,显示全屏按钮
     - "showDownload": 布尔值,默认 true,显示下载按钮
     - "imageHeight": 字符串,默认 "auto",图片高度
@@ -116,7 +116,7 @@ field 包含以下键:
     - "fallback": 字符串|None,加载失败回退内容
     - "subtitle": 字符串|None,子标题
     - "alt": 字符串|None,替代文本
-  table 类型:用于绘制表格
+  - table 类型:用于绘制表格
     - "columns": 列配置数组,参见**COLUMN_STRUCTURE**
     - "rowKey": 字符串,行唯一标识字段,默认 "id"
     - "bordered": 布尔值,默认 true,显示边框
@@ -130,7 +130,7 @@ field 包含以下键:
     - "maxHeight": 字符串|None,最大高度
     - "compact": 布尔值,默认 false,紧凑模式
     - "rowSelection": 布尔值,默认 false,行选择
-  component 类型:用于组件中嵌入组件
+  - component 类型:用于组件中嵌入组件
     - "block_config": 要嵌入的block配置,结构同**block**
 </FIELD_STRUCTURE>
 
