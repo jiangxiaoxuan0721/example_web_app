@@ -66,12 +66,7 @@ def handle_remove_operation(schema: UISchema, path: str, value: Any):
             # Find and remove the block with matching id
             for i, block in enumerate(schema.blocks):
                 if hasattr(block, "id") and getattr(block, "id") == block_id:
-                    # Get the block's bind path to clean up related state (BEFORE removing)
-                    bind_path = getattr(block, "bind", None) if hasattr(block, "bind") else None
                     print(f"[PatchRoutes] Found block to remove: {block.id}")
-                    print(f"[PatchRoutes] Block has bind attribute: {hasattr(block, 'bind')}")
-                    print(f"[PatchRoutes] Block bind value: {getattr(block, 'bind', 'NOT_SET')}")
-                    print(f"[PatchRoutes] Block bind_path: {bind_path}")
                     print(f"[PatchRoutes] Full block object: {block}")
 
                     # Clean up related state FIRST, then remove the block
@@ -92,52 +87,6 @@ def handle_remove_operation(schema: UISchema, path: str, value: Any):
                                         print(f"[PatchRoutes] ✓ Deleted state.runtime.{field_key}")
                                 except (KeyError, AttributeError) as e:
                                     print(f"[PatchRoutes] Warning: Failed to delete state.{field_key}: {e}")
-                    elif bind_path and bind_path.startswith("state."):
-                        # For non-form blocks, use the bind path to delete specific state
-                        # Extract the state key (e.g., "state.params.counter" -> "params.counter")
-                        state_keys = bind_path.split(".", 1)[1].split(".")
-                        print(f"[PatchRoutes] Cleaning up state - bind_path: {bind_path}, state_keys: {state_keys}")
-
-                        # Check if block binds to top-level state (params or runtime directly)
-                        # In this case, don't delete anything
-                        if len(state_keys) == 1 and state_keys[0] in ["params", "runtime"]:
-                            print(f"[PatchRoutes] Block binds to top-level state ({state_keys[0]}), skipping state cleanup")
-                        else:
-                            # Navigate to the state dictionary
-                            try:
-                                # Start from schema.state
-                                current = schema.state
-                                print(f"[PatchRoutes] Initial current type: {type(current)}")
-                                print(f"[PatchRoutes] StateInfo params: {schema.state.params}")
-                                print(f"[PatchRoutes] StateInfo runtime: {schema.state.runtime}")
-
-                                # Navigate through the nested dictionaries
-                                for j, key in enumerate(state_keys[:-1]):
-                                    print(f"[PatchRoutes] Navigating to key: {key}, current type: {type(current)}")
-                                    if key == "params":
-                                        current = current.params
-                                    elif key == "runtime":
-                                        current = current.runtime
-                                    elif isinstance(current, dict) and key in current:
-                                        current = current[key]
-                                    else:
-                                        current = None
-                                        break
-
-                                # Remove the final key
-                                if current is not None and isinstance(current, dict):
-                                    final_key = state_keys[-1]
-                                    print(f"[PatchRoutes] Attempting to delete key '{final_key}' from dict with keys: {list(current.keys())}")
-                                    if final_key in current:
-                                        del current[final_key]
-                                        print(f"[PatchRoutes] ✓ Cleaned up state for removed block: {bind_path} (removed key: {final_key})")
-                                        print(f"[PatchRoutes] State after cleanup - params: {schema.state.params}, runtime: {schema.state.runtime}")
-                                    else:
-                                        print(f"[PatchRoutes] Warning: Final key '{final_key}' not found in state for: {bind_path}")
-                            except (KeyError, AttributeError) as e:
-                                print(f"[PatchRoutes] Warning: Failed to clean up state for {bind_path}: {e}")
-                                import traceback
-                                print(f"[PatchRoutes] Traceback:\n{traceback.format_exc()}")
 
                     # Remove the block AFTER state cleanup
                     removed_block = schema.blocks.pop(i)
@@ -342,53 +291,6 @@ def handle_add_operation(schema: UISchema, path: str, value: Any):
                         if field_key not in schema.state.params:
                             schema.state.params[field_key] = ""
                             print(f"[PatchRoutes] ✓ Initialized state.params.{field_key} = ''")
-            else:
-                # For non-form blocks, initialize state based on bind path
-                bind_path = getattr(block, "bind", None) if hasattr(block, "bind") else None
-                if bind_path and bind_path.startswith("state."):
-                    # Extract the state key path (e.g., "state.params.counter" -> "params.counter")
-                    state_keys = bind_path.split(".", 1)[1].split(".")
-                    print(f"[PatchRoutes] Initializing state for new block - bind_path: {bind_path}, state_keys: {state_keys}")
-
-                    # Only initialize if there's a specific key (not just "params" or "runtime")
-                    if len(state_keys) == 1 and state_keys[0] in ["params", "runtime"]:
-                        # Block binds to state.params or state.runtime directly - don't create anything
-                        print(f"[PatchRoutes] Block binds to top-level state ({state_keys[0]}), skipping initialization")
-                    else:
-                        try:
-                            # Navigate to the state dictionary
-                            current = schema.state
-
-                            # Navigate through nested dictionaries, creating missing ones
-                            for j, key in enumerate(state_keys[:-1]):
-                                print(f"[PatchRoutes] Navigating to key: {key}, current type: {type(current)}")
-                                if key == "params" and hasattr(current, "params"):
-                                    current = current.params
-                                elif key == "runtime" and hasattr(current, "runtime"):
-                                    current = current.runtime
-                                elif isinstance(current, dict):
-                                    if key not in current:
-                                        # Create missing nested dictionaries
-                                        current[key] = {}
-                                        print(f"[PatchRoutes] Created missing nested dict for key: {key}")
-                                    current = current[key]
-                                else:
-                                    current = None
-                                    break
-
-                            # Initialize the final key if it doesn't exist
-                            if current is not None and isinstance(current, dict):
-                                final_key = state_keys[-1]
-                                if final_key not in current:
-                                    current[final_key] = {}
-                                    print(f"[PatchRoutes] ✓ Initialized state for new block: {bind_path} (created key: {final_key})")
-                                else:
-                                    print(f"[PatchRoutes] State key '{final_key}' already exists for: {bind_path}")
-                        except (KeyError, AttributeError) as e:
-                            print(f"[PatchRoutes] Warning: Failed to initialize state for {bind_path}: {e}")
-                            import traceback
-                            print(f"[PatchRoutes] Traceback:\n{traceback.format_exc()}")
-
             return {"success": True}
 
         # Special handling for adding new action to actions array
@@ -759,18 +661,13 @@ def register_patch_routes(
                         new_schema.actions = [ActionConfig(**action) for action in actions_data]
 
                 if new_schema:
-                    schema_manager.set(new_instance_name, new_schema)
+                    schema_manager.set(instance_name=new_instance_name, schema=new_schema)
                     print(f"[PatchRoutes] 实例 '{new_instance_name}' 创建成功")
                     return {
                         "status": "success",
                         "message": f"Instance '{new_instance_name}' created successfully",
                         "instance_name": new_instance_name
                     }
-
-                return {
-                    "status": "error",
-                    "error": "Failed to create instance: Invalid patches"
-                }
 
             # Handle Delete Instance
             if instance_name == "__DELETE__":

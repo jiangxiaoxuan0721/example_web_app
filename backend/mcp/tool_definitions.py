@@ -212,13 +212,13 @@ more example: see **COMPREHENSIVE_EXAMPLE**
 - 创建新实例:
   - 使用 "__CREATE__" 作为 instance_name 创建新实例
   - 必须提供 new_instance_name 参数
-  - 使用 "set" 操作定义实例结构(meta/state/blocks/actions)
+  - 使用 "set" 操作定义实例结构(page_key/state/blocks/actions)
   - 示例:
     {
       "instance_name": "__CREATE__",
       "new_instance_name": "my_app",
       "patches": [
-        {"op": "set", "path": "meta", "value": {"page_key": "my_app"}},
+        {"op": "set", "path": "page_key", "value": "my_app"},
         {"op": "set", "path": "state", "value": {"params": {}, "runtime": {}}},
         {"op": "set", "path": "blocks", "value": [
           {"id": "main_block", "layout": "form", "props": {"fields": [{"key": "name", "label": "姓名", "type": "text"}], "actions": []}}
@@ -243,7 +243,7 @@ more example: see **COMPREHENSIVE_EXAMPLE**
     "instance_name": "__CREATE__",
     "new_instance_name": "task_manager",
     "patches": [
-      {"op": "set", "path": "meta", "value": {"page_key": "task_manager"}},
+      {"op": "set", "path": "page_key", "value": "task_manager"},
       {"op": "set", "path": "state", "value": {
         "params": {
           "tasks": [

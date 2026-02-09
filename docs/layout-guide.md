@@ -19,7 +19,6 @@
   "id": "user-details",
   "type": "grid",
   "title": "详细信息",
-  "bind": "user",
   "props": {
     "cols": 2,
     "gap": "20px",
@@ -82,7 +81,6 @@
   "id": "user-settings",
   "type": "tabs",
   "title": "用户设置",
-  "bind": "user",
   "props": {
     "tabs": [
       {
@@ -162,7 +160,6 @@
   "id": "faq-section",
   "type": "accordion",
   "title": "常见问题",
-  "bind": "faq",
   "props": {
     "panels": [
       {
@@ -235,7 +232,6 @@
       "id": "user-profile",
       "type": "grid",
       "title": "用户资料",
-      "bind": "user",
       "props": {
         "cols": 2,
         "fields": [
@@ -266,7 +262,6 @@
       "id": "settings-tabs",
       "type": "tabs",
       "title": "系统设置",
-      "bind": "settings",
       "props": {
         "tabs": [
           {
@@ -334,7 +329,7 @@ registerBlockRenderer('myCustomLayout', ({ block, schema, disabled, highlightFie
           key={field.key}
           field={field}
           schema={schema}
-          bindPath={block.bind}
+          bindPath="state.params"
           disabled={disabled}
           highlighted={field.key === highlightField}
         />
@@ -350,7 +345,7 @@ registerBlockRenderer('myCustomLayout', ({ block, schema, disabled, highlightFie
 
 1. **字段渲染一致性**: 所有布局类型都使用 `GenericFieldRenderer` 渲染字段，确保字段类型的行为一致。
 
-2. **数据绑定**: 每个布局都通过 `bind` 属性指定数据路径，字段相对于该路径进行绑定。
+2. **数据绑定**: 所有字段默认绑定到 `state.params` 路径。
 
 3. **响应式设计**: 大多数布局都支持响应式，会自动适应不同屏幕尺寸。
 

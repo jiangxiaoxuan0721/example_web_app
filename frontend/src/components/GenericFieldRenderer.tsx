@@ -4,9 +4,8 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import type { FieldConfig } from '../types/schema';
 import type { UISchema } from '../types/schema';
 import { useFieldPatch } from '../store/schemaStore';
-import { useMultiInstanceStore } from '../store/multiInstanceStore';
 import { useEventEmitter } from '../utils/eventEmitter';
-import { renderTemplate, renderFieldTemplate } from '../utils/template';
+import { renderFieldTemplate } from '../utils/template';
 import ImageRenderer from './ImageRenderer';
 import BlockRenderer from './BlockRenderer';
 import InputField from './InputField';
@@ -31,8 +30,6 @@ export interface FieldRenderer {
 
 interface FieldRendererProps {
   field: FieldConfig;
-  schema: UISchema;
-  bindPath: string;
   value: any;
   onChange: (value: any) => void;
   disabled?: boolean;
@@ -116,8 +113,6 @@ const defaultRenderers: FieldRendererRegistry = {
   text: ({ field, value, onChange, disabled, highlighted }) => (
     <InputField
       field={field}
-      schema={null as any}
-      bindPath=""
       value={value}
       onChange={onChange}
       disabled={disabled}
@@ -138,8 +133,6 @@ const defaultRenderers: FieldRendererRegistry = {
   textarea: ({ field, value, onChange, disabled }) => (
     <TextArea
       field={field}
-      schema={null as any}
-      bindPath=""
       value={value}
       onChange={onChange}
       disabled={disabled}
@@ -149,8 +142,6 @@ const defaultRenderers: FieldRendererRegistry = {
   checkbox: ({ field, value, onChange, disabled }) => (
     <CheckBox
       field={field}
-      schema={null as any}
-      bindPath=""
       value={value}
       onChange={onChange}
       disabled={disabled}
@@ -160,8 +151,6 @@ const defaultRenderers: FieldRendererRegistry = {
   select: ({ field, value, onChange, disabled, highlighted }) => (
     <Select
       field={field}
-      schema={null as any}
-      bindPath=""
       value={value}
       onChange={onChange}
       disabled={disabled}
@@ -169,17 +158,16 @@ const defaultRenderers: FieldRendererRegistry = {
     />
   ),
 
-  json: ({ field, value, schema }) => {
+  json: ({ field, value }) => {
     // 渲染 value 中的模板变量
     let renderedValue: any;
     if (typeof value === 'object' && value !== null) {
       renderedValue = value;
     } else if (typeof value === 'string') {
-      const templateRendered = schema ? renderTemplate(value, schema) : value;
       try {
-        renderedValue = JSON.parse(templateRendered);
+        renderedValue = JSON.parse(value);
       } catch {
-        renderedValue = templateRendered;
+        renderedValue = value;
       }
     } else {
       renderedValue = value;
@@ -199,15 +187,13 @@ const defaultRenderers: FieldRendererRegistry = {
   radio: ({ field, value, onChange, disabled }) => (
     <RadioGroup
       field={field}
-      schema={null as any}
-      bindPath=""
       value={value}
       onChange={onChange}
       disabled={disabled}
     />
   ),
 
-  html: ({ field, value, schema }) => {
+  html: ({ field, value }) => {
     // 对于 html 类型，优先使用 field.value 作为默认值
     // 如果 state 中有值，则使用 state 中的值（覆盖默认值）
     const htmlContent = value !== undefined && value !== null && value !== '' ? value : field.value;
@@ -219,7 +205,7 @@ const defaultRenderers: FieldRendererRegistry = {
             {field.label}
           </label>
         )}
-        <RichContentRenderer html={htmlContent} schema={schema} style={{ marginBottom: '16px' }} />
+        <RichContentRenderer html={htmlContent} style={{ marginBottom: '16px' }} />
         {field.description && (
           <div style={{ marginTop: '4px', color: '#666', fontSize: '12px' }}>
             {field.description}
@@ -236,8 +222,6 @@ const defaultRenderers: FieldRendererRegistry = {
   multiselect: ({ field, value, onChange, disabled, highlighted }) => (
     <MultiSelect
       field={field}
-      schema={null as any}
-      bindPath=""
       value={value}
       onChange={onChange}
       disabled={disabled}
@@ -465,8 +449,6 @@ export default function GenericFieldRenderer({
 
   return renderer({
     field: renderedField,
-    schema,
-    bindPath,
     value: localValue,
     onChange: handleChange,
     disabled,

@@ -776,7 +776,7 @@ def apply_patch_to_schema(schema: UISchema, patch: dict[str, object]) -> None:
             except (ValueError, AttributeError) as e:
                 print(f"[PatchService] Error applying set operation for path '{path}': {e}")
 
-        # 路径格式：blocks.X.id, blocks.X.type, blocks.X.bind 等 - 修改 block 属性
+        # 路径格式：blocks.X.id, blocks.X.type 等 - 修改 block 属性
         # 注意：这个分支不处理 blocks.X.props.Y，由下一个分支处理
         elif len(keys) >= 2 and keys[0] == 'blocks' and (len(keys) < 3 or keys[2] != 'props'):
             block_index = int(keys[1])
@@ -787,7 +787,7 @@ def apply_patch_to_schema(schema: UISchema, patch: dict[str, object]) -> None:
                     block = schema.blocks[block_index]
 
                     if block_attr:
-                        # 修改 block 的属性（id, type, bind, visible 等）
+                        # 修改 block 的属性（id, type 等）
                         setattr(block, block_attr, value)
                         print(f"[PatchService] Updated block[{block_index}].{block_attr} = {value}")
                     else:

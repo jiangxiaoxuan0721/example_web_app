@@ -1,12 +1,8 @@
 /** 数字输入框组件 */
-
 import { FieldConfig } from '../types/schema';
-import type { UISchema } from '../types/schema';
 
 export interface NumberInputProps {
   field: FieldConfig;
-  schema?: UISchema;
-  bindPath?: string;
   value?: number;
   onChange?: (value: number) => void;
   disabled?: boolean;

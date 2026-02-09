@@ -1,19 +1,15 @@
 /** 多行文本框组件 */
-
 import { FieldConfig } from '../types/schema';
-import type { UISchema } from '../types/schema';
 
 interface TextAreaProps {
   field: FieldConfig;
-  schema: UISchema;
-  bindPath: string;
   value: any;
   onChange?: (value: string) => void;
   disabled?: boolean;
   rows?: number;
 }
 
-export default function TextArea({ field, schema, bindPath, value, onChange, disabled, rows = 4 }: TextAreaProps) {
+export default function TextArea({ field, value, onChange, disabled, rows = 4 }: TextAreaProps) {
   const displayValue = value !== undefined && value !== null ? String(value) : '';
   const isDisabled = disabled || field.editable === false;
   const isRequired = field.required === true;
