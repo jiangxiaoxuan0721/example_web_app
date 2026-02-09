@@ -1,590 +1,166 @@
 # Agent Programmable UI Runtime
 
-An innovative system that enables AI agents to dynamically build and modify user interfaces through a schema-driven architecture using MCP (Model Context Protocol) tools.
+基于 Schema 驱动的 UI 运行时系统，通过 MCP (Model Context Protocol) 工具让 AI Agent 动态构建和修改用户界面。
 
-## Overview
+## 快速开始
 
-This project implements a runtime where AI agents can programmatically control UI elements through structured patches, providing a clean separation between UI definition, state management, and user interaction.
+### 安装依赖
 
-### Core Philosophy
-
-**Highly Flexible Yet Structured**:
-
-1. **Highly Flexible**:
-   - Dynamically create arbitrary UI structures (through combinations of blocks, fields, and actions)
-   - Support complex logic processing (through diverse handler types)
-   - No hardcoded logic required for specific features - all functionality is configuration-driven
-   - Support cross-instance referencing and component reuse
-   - Support 19 field types and 9 operation types, enabling infinite possibilities
-
-2. **Structured**:
-   - All operations follow predefined data models
-   - Clear definitions for field types, handler types, and operation types
-   - Unified syntax for path specifications
-   - Parameter validation ensures data consistency
-   - Clear tool descriptions guide AI agents to use tools correctly
-
-### Architecture
-
-```
-┌───────────────────────┐
-│   External AI (LLM)   │
-│  - Reasoning          │
-│  - MCP Tool Calls     │
-└───────────┬───────────┘
-            │
-            │ MCP Tool Calls
-            ▼
-┌───────────────────────┐
-│   MCP Tool Server     │  ← FastAPI + FastMCP
-│  - Schema Authority   │
-│  - Patch Application  │
-│  - Event Dispatch     │
-│  - Instance Management│
-└───────────┬───────────┘
-            │
-            │ Schema / Patch / Event
-            ▼
-┌───────────────────────┐
-│   Frontend Runtime    │  ← TypeScript SPA
-│  - Schema Interpreter │
-│  - Renderer           │
-│  - Event Emitter      │
-└───────────────────────┘
-```
-
-## Key Features
-
-- **Schema-Driven UI**: All UI elements are defined and controlled through a structured schema
-- **Patch-Based Modifications**: UI changes are applied through structured patches, ensuring predictability
-- **MCP Integration**: AI agents can modify UI using well-defined MCP tools
-- **Multi-Instance Support**: Manage multiple UI instances with independent states
-- **Event-Driven Architecture**: Clean separation between UI events and state changes
-- **19 Field Types**: text, number, textarea, checkbox, json, date, datetime, file, select, radio, multiselect, html, image, tag, progress, badge, table, modal, component
-- **9 Handler Types**: set, increment, decrement, toggle, template, external, template:all, template:state, and operation objects
-- **Template Rendering**: Support for `${state.xxx}` syntax for dynamic content updates with automatic timestamp updates
-- **Object Value Handling**: Automatically converts objects to JSON strings to avoid `[object Object]` display
-
-## Quick Start
-
-### Prerequisites
-
-- Python 3.8+
-- Node.js 16+
-- Git
-
-### Installation
-
-1. Clone the repository:
 ```bash
-git clone https://github.com/jiangxiaoxuan0721/example_web_app.git
-cd example_web_app
-```
-
-2. Install backend dependencies:
-```bash
+# 后端
 cd backend
 pip install -r requirements.txt
-```
 
-3. Install frontend dependencies:
-```bash
+# 前端
 cd frontend
 npm install
 ```
 
-### Running the Application
+### 启动服务
 
-1. Start the backend server:
 ```bash
+# 后端 (终端 1)
 cd backend
-uvicorn fastapi.main:app --host 0.0.0.0 --port 8001 --reload
-```
+uvicorn backend.fastapi.main:app --host 0.0.0.0 --port 8001 --reload
 
-2. Start the frontend development server:
-```bash
+# 前端 (终端 2)
 cd frontend
 npm run dev
-```
 
-3. Access the application at `http://localhost:5173`
-
-### Running MCP Tools
-
-#### Quick Start (Recommended)
-
-**Windows (PowerShell):**
-```powershell
-cd backend/mcp
-.\start_http.ps1
-```
-
-**Linux/Mac:**
-```bash
-cd backend/mcp
-python start_http.py
-```
-
-#### Alternative Methods
-
-**HTTP Mode (Port 8766):**
-```bash
-cd backend/mcp
-export MCP_TRANSPORT=http
-export MCP_PORT=8766
-python tools.py
-```
-
-**STDIO Mode (Default):**
-```bash
+# MCP 服务 (终端 3，可选)
 cd backend/mcp
 python tools.py
 ```
 
-## Available Instances
+访问 `http://localhost:5173`
 
-The system comes with five pre-configured instances:
+## 系统架构
 
-1. **demo** - User data table example (showcasing tables, tags, images, actions, etc.)
-2. **block_actions_test** - Block Actions testing (showcasing block-level actions and dynamic operations)
-3. **block_layouts_demo** - Layout demonstrations (showcasing grid, flex, tabs, and accordion layouts)
-4. **table_buttons_demo** - Table button events (showcasing inline button click handling)
-5. **option_label_demo** - Option label template (showcasing how to get both value and label from select/radio/multiselect fields)
-
-Access them at:
-- `http://localhost:5173?instanceId=demo`
-- `http://localhost:5173?instanceId=block_actions_test`
-- `http://localhost:5173?instanceId=block_layouts_demo`
-- `http://localhost:5173?instanceId=table_buttons_demo`
-- `http://localhost:5173?instanceId=option_label_demo`
-
-## MCP Tools
-
-The system provides **5 MCP tools** for comprehensive UI manipulation:
-
-### 1. patch_ui_state (Generic Patch Tool)
-
-Apply structured patches to modify UI Schema state and structure. This is the ONLY way to modify UI - no direct mutations allowed.
-
-**Use Cases**:
-- Complex batch operations
-- Direct deep path modifications
-- Multiple unrelated operations in one call
-- Creating new instances or deleting instances
-
-```python
-# Update state
-await patch_ui_state({
-    "instance_name": "counter",
-    "patches": [
-        {"op": "set", "path": "state.params.count", "value": 42}
-    ]
-})
-
-# Update field (shortcut)
-await patch_ui_state({
-    "instance_name": "form",
-    "field_key": "email",
-    "updates": {
-        "label": "Email Address",
-        "type": "email"
-    }
-})
-
-# Create new instance
-await patch_ui_state({
-    "instance_name": "__CREATE__",
-    "new_instance_name": "my_instance",
-    "patches": [
-        {"op": "set", "path": "meta", "value": {...}},
-        {"op": "set", "path": "state", "value": {...}},
-        {"op": "set", "path": "blocks", "value": []},
-        {"op": "set", "path": "actions", "value": []}
-    ]
-})
+```
+用户操作 → 前端渲染 → WebSocket → 后端处理 → MCP工具 → Schema更新 → 前端更新
 ```
 
-### 2. get_schema
+### 后端
 
-Get current UI Schema for an instance.
+- **FastAPI** - REST API 和 WebSocket 服务
+- **SchemaManager** - 管理所有 UI Schema 实例
+- **InstanceService** - 处理实例创建/删除/更新
+- **PatchHistoryManager** - 记录 Patch 操作历史
 
-**Use Cases**:
-- Check current state
-- Analyze UI structure
-- Verify modifications
+### 前端
 
-```python
-result = await get_schema(instance_name="demo")
-# Returns: {"status": "success", "instance_name": "demo", "schema": {...}}
+- **React 18** + **Vite** - UI 框架
+- **Zustand** - 状态管理
+- **Immer** - 不可变数据更新
+
+## 默认实例
+
+启动后包含一个 `demo` 实例，展示所有功能：
+- 计数器（increment/decrement）
+- 动态列表（append_to_list）
+- 可编辑表格
+- 选项组件
+- 图片组件
+- Grid/Tabs/Accordion 布局
+- 块导航
+
+## MCP 工具
+
+### `patch_ui_state`
+
+应用 Patch 修改 UI，包括创建/删除实例、更新状态等。
+
+**创建实例**:
+```json
+{
+  "instance_name": "__CREATE__",
+  "new_instance_name": "my_app",
+  "patches": [
+    {"op": "set", "path": "page_key", "value": "my_app"},
+    {"op": "set", "path": "state", "value": {"params": {}, "runtime": {}}},
+    {"op": "set", "path": "blocks", "value": []},
+    {"op": "set", "path": "actions", "value": []}
+  ]
+}
 ```
 
-### 3. list_instances
+### 其他工具
 
-List all available UI Schema instances.
+- `get_schema` - 获取 Schema
+- `list_instances` - 列出所有实例
+- `access_instance` - 激活实例
+- `validate_completion` - 验证完成条件
 
-**Use Cases**:
-- Browse available instances
-- Discover instance resources
+## 核心 Patch 操作
 
-```python
-result = await list_instances()
-# Returns: {"status": "success", "instances": [...], "total": 4}
-```
+| 操作 | 路径 | 说明 |
+|------|------|------|
+| `set` | 任意 | 设置值 |
+| `add` | 列表 | 添加元素 |
+| `remove` | 列表 | 移除元素 |
+| `append_to_list` | 列表 | 追加元素 |
+| `prepend_to_list` | 列表 | 前置元素 |
+| `update_list_item` | 列表索引 | 更新元素 |
+| `remove_last` | 列表 | 移除最后一个 |
+| `merge` | 对象 | 合并对象 |
+| `increment` | 数字 | 自增 |
+| `decrement` | 数字 | 自减 |
+| `toggle` | 布尔 | 切换 |
 
-### 4. validate_completion
+## 字段类型
 
-Validate if UI instance meets specific completion criteria.
+- **基础**: `text`, `number`, `textarea`, `checkbox`, `json`
+- **选择**: `select`, `radio`, `multiselect`
+- **日期**: `date`, `datetime`
+- **富文本**: `html`, `file`
+- **高级**: `table`, `image`, `tag`, `progress`, `badge`, `modal`, `component`
 
-**Use Cases**:
-- Evaluate task completion
-- Determine next steps
-- Quality checks
+## 布局类型
 
-```python
-result = await validate_completion({
-    "instance_name": "form",
-    "intent": "Create a registration form with email and password fields",
-    "completion_criteria": [
-        {
-            "type": "field_exists",
-            "path": "state.params.email",
-            "description": "Email field exists"
-        },
-        {
-            "type": "field_exists",
-            "path": "state.params.password",
-            "description": "Password field exists"
-        }
-    ]
-})
-```
+- `single` - 单列布局
+- `grid` - 网格布局
+- `tabs` - 标签页布局
+- `accordion` - 手风琴布局
 
-### 5. access_instance
+## 配置
 
-Access a specific UI instance and mark it as active.
-
-**Use Cases**:
-- Switch context
-- Mark active instance
-
-```python
-result = await access_instance(instance_name="form")
-# Returns: {"status": "success", "instance_name": "form", "schema": {...}}
-```
-
-## Supported Operations
-
-|| Op | Behavior | Allowed Paths | Required Fields |
-||----|----------|---------------|-----------------|
-|| `set` | Set value at path (creates if missing) | Any path | `path`, `value` |
-|| `add` | Add item to end of array | `blocks+`, `actions+` | `path`, `value` |
-|| `remove` | Remove specific item | `blocks-{id}`, `actions-{id}` | `path`, `value` |
-
-**Important Notes**:
-- ❌ Do NOT use `blocks/-` or `actions/-` format (invalid)
-- ✅ Use `blocks` or `actions` for `add` operations
-- ✅ Use `blocks` or `actions` with complete `value` for `remove` operations (tool matches by `id` or content)
-
-## API Endpoints
-
-### GET /ui/schema
-
-Get current Schema for an instance.
-
-- `/ui/schema` → Returns default instance (demo)
-- `/ui/schema?instanceId=counter` → Returns counter instance
-
-### POST /ui/patch
-
-Apply patches to modify UI Schema.
-
-### POST /ui/access
-
-Access a specific UI instance and mark it as active.
-
-### GET /ui/instances
-
-List all available UI Schema instances.
-
-## Configuration
-
-### Claude Desktop Configuration
-
-Add to your `claude_desktop_config.json`:
+### Claude Desktop
 
 ```json
 {
   "mcpServers": {
     "ui-patch-server": {
       "command": "python",
-      "args": [
-        "/path/to/project/backend/mcp/tools.py"
-      ],
+      "args": ["/path/to/project/backend/mcp/tools.py"],
       "env": {
-        "PYTHONPATH": "/path/to/project",
-        "MCP_TRANSPORT": "http",
-        "MCP_PORT": "8766"
+        "PYTHONPATH": "/path/to/project"
       }
     }
   }
 }
 ```
 
-### Cline (VS Code) Configuration
-
-Add to your `.clinerules`:
+### Cline (VS Code)
 
 ```yaml
 mcpServers:
   ui-patch-server:
     command: python
-    args:
-      - ./backend/mcp/tools.py
+    args: ["./backend/mcp/tools.py"]
     env:
       PYTHONPATH: ./
-      MCP_TRANSPORT: http
-      MCP_PORT: '8766'
 ```
 
-## Architecture Principles
+## 文档
 
-### Single Write Path
+详细文档见 [docs/](docs/)：
 
-All modifications MUST go through `patch_ui_state`:
-
-```
-User Input → Frontend Optimistic Update → Action Click →
-patch_ui_state Tool → Backend Application → WebSocket Push → Frontend Update
-```
-
-### Advantages
-
-- ✅ **No Race Conditions** - Single-writer model
-- ✅ **Predictable Behavior** - Sequential application
-- ✅ **Debuggable** - Clear operation history
-- ✅ **AI Friendly** - Perfect fit for Agent workflows
-
-### High-Level Abstraction vs Low-Level Control
-
-- **Specialized Tools** (add_field, update_field, remove_field, etc.): Provide high-level abstraction with clear parameters for common scenarios
-- **patch_ui_state**: Provides low-level control with full flexibility for complex operations and batch updates
-
-**Best Practices**:
-- For common operations (add/update/remove fields, blocks, actions), prioritize specialized tools
-- For complex batch operations or direct deep path modifications, use `patch_ui_state`
-
-### Template Rendering
-
-The system supports using template variables in field configurations and HTML content with format `${path}`, such as `${state.runtime.timestamp}`.
-
-**Supported Paths**:
-- `${state.params.xxx}` - Field parameter values
-- `${state.runtime.xxx}` - Runtime data
-- `${params.xxx}` - Parameter shortcut access
-- `${runtime.xxx}` - Runtime shortcut access
-- `${meta.xxx}` - Metadata information
-
-**Automatic Timestamp Updates**:
-When a template references `state.runtime.timestamp`, the system automatically updates it to the current time without manual handling.
-
-For details, see [TEMPLATE_USAGE.md](./TEMPLATE_USAGE.md).
-
-### Operation Objects (Set Handler)
-
-The set handler supports executing complex operations through operation objects:
-
-**Supported Operation Types**:
-- `append_to_list`: Add element to end of list
-- `prepend_to_list`: Add element to beginning of list
-- `remove_from_list`: Remove element from list
-- `update_list_item`: Update element in list
-- `clear_all_params`: Clear all params
-- `append_block`: Add new block
-- `prepend_block`: Add block at beginning
-- `remove_block`: Remove block
-- `update_block`: Update block
-- `merge`: Merge objects
-
-**Example**:
-```json
-{
-  "handler_type": "set",
-  "patches": {
-    "state.params.users": {
-      "operation": "append_to_list",
-      "params": {
-        "item": {"id": 6, "name": "Zhao Liu"}
-      }
-    }
-  }
-}
-```
-
-For details, see "Action Handler Details" in [MCP_Tool_Reference_Manual.md](./backend/mcp/MCP_Tool_Reference_Manual.md).
-
-## Project Structure
-
-```
-example_web_app/
-├── backend/
-│   ├── fastapi/          # FastAPI application
-│   │   ├── main.py       # Main application entry point
-│   │   ├── models.py     # Pydantic data models (UISchema, Block, FieldConfig, ActionConfig, etc.)
-│   │   ├── routes/       # API routes
-│   │   │   ├── event_routes.py      # Event handling (action:click, field:change)
-│   │   │   ├── patch_routes.py      # Patch application logic (add/remove/set operations)
-│   │   │   ├── schema_routes.py     # Schema retrieval and instance management
-│   │   │   └── websocket_routes.py  # WebSocket connection handling
-│   │   └── services/     # Business logic
-│   │       ├── event_handler.py      # Event processing
-│   │       ├── instance_service.py   # Instance and action management
-│   │       ├── patch.py             # Patch application to schema
-│   │       └── websocket/          # WebSocket subsystem
-│   │           ├── handlers/        # Message dispatching
-│   │           │   ├── dispatcher.py    # Send messages to clients
-│   │           │   └── manager.py       # Connection lifecycle
-│   │           └── connection/      # Connection pooling
-│   │               ├── pool.py          # Active connections pool
-│   │               └── monitor.py      # Connection health monitoring
-│   ├── mcp/              # MCP tools
-│   │   ├── tools.py                # MCP server entry point
-│   │   ├── tool_definitions.py     # MCP tool definitions (12 tools)
-│   │   ├── tool_implements.py      # Tool implementations
-│   │   ├── interfaces.py          # Type definitions and interfaces
-│   │   ├── MCP_Field_TYPES.md     # Field type reference (17 types)
-│   │   ├── MCP_Tool_Reference_Manual.md  # Complete tool manual
-│   │   ├── MCP_Tools_Refactoring_Guide.md # Refactoring guide
-│   │   └── start_http.py          # HTTP server starter
-│   ├── core/             # Core management
-│   │   ├── defaults.py   # Default schema definitions (4 instances)
-│   │   ├── history.py    # Patch history management
-│   │   └── manager.py    # Schema instance manager
-│   ├── config.py         # Configuration
-│   └── requirements.txt   # Python dependencies
-├── frontend/
-│   ├── src/              # TypeScript source
-│   │   ├── components/   # React components (20+ components)
-│   │   │   ├── BlockRenderer.tsx       # Block container renderer
-│   │   │   ├── GenericFieldRenderer.tsx # Universal field renderer (50+ field types)
-│   │   │   ├── ImageRenderer.tsx       # Image display with modal
-│   │   │   ├── RichContentRenderer.tsx  # Markdown/HTML content
-│   │   │   ├── ActionButton.tsx        # Button with action handling
-│   │   │   ├── DebugInfo.tsx          # Debug information display
-│   │   │   ├── PatchHistory.tsx       # Patch history viewer
-│   │   │   ├── InstanceSelector.tsx    # Instance switcher
-│   │   │   └── ... (20+ more components)
-│   │   ├── hooks/        # React hooks
-│   │   │   ├── useSchema.ts           # Schema state management
-│   │   │   ├── useWebSocket.ts        # WebSocket connection
-│   │   │   └── usePatchHistory.ts    # Patch history replay
-│   │   ├── store/        # State management (Zustand)
-│   │   │   ├── schemaStore.ts        # Schema state & patch application
-│   │   │   └── multiInstanceStore.ts # Multi-instance management
-│   │   ├── utils/        # Utility functions
-│   │   │   ├── api.ts                # HTTP API calls
-│   │   │   ├── eventEmitter.ts       # Event emission to backend
-│   │   │   ├── patch.ts              # Patch application helpers
-│   │   │   └── template.ts          # Template rendering
-│   │   ├── types/        # TypeScript types
-│   │   │   └── schema.ts             # Schema type definitions
-│   │   ├── App.tsx        # Main application component
-│   │   ├── main.tsx       # Application entry point
-│   │   └── index.css      # Global styles
-│   ├── package.json       # NPM dependencies
-│   ├── vite.config.ts    # Vite configuration
-│   └── COMPONENTS.md    # Frontend components documentation
-├── TEMPLATE_USAGE.md      # Template syntax and usage guide
-├── TEMPLATE_WORKFLOW.md   # Complete template rendering workflow
-├── REPORTS.md            # Project reports and analysis
-├── check.py              # Development helper script
-└── README.md             # This file
-```
-
-## Documentation
-
-### Core Documentation
-- [TEMPLATE_USAGE.md](./TEMPLATE_USAGE.md) - Template syntax and usage guide
-- [TEMPLATE_WORKFLOW.md](./TEMPLATE_WORKFLOW.md) - Complete template rendering workflow
-- [REPORTS.md](./REPORTS.md) - Project reports and analysis
-
-### MCP Tool Documentation
-- [MCP_Tool_Reference_Manual.md](./backend/mcp/MCP_Tool_Reference_Manual.md) - Complete tool manual (Required Reading)
-- [MCP_FIELD_TYPES.md](./backend/mcp/MCP_Field_TYPES.md) - Field type reference (17 field types detailed)
-- [MCP_Tools_Refactoring_Guide.md](./backend/mcp/MCP_Tools_Refactoring_Guide.md) - Tool refactoring guide
-- [interfaces.py](./backend/mcp/interfaces.py) - Type definitions and interfaces
-
-### Frontend Documentation
-- [COMPONENTS.md](./frontend/COMPONENTS.md) - Frontend components library documentation
-
-### Backend Documentation
-- [backend/fastapi/services/websocket/README.md](./backend/fastapi/services/websocket/README.md) - WebSocket subsystem documentation
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Support
-
-For questions and support, please open an issue on GitHub.
+- [Schema Guide](docs/schema-guide.md) - UI Schema 结构
+- [Tools Reference](docs/tools-reference.md) - MCP 工具文档
+- [Field Types](docs/field-types.md) - 字段类型详解
+- [Template Syntax](docs/template-syntax.md) - 模板语法
+- [Layout Guide](docs/layout-guide.md) - 布局系统
 
 ---
 
-## Quick Reference
-
-### 17 Field Types
-
-#### Input Types (5 types)
-- `text` - Single-line text
-- `number` - Number input
-- `textarea` - Multi-line text
-- `checkbox` - Checkbox
-- `json` - JSON editor
-
-#### Selection Types (3 types)
-- `select` - Dropdown select
-- `radio` - Radio buttons
-- `multiselect` - Multi-select checkboxes
-
-#### Display Types (9 types)
-- `html` - HTML content
-- `image` - Image display
-- `tag` - Tag display
-- `progress` - Progress bar
-- `badge` - Badge notification
-- `table` - Data table (supports mixed rendering)
-- `modal` - Modal dialog
-- `component` - Embedded rendering (cross-instance reference)
-
-For details, see [MCP_FIELD_TYPES.md](./backend/mcp/MCP_FIELD_TYPES.md).
-
-### 9 Handler Types
-
-- `set` - Direct value assignment (supports operation objects for complex operations)
-- `increment` - Numeric increment
-- `decrement` - Numeric decrement
-- `toggle` - Boolean toggle
-- `template` - Template rendering
-- `external` - External API calls
-- `template:all` - Template rendering for all paths
-- `template:state` - Template rendering for state paths only
-
-For details, see "Action Handler Details" in [MCP_Tool_Reference_Manual.md](./backend/mcp/MCP_Tool_Reference_Manual.md).
-
-### 5 MCP Tools
-
-**Query Tools**:
-- `get_schema` - Get instance schema
-- `list_instances` - List all instances
-- `validate_completion` - Validate completion criteria
-- `access_instance` - Access and activate instance
-
-**Generic Tool**:
-- `patch_ui_state` - Apply structured patches (for all UI modifications including creating/deleting instances)
+Built with FastAPI, React, and FastMCP

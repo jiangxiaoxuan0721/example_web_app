@@ -1,23 +1,4 @@
-"""MCP工具定义文件
-
-此文件定义所有MCP工具。实现逻辑在tool_implements.py中。
-工具描述会被注入到Agent上下文,必须完整、准确。
-"""
-
-from typing import Any
-from fastmcp import FastMCP
-
-mcp: FastMCP[Any] = FastMCP(name="ui-patch-server")
-
-
-@mcp.tool()
-async def patch_ui_state(
-    instance_name: str,
-    patches: list[dict[str, Any]] = [],
-    new_instance_name: str | None = None,
-    target_instance_name: str | None = None
-) -> dict[str, Any]:
-    """
+<PTA_TOOL_REFERENCE>
 <KEY_WORDS>
 ui_schema :  记录在内存中,用于渲染UI界面的json schema,查看 **UI_SCHEMA_STRUCTURE**了解它的结构
 patch     :  补丁,用于修改ui_schema来实现UI界面的修改(也包括一些处理逻辑的设计),查看**PATCH_EXAMPLE**。
@@ -28,7 +9,6 @@ path      :  用于定位schema中的某个元素,使用JSON指针语法从ui_sc
 instance  :  一个实例是一个完整的单页面PTA应用,包含一个ui_schema和一个运行时状态
 state     :  ui_schema中数据存储的地方,由params(原始数据)和runtime(运行数据)两者构成
 </KEY_WORDS>
-
 <TOOL_DEFINITION>
 - NAME: patch_ui_state
 - DESCRIPTION: 修改 UI 状态
@@ -42,19 +22,59 @@ state     :  ui_schema中数据存储的地方,由params(原始数据)和runtime
   target_instance_name: str | None - instance_name为"__DELETE__"时提供的目标实例名
 </TOOL_DEFINITION>
 
+<TOOL_DEFINITION>
+- NAME: get_schema
+- DESCRIPTION: 获取实例的完整 ui_schema
+- PARAMETERS:
+  instance_name: str - 要获取 ui_schema 的实例名
+</TOOL_DEFINITION>
+
+<TOOL_DEFINITION>
+- NAME: list_instances
+- DESCRIPTION: 列出所有可用实例
+</TOOL_DEFINITION>
+
+<TOOL_DEFINITION>
+- NAME: validate_completion
+- DESCRIPTION: 快速诊断UI实例状态,返回当前结构摘要和调试信息,指导进行完成度检查
+- PARAMETERS:
+  instance_name: str - 要诊断的实例名
+- 返回: {status, debug_info, state_summary, structure_summary, fields_summary, actions_summary, hints}
+  - debug_info: {instance_exists, instance_name, block_count, field_count, action_count, state_params_keys, state_runtime_keys, layout_type}
+  - state_summary: {params: {键值对}, runtime: {键值对}} - 完整的状态数据
+  - structure_summary: [{id, title, layout, fields: [{key, type, label}], actions: [{id, type, label}]}, ...]
+    - 第一项(id="__global__")是顶层全局actions,后续项是各block的结构
+  - fields_summary: [{key, type, label, path, has_value}, ...] - 所有字段的紧凑列表
+  - actions_summary: [{id, label, type, patch_count, scope}, ...] - 所有actions的紧凑列表(scope: "global"|"block")
+  - hints: 基于当前状态的改进建议
+- 调用此工具获取界面快照,判断完成度,决定后续patch操作
+- 示例: {"instance_name":"counter"} -> 返回计数器的完整结构概览、状态值和缺失组件提示
+</TOOL_DEFINITION>
+
+<TOOL_DEFINITION>
+- NAME: switch_ui
+- DESCRIPTION: 切换UI界面，支持切换到指定实例或切换到实例内的指定block
+- PARAMETERS:
+  instance_name: str | None - 要切换到的实例名，不传则不切换实例
+  block_id: str | None - 要切换到的block ID，不传则不切换block（例如在Tabs布局中切换标签页）
+- 使用方式：
+  1. 切换到实例: {"instance_name": "demo"}
+  2. 切换到实例内的block: {"instance_name": "demo", "block_id": "counter_block"}
+  3. 仅切换当前实例内的block: {"block_id": "counter_block"}
+</TOOL_DEFINITION>
+
 <PATCH_DESCRIPTION>
 patch包含以下键:
   - "op": 可选值以及示例请查看**PATCH_EXAMPLE**
   - "path": "blocks.xxx"|"states.xxx"|"actions.xxx"|"layout.xxx"
   - "value": 用于操作所选path的字典,需要根据界面的结构来确定value的结构,因此将详细讨论界面各个组件的结构,详见: **UI_SCHEMA_STRUCTURE**,**FIELD_STRUCTURE**,**ACTION_STRUCTURE**
-  - "index": "索引(可选,仅 update_list_item 使用)"
 </PATCH_DESCRIPTION>
 
 <UI_SCHEMA_STRUCTURE>
 ui_schema 包含 page_key state layout blocks actions 5个键。
 每个block有自己的actions,和全局actions不冲突。
 field和action的结构参见:**FIELD_STRUCTURE**,**ACTION_STRUCTURE**
-page_key - 页面键名,用于标识实例。创建实例时通过 path="page_key" 设置。
+page_key - 页面标识符,创建实例时通过 path="page_key" 设置
 state - 包含状态参数和运行时参数字典 {params: dict[str, Any], runtime: dict[str, Any]}
 layout - 布局参数字典,将决定blocks如何布局,包含以下键:
   - "type": "single"|"flex"|"grid"|"tabs"
@@ -76,18 +96,18 @@ field 包含以下键:
   - "type": 字段类型,可选值:text/textarea/number/select/radio/multiselect/checkbox/json/image/table/component/date/datetime/file/html/tag/progress/badge/modal
   - "label": 字符串,字段显示标签
   - "key": 字符串,字段唯一标识,用于从 state 中读取和写入数据
-  - "value": any,字段值(可选)
-  - "description": 字符串|None,字段描述(可选)
+  - "value": any,字段值（可选）
+  - "description": 字符串|None,字段描述（可选）
   - "editable": 布尔值,默认 true,是否可编辑
   - "required": 布尔值,默认 false,是否必填
   - "disabled": 布尔值,默认 false,是否禁用
-  - "placeholder": 字符串|None,占位符(可选)
+  - "placeholder": 字符串|None,占位符（可选）
 
 根据type的不同有额外字段:
-  select/radio/multiselect 类型:用于渲染选择器
+  - select/radio/multiselect 类型:用于渲染选择器
     - "options": 选项对象数组,每个选项包含 {label: string, value: string, disabled: bool, description: string}
     - "multiple": select 类型可选,布尔值,默认 false,是否多选
-  image 类型:用于渲染图片或HTML
+  - image 类型:用于渲染图片或HTML
     - "showFullscreen": 布尔值,默认 true,显示全屏按钮
     - "showDownload": 布尔值,默认 true,显示下载按钮
     - "imageHeight": 字符串,默认 "auto",图片高度
@@ -96,7 +116,7 @@ field 包含以下键:
     - "fallback": 字符串|None,加载失败回退内容
     - "subtitle": 字符串|None,子标题
     - "alt": 字符串|None,替代文本
-  table 类型:用于绘制表格
+  - table 类型:用于绘制表格
     - "columns": 列配置数组,参见**COLUMN_STRUCTURE**
     - "rowKey": 字符串,行唯一标识字段,默认 "id"
     - "bordered": 布尔值,默认 true,显示边框
@@ -110,7 +130,7 @@ field 包含以下键:
     - "maxHeight": 字符串|None,最大高度
     - "compact": 布尔值,默认 false,紧凑模式
     - "rowSelection": 布尔值,默认 false,行选择
-  component 类型:用于组件中嵌入组件
+  - component 类型:用于组件中嵌入组件
     - "block_config": 要嵌入的block配置,结构同**block**
 </FIELD_STRUCTURE>
 
@@ -121,8 +141,8 @@ action 包含以下键:
   - "style": 字符串,按钮样式,可选值:primary/secondary/danger/warning/success,默认 secondary
   - "action_type": 字符串,点击触发的事件类型,可选值:apply_patch/navigate/navigate_block/api/modal
   - "patches": action_type=apply_patch时,将执行的patch数组,详见 **PATCH_DESCRIPTION**
-  - "target_instance": action_type=navigate时跳转到target_instance(实例导航)
-  - "target_block": action_type=navigate_block时跳转到target_block(block导航,同实例内滚动到指定block)
+  - "target_instance": action_type=navigate时跳转到target_instance（实例导航）
+  - "target_block": action_type=navigate_block时跳转到target_block（block导航，同实例内滚动到指定block）
   - "api": action_type=api 时,将执行的api调用
   - "disabled": 布尔值,默认 false,是否禁用
 </ACTION_STRUCTURE>
@@ -165,7 +185,7 @@ op 参数可选的值及示例使用如下:
     - 示例: {"op": "filter_list", "path": "state.params.todos", "value": {"key": "completed", "operator": "!=", "value": true}}
 
   - "update_list_item": 更新列表元素
-    - 参数: path(string), index?(number已弃用), value({key, value, updates})
+    - 参数: path(string), value({key, value, updates})
     - key: 匹配字段名,默认"id"
     - value: 要更新的元素的key值
     - updates: 要更新的字段字典
@@ -212,13 +232,13 @@ more example: see **COMPREHENSIVE_EXAMPLE**
 - 创建新实例:
   - 使用 "__CREATE__" 作为 instance_name 创建新实例
   - 必须提供 new_instance_name 参数
-  - 使用 "set" 操作定义实例结构(meta/state/blocks/actions)
+  - 使用 "set" 操作定义实例结构(page_key/state/blocks/actions)
   - 示例:
     {
       "instance_name": "__CREATE__",
       "new_instance_name": "my_app",
       "patches": [
-        {"op": "set", "path": "meta", "value": {"page_key": "my_app"}},
+        {"op": "set", "path": "page_key", "value": "my_app"},
         {"op": "set", "path": "state", "value": {"params": {}, "runtime": {}}},
         {"op": "set", "path": "blocks", "value": [
           {"id": "main_block", "layout": "form", "props": {"fields": [{"key": "name", "label": "姓名", "type": "text"}], "actions": []}}
@@ -237,13 +257,13 @@ more example: see **COMPREHENSIVE_EXAMPLE**
       "patches": []
     }
 
-- 创建复杂表格示例(包含多种列类型和可编辑功能):
-  - 示例: 创建一个任务管理表格,包含状态标签、进度条、图片头像、操作按钮和可编辑列
+- 创建复杂表格示例（包含多种列类型和可编辑功能）:
+  - 示例: 创建一个任务管理表格，包含状态标签、进度条、图片头像、操作按钮和可编辑列
   {
     "instance_name": "__CREATE__",
     "new_instance_name": "task_manager",
     "patches": [
-      {"op": "set", "path": "meta", "value": {"page_key": "task_manager"}},
+      {"op": "set", "path": "page_key", "value": "task_manager"},
       {"op": "set", "path": "state", "value": {
         "params": {
           "tasks": [
@@ -330,7 +350,7 @@ more example: see **COMPREHENSIVE_EXAMPLE**
   }
 
 - 布局使用示例:
-  - Grid布局示例(2列网格):
+  - Grid布局示例（2列网格）:
     {
       "instance_name": "my_app",
       "patches": [
@@ -342,7 +362,7 @@ more example: see **COMPREHENSIVE_EXAMPLE**
       ]
     }
 
-  - Tabs布局示例(多个标签页):
+  - Tabs布局示例（多个标签页）:
     {
       "instance_name": "my_app",
       "patches": [
@@ -363,7 +383,7 @@ more example: see **COMPREHENSIVE_EXAMPLE**
       ]
     }
 
-  - Flex布局示例(自适应排列):
+  - Flex布局示例（自适应排列）:
     {
       "instance_name": "my_app",
       "patches": [
@@ -376,7 +396,7 @@ more example: see **COMPREHENSIVE_EXAMPLE**
       ]
     }
 
-  - Accordion布局示例(可折叠面板):
+  - Accordion布局示例（可折叠面板）:
     {
       "instance_name": "my_app",
       "patches": [
@@ -417,109 +437,8 @@ more example: see **COMPREHENSIVE_EXAMPLE**
 
 <NOTE>
 你的MCP调用应当满足以下准则:
-- 列表、字典列表等结构如果不传参数而又必须要求传递参数,请使用"[]"和"[{}]"进行传递,请尽量不要出现这种情况。
+- 列表、字典列表等结构如果不传参数而又必须要求传递参数，请使用"[]"或者"[{}]"进行传递,请尽量不要出现这种情况。
 - 优先使用validate_completion而非get_schema来获取页面结构信息(第一次需要初步了解详细信息时除外)。
 - 注意使用合理的组件和布局,在完成功能的基础上尽量美观。
 </NOTE>
-    """
-    from backend.mcp.tool_implements import patch_ui_state_impl
-    return await patch_ui_state_impl(
-        instance_name, patches, new_instance_name, target_instance_name
-    )
-
-
-# ===== 只读查询工具 =====
-
-@mcp.tool()
-async def get_schema(instance_name: str | None = None) -> dict[str, Any]:
-    """
-- NAME: get_schema
-- DESCRIPTION: 获取实例的完整 ui_schema
-- PARAMETERS:
-  instance_name: str - 要获取 ui_schema 的实例名
-    """
-    from backend.mcp.tool_implements import get_schema_impl
-    return await get_schema_impl(instance_name)
-
-
-@mcp.tool()
-async def list_instances() -> dict[str, Any]:
-    """
-- NAME: list_instances
-- DESCRIPTION: 列出所有可用实例
-- PARAMETERS: 无参数
-    """
-    from backend.mcp.tool_implements import list_instances_impl
-    return await list_instances_impl()
-
-
-@mcp.tool()
-async def switch_ui(
-    instance_name: str | None = None,
-    block_id: str | None = None
-) -> dict[str, Any]:
-    """
-<KEY_WORDS>
-ui_schema :  记录在内存中,用于渲染UI界面的json schema
-block     :  一个block是一个UI元素,包含一个或多个field,一个或多个action
-instance  :  一个实例是一个完整的单页面PTA应用,包含一个ui_schema和一个运行时状态
-</KEY_WORDS>
-
-<TOOL_DEFINITION>
-- NAME: switch_ui
-- DESCRIPTION: 切换UI界面,支持切换到指定实例或切换到实例内的指定block
-- PARAMETERS:
-  instance_name: str | None - 要切换到的实例名,不传则不切换实例
-  block_id: str | None - 要切换到的block ID,不传则不切换block(例如在Tabs布局中切换标签页)
-- 使用方式：
-  1. 切换到实例: {"instance_name": "demo"}
-  2. 切换到实例内的block: {"instance_name": "demo", "block_id": "counter_block"}
-  3. 仅切换当前实例内的block: {"block_id": "counter_block"}
-</TOOL_DEFINITION>
-
-<NOTE>
-- instance_name 和 block_id 都是可选参数
-- 当传递 instance_name 时,会切换到指定实例
-- 当传递 block_id 时,会在当前或指定实例内切换到对应block
-- 对于Tabs布局,切换block会自动切换到对应标签页
-- 对于其他布局,切换block会高亮并滚动到对应位置
-</NOTE>
-    """
-    from backend.mcp.tool_implements import switch_ui_impl as _switch_ui_impl
-    return await _switch_ui_impl(instance_name, block_id)
-
-
-
-# ===== 验证工具 =====
-@mcp.tool()
-async def validate_completion(
-    instance_name: str
-) -> dict[str, Any]:
-    """
-- NAME: validate_completion
-- DESCRIPTION: 快速诊断UI实例状态,返回当前结构摘要和调试信息,指导进行完成度检查
-- PARAMETERS:
-  instance_name: str - 要诊断的实例名
-- 返回: {status, debug_info, state_summary, structure_summary, fields_summary, actions_summary, hints}
-  - debug_info: {instance_exists, instance_name, block_count, field_count, action_count, state_params_keys, state_runtime_keys, layout_type}
-  - state_summary: {params: {键值对}, runtime: {键值对}} - 完整的状态数据
-  - structure_summary: [{id, title, layout, fields: [{key, type, label}], actions: [{id, type, label}]}, ...]
-    - 第一项(id="__global__")是顶层全局actions,后续项是各block的结构
-  - fields_summary: [{key, type, label, path, has_value}, ...] - 所有字段的紧凑列表
-  - actions_summary: [{id, label, type, patch_count, scope}, ...] - 所有actions的紧凑列表(scope: "global"|"block")
-  - hints: 基于当前状态的改进建议
-- 调用此工具获取界面快照,判断完成度,决定后续patch操作
-- 示例: {"instance_name":"counter"} -> 返回计数器的完整结构概览、状态值和缺失组件提示
-    """
-    from backend.mcp.tool_implements import validate_completion_impl
-    return await validate_completion_impl(instance_name)
-
-
-if __name__ == "__main__":
-    print("🚀 Starting MCP Server for UI Patch Tool...")
-    mcp.run(
-        transport="streamable-http",
-        port=8766,
-        host="0.0.0.0",
-        path="/mcp",
-    )
+</PTA_TOOL_REFERENCE>

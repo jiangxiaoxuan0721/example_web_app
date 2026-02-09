@@ -74,7 +74,7 @@ patch包含以下键:
 ui_schema 包含 page_key state layout blocks actions 5个键。
 每个block有自己的actions,和全局actions不冲突。
 field和action的结构参见:**FIELD_STRUCTURE**,**ACTION_STRUCTURE**
-page_key - instance_name
+page_key - 页面标识符,通过 page_key 设置
 state - 包含状态参数和运行时参数字典 {params: dict[str, Any], runtime: dict[str, Any]}
 layout - 布局参数字典,将决定blocks如何布局,包含以下键:
   - "type": "single"|"flex"|"grid"|"tabs"
@@ -232,13 +232,13 @@ more example: see **COMPREHENSIVE_EXAMPLE**
 - 创建新实例:
   - 使用 "__CREATE__" 作为 instance_name 创建新实例
   - 必须提供 new_instance_name 参数
-  - 使用 "set" 操作定义实例结构(meta/state/blocks/actions)
+  - 使用 "set" 操作定义实例结构(page_key/state/blocks/actions)
   - 示例:
     {
       "instance_name": "__CREATE__",
       "new_instance_name": "my_app",
       "patches": [
-        {"op": "set", "path": "meta", "value": {"page_key": "my_app"}},
+        {"op": "set", "path": "page_key", "value": "my_app"},
         {"op": "set", "path": "state", "value": {"params": {}, "runtime": {}}},
         {"op": "set", "path": "blocks", "value": [
           {"id": "main_block", "layout": "form", "props": {"fields": [{"key": "name", "label": "姓名", "type": "text"}], "actions": []}}
@@ -263,7 +263,7 @@ more example: see **COMPREHENSIVE_EXAMPLE**
     "instance_name": "__CREATE__",
     "new_instance_name": "task_manager",
     "patches": [
-      {"op": "set", "path": "meta", "value": {"page_key": "task_manager"}},
+      {"op": "set", "path": "page_key", "value": "task_manager"},
       {"op": "set", "path": "state", "value": {
         "params": {
           "tasks": [

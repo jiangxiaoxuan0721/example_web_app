@@ -1,5 +1,6 @@
 """Patch 相关 API 路由"""
 
+from backend.fastapi.models.schema_models import UISchema
 from backend.fastapi.models.enums import LayoutType
 from fastapi import FastAPI, Query
 from typing import Any
@@ -691,7 +692,7 @@ def register_patch_routes(
                     }
 
                 # Apply patches to create instance structure
-                new_schema = None
+                new_schema: UISchema = None  # pyright: ignore[reportAssignmentType]
                 for patch in patches:
                     op = patch.get("op")
                     path = patch.get("path")
@@ -700,10 +701,10 @@ def register_patch_routes(
                     if op != "set":
                         continue
 
-                    if path == "meta":
-                        meta_data = value
-                        new_schema = UISchema(
-                            page_key=meta_data.get("page_key", new_instance_name),
+                    if path == "page_key":
+                        # 创建 UISchema 时设置 page_key
+                        new_schema: UISchema = UISchema(
+                            page_key=value if isinstance(value, str) else str(value),
                             state=StateInfo(params={}, runtime={}),
                             layout=LayoutInfo(type=LayoutType.SINGLE),
                             blocks=[],

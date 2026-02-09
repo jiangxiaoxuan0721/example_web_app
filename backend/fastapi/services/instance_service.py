@@ -29,7 +29,7 @@ class InstanceService:
             return False, f"Instance '{instance_name}' already exists"
 
         # 应用 patches 创建实例
-        new_schema: UISchema | None = None  # pyright: ignore[reportAssignmentType]
+        new_schema: UISchema | None = None
         for patch in patches:
             op: PatchOperationType = patch.op
             path: str = patch.path
@@ -38,10 +38,10 @@ class InstanceService:
             if op != PatchOperationType.SET:
                 continue
 
-            if path == "meta":
-                meta_data: object = value
-                new_schema: UISchema = UISchema(
-                    page_key=getattr(meta_data, "page_key", instance_name),
+            if path == "page_key":
+                # 创建 UISchema 时设置 page_key
+                new_schema = UISchema(
+                    page_key=value if isinstance(value, str) else str(value),
                     state=StateInfo(params={}, runtime={}),
                     layout=LayoutInfo(type=LayoutType.SINGLE, columns=None, gap=None),
                     blocks=[],
@@ -50,8 +50,8 @@ class InstanceService:
             elif path == "state" and new_schema:
                 state_data: object = value
                 new_schema.state = StateInfo(
-                    params=getattr(state_data, "params", {}),
-                    runtime=getattr(state_data, "runtime", {})
+                    params=state_data.get("params", {}) if isinstance(state_data, dict) else getattr(state_data, "params", {}),
+                    runtime=state_data.get("runtime", {}) if isinstance(state_data, dict) else getattr(state_data, "runtime", {})
                 )
             elif path == "blocks" and new_schema:
                 blocks_data: list[Any] = value if isinstance(value, list) else []
@@ -88,6 +88,8 @@ class InstanceService:
         if new_schema:
             self.schema_manager.set(instance_name, new_schema)
             return True, f"Instance '{instance_name}' created successfully"
+
+        return False, "Failed to create instance: page_key patch is required"
 
     def delete_instance(
         self,

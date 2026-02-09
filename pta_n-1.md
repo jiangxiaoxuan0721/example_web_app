@@ -44,6 +44,38 @@ belong_mcp_server: FastMCP
 
 ## Model A：单次 N-1 仿真流程
 
+### 步骤 0：PTA 实例初始化 `[自动执行]`
+
+**操作**：创建 PTA 实例
+
+**PTA 初始化**：
+```json
+{
+  "instance_name": "__CREATE__",
+  "new_instance_name": "n1_simulation",
+  "patches": [
+    {"op": "set", "path": "page_key", "value": "n1_simulation"},
+    {"op": "set", "path": "state", "value": {"params": {}, "runtime": {}}},
+    {"op": "set", "path": "layout", "value": {"type": "tabs"}},
+    {"op": "set", "path": "blocks", "value": [
+      {"id": "step1_init", "layout": "form", "title": "步骤1: 模型初始化", "props": {"fields": [], "actions": []}},
+      {"id": "step2_powerflow", "layout": "form", "title": "步骤2: 潮流计算", "props": {"fields": [], "actions": []}},
+      {"id": "step3_flow_result", "layout": "form", "title": "步骤3: 潮流计算结果", "props": {"fields": [], "actions": []}},
+      {"id": "step4_fault", "layout": "form", "title": "步骤4: 故障参数", "props": {"fields": [], "actions": []}},
+      {"id": "step5_emt", "layout": "form", "title": "步骤5: 电磁暂态计算", "props": {"fields": [], "actions": []}},
+      {"id": "step6_measures", "layout": "form", "title": "步骤6: 量测信号", "props": {"fields": [], "actions": []}},
+      {"id": "step7_run", "layout": "form", "title": "步骤7: 执行仿真", "props": {"fields": [], "actions": []}},
+      {"id": "step8_result", "layout": "form", "title": "步骤8: 结果分析", "props": {"fields": [], "actions": []}}
+    ]},
+    {"op": "set", "path": "actions", "value": []}
+  ]
+}
+```
+
+**注意**：创建实例必须包含 `meta` 字段，用于设置 `page_key`。
+
+---
+
 ### 步骤 1：模型初始化 `[自动执行]`
 
 **操作**：调用 `initModelAndCreateSACanvas` 初始化仿真环境
@@ -444,6 +476,35 @@ if run_simulation:
 
 - **禁止**调用任何 Model A 的工具（如 `createOrUpdateConfig`、`createOrUpdateJob`）
 - **禁止**直接执行仿真，仅配置和提交批量任务
+
+---
+
+### 步骤 0：PTA 实例初始化 `[自动执行]`
+
+**PTA 初始化**：
+```json
+{
+  "instance_name": "__CREATE__",
+  "new_instance_name": "n1_simulation_batch",
+  "patches": [
+    {"op": "set", "path": "page_key", "value": "n1_simulation_batch"},
+    {"op": "set", "path": "state", "value": {"params": {}, "runtime": {}}},
+    {"op": "set", "path": "layout", "value": {"type": "tabs"}},
+    {"op": "set", "path": "blocks", "value": [
+      {"id": "step1_default_config", "layout": "form", "title": "步骤1: 默认配置", "props": {"fields": [], "actions": []}},
+      {"id": "step2_flow_template", "layout": "form", "title": "步骤2: 流程模板", "props": {"fields": [], "actions": []}},
+      {"id": "step3_params_explanation", "layout": "form", "title": "步骤3: 参数说明", "props": {"fields": [], "actions": []}},
+      {"id": "step4_batch_config", "layout": "form", "title": "步骤4: 批量配置", "props": {"fields": [], "actions": []}},
+      {"id": "step5_batch_count", "layout": "form", "title": "步骤5: 批量次数", "props": {"fields": [], "actions": []}},
+      {"id": "step6_submit_task", "layout": "form", "title": "步骤6: 提交任务", "props": {"fields": [], "actions": []}},
+      {"id": "step7_query_result", "layout": "form", "title": "步骤7: 结果查询", "props": {"fields": [], "actions": []}}
+    ]},
+    {"op": "set", "path": "actions", "value": []}
+  ]
+}
+```
+
+**注意**：创建实例必须包含 `meta` 字段，用于设置 `page_key`。
 
 ---
 
