@@ -22,6 +22,9 @@ import Badge from './Badge';
 import JSONViewer from './JSONViewer';
 import RichContentRenderer from './RichContentRenderer';
 import Modal from './Modal';
+import DatePicker from './DatePicker';
+import DateTimePicker from './DateTimePicker';
+import FileUpload from './FileUpload';
 
 // 字段渲染器接口
 export interface FieldRenderer {
@@ -136,6 +139,42 @@ const defaultRenderers: FieldRendererRegistry = {
       value={value}
       onChange={onChange}
       disabled={disabled}
+    />
+  ),
+
+  date: ({ field, value, onChange, disabled }) => (
+    <DatePicker
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      placeholder={field.placeholder}
+      min={field.min}
+      max={field.max}
+      required={field.required}
+    />
+  ),
+
+  datetime: ({ field, value, onChange, disabled }) => (
+    <DateTimePicker
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      placeholder={field.placeholder}
+      min={field.min}
+      max={field.max}
+      required={field.required}
+    />
+  ),
+
+  file: ({ field, value, onChange, disabled }) => (
+    <FileUpload
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      accept={field.accept}
+      multiple={field.multiple}
+      required={field.required}
+      maxSize={field.maxSize}
     />
   ),
 

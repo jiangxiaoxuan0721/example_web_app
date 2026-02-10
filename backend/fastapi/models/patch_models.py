@@ -16,6 +16,7 @@
 - toggle: 切换布尔值
 """
 
+from typing import Any
 from pydantic import Field
 from .enums import PatchOperationType
 from .base import BaseModelWithConfig
@@ -49,3 +50,15 @@ class SchemaPatch(BaseModelWithConfig):
     op: PatchOperationType = Field(..., description="操作类型")
     path: str = Field(..., description="目标路径")
     value: object = Field(default=None, description="操作值（根据 op 类型不同含义不同）")
+
+
+class ExternalApiConfig(BaseModelWithConfig):
+    """外部 API 调用配置"""
+    url: str = Field(..., description="API 请求地址")
+    method: str = Field(default="POST", description="HTTP 方法 (GET/POST/PUT/DELETE)")
+    headers: dict[str, str] = Field(default_factory=dict, description="请求头")
+    body_template: dict[str, Any] | str | None = Field(default=None, description="请求体模板，支持 ${state.params.xxx} 模板语法")
+    body_template_type: str = Field(default="json", description="请求体类型 (json/form)")
+    timeout: int = Field(default=30, description="请求超时时间（秒）")
+    response_mappings: dict[str, str] = Field(default_factory=dict, description="响应映射，将 API 响应映射到 state.params")
+    error_mapping: dict[str, str] = Field(default_factory=dict, description="错误映射，将 API 错误映射到 state.runtime")

@@ -14,7 +14,7 @@
 from .enums import *
 from .base import BaseModelWithConfig
 from .event_models import EventPayload, UIEvent
-from .patch_models import  SchemaPatch
+from .patch_models import  SchemaPatch, ExternalApiConfig
 from .field_models import (
     OptionItem,
     ColumnConfig,
@@ -63,6 +63,7 @@ __all__ = [
     "UIEvent",
     # Patch 模型
     "SchemaPatch",
+    "ExternalApiConfig",
     # 字段模型
     "OptionItem",
     "ColumnConfig",

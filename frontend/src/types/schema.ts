@@ -8,13 +8,15 @@ export interface PictureConfig {
   /** 图片高度 */
   imageHeight?: string;
   /** 图片适应方式 */
-  imageFit?: 'contain' | 'cover' | 'fill' | 'none' | 'scale-down';
+  imageFit?: 'contain' | 'cover' | 'fill';
   /** 是否懒加载 */
   lazy?: boolean;
   /** 加载失败时的回退内容 */
   fallback?: string;
   /** 子标题 */
   subtitle?: string;
+  /** 替代文本 */
+  alt?: string;
 }
 
 /** 表格列配置接口 */
@@ -75,8 +77,17 @@ export interface FieldConfig extends PictureConfig {
   disabled?: boolean;  // 是否禁用（默认 false）
   placeholder?: string;  // 占位符文本
 
+  // 日期/时间属性
+  min?: string;  // 最小值（date/datetime）
+  max?: string;  // 最大值（date/datetime）
+
   // 多选框属性
+  multiple?: boolean;  // 是否多选（仅select类型）
   selectedValues?: string[];
+
+  // 文件上传属性
+  accept?: string;  // 接受的文件类型
+  maxSize?: number;  // 最大文件大小（MB）
 
   // 表格属性
   columns?: TableColumn[];
@@ -91,6 +102,7 @@ export interface FieldConfig extends PictureConfig {
   pageSize?: number;
   maxHeight?: string;
   compact?: boolean;
+  rowSelection?: boolean;  // 行选择
 
   // 组件嵌入：渲染一个嵌套的 Block 配置
   blockConfig?: Block;  // 要渲染的嵌套 Block 配置
@@ -129,12 +141,24 @@ export interface Block {
 export interface ActionConfig {
   id: string;
   label: string;
-  style: string;
-  action_type?: string;  // 'apply_patch'（默认）、'navigate'（实例导航）或 'navigate_block'（block导航）
+  style: 'primary' | 'secondary' | 'danger' | 'warning' | 'success';
+  action_type?: 'api' | 'navigate' | 'navigate_block' | 'apply_patch';
   target_instance?: string;  // 目标实例ID（当action_type=navigate时使用）
   target_block?: string;  // 目标block ID（当action_type=navigate_block时使用）
-  patches?: UnifiedPatch[];  // patch 数组，统一格式
+  patches?: SchemaPatch[];  // patch 数组，统一格式
+  api?: ExternalApiConfig;  // 外部 API 配置（action_type=api 时使用）
   disabled?: boolean;  // 是否禁用
+}
+
+export interface ExternalApiConfig {
+  url: string;
+  method?: string;
+  headers?: Record<string, string>;
+  body_template?: any;
+  body_template_type?: string;
+  timeout?: number;
+  response_mappings?: Record<string, string>;
+  error_mapping?: Record<string, string>;
 }
 
 export interface StepInfo {
@@ -148,14 +172,14 @@ export interface StateInfo {
 }
 
 /** 统一 Patch 类型 */
-export interface UnifiedPatch {
+export interface SchemaPatch {
   op: 'set' | 'add' | 'remove' | 'append_to_list' | 'prepend_to_list' |
-      'update_list_item' | 'remove_last' | 'merge' | 'increment' | 'decrement' | 'toggle';
+      'update_list_item' | 'remove_from_list' | 'filter_list' | 'remove_last' | 
+      'merge' | 'increment' | 'decrement' | 'toggle' | 'clear_all_params';
   path: string;
   value?: any;
   index?: number;  // 仅 update_list_item 使用
 }
-
 
 export interface LayoutInfo {
   type: 'single' | 'grid' | 'flex' | 'tabs';

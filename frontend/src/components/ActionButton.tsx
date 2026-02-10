@@ -32,7 +32,7 @@ export default function ActionButton({ action, highlighted = false, onNavigate, 
       // 导航到目标block - 直接使用高亮机制
       onNavigateBlock(action.target_block);
     } else {
-      // 默认为 API 操作，发送事件到后端（传递 blockId）
+      // 默认发送事件到后端（包括 api, modal 等类型）
       emitActionClickWithBlockId(action.id, blockId);
     }
   };

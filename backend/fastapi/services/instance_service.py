@@ -199,6 +199,15 @@ class InstanceService:
                 "navigate_to": action_config.target_instance
             }
 
+        # 处理 api 类型的 action
+        if action_config.action_type == "api" and action_config.api:
+            print(f"[InstanceService] Action 是 api 类型，调用外部 API")
+            api_patch = self._handle_external_api(schema, action_config.api.model_dump())
+            return {
+                "status": "success",
+                "patch": api_patch
+            }
+
         # 对于其他类型的 action，不主动同步 params
         # params 应该已经在 action handler 执行前通过 field:change 事件更新过了
         print(f"[InstanceService] 开始执行 action handler")
@@ -716,9 +725,18 @@ class InstanceService:
 
                     # 应用响应映射
                     for target_path, json_path in response_mappings.items():
-                        value = self._get_json_path_value(response_data, json_path)
-                        if value is not None:
-                            patch[target_path] = value
+                        # 特殊处理：如果 json_path 是 "status_code"，则使用 HTTP 状态码
+                        if json_path == "status_code":
+                            patch[target_path] = str(response.status_code)
+                        else:
+                            value = self._get_json_path_value(response_data, json_path)
+                            if value is not None:
+                                # 如果值是 dict 或 list，转换为 JSON 字符串以便显示
+                                import json
+                                if isinstance(value, (dict, list)):
+                                    patch[target_path] = json.dumps(value, ensure_ascii=False, indent=2)
+                                else:
+                                    patch[target_path] = value
 
                     # 默认保存完整响应（如果没有指定 mappings）
                     if not response_mappings:

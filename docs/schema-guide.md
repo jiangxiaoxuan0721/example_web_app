@@ -115,10 +115,6 @@ interface StateInfo {
 }
 ```
 
-#### 自动更新的字段
-
-- `timestamp` - 每次操作自动更新为当前时间
-
 #### 特殊字段
 
 - `temp_rowData` - 表格行操作的临时数据
@@ -378,26 +374,28 @@ interface ActionConfig {
 
 ```typescript
 enum ActionType {
-  APPLY_PATCH = "apply_patch",  // 应用 Patch
-  OPEN_URL = "open_url",        // 打开 URL
-  CUSTOM = "custom"             // 自定义行为
+  API = "api",                  // API 调用
+  NAVIGATE = "navigate",         // 实例导航
+  NAVIGATE_BLOCK = "navigate_block", // 块导航
+  MODAL = "modal",              // 模态框
+  PATCH = "apply_patch"         // 应用 Patch
 }
 ```
 
-### 5.2 handler_type
+### 5.2 Patch 操作类型
 
-处理器类型，指定如何处理 patches。
+当 `action_type` 为 `"apply_patch"` 时，patches 中可以使用的操作类型：
 
 ```typescript
-enum HandlerType {
+enum PatchOperationType {
   SET = "set",              // 设置值
-  INCREMENT = "increment",  // 增加
-  DECREMENT = "decrement",  // 减少
-  TOGGLE = "toggle",       // 切换
-  TEMPLATE = "template",   // 模板渲染
-  EXTERNAL = "external",   // 外部调用
-  TEMPLATE_ALL = "template:all",  // 模板渲染（所有）
-  TEMPLATE_STATE = "template:state"  // 模板渲染（状态）
+  INCREMENT = "increment",  // 增加数值
+  DECREMENT = "decrement",  // 减少数值
+  TOGGLE = "toggle",       // 切换布尔值
+  ADD = "add",             // 添加元素
+  REMOVE = "remove",       // 移除元素
+  MERGE = "merge",         // 合并对象
+  // ... 更多操作类型
 }
 ```
 
@@ -411,19 +409,17 @@ enum HandlerType {
       "label": "保存",
       "style": "primary",
       "action_type": "apply_patch",
-      "handler_type": "set",
-      "patches": {
-        "state.params.saved": true
-      }
+      "patches": [
+        {"op": "set", "path": "state.params.saved", "value": true}
+      ]
     },
     {
       "id": "increment",
       "label": "增加",
       "action_type": "apply_patch",
-      "handler_type": "increment",
-      "patches": {
-        "state.params.count": 1
-      }
+      "patches": [
+        {"op": "increment", "path": "state.params.count", "value": 1}
+      ]
     }
   ]
 }

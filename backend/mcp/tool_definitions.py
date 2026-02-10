@@ -62,10 +62,10 @@ layout - 布局参数字典,将决定blocks如何布局,包含以下键:
   - "gap": 间距
 blocks - list[block],包含界面所有block,每个block包含以下键:
   - "id": 字符串,用于唯一标识block,将显示为block的名称
-  - "layout": 布局参数字典,将决定block中的field如何布局,可选值为:"form"|"grid"|"tabs"|"accordition"
+  - "layout": 布局参数字典,将决定block中的field如何布局,可选值为:"form"|"grid"|"tabs"|"accordion"
   - "props": 字典,用于指定block的配置,根据layout的不同,props的结构也不同
     form布局的props: {fields: list[field], actions: list[action]}
-    grid布局的props:{cols: int, gap: int, fields: list[field], actions: list[action]}
+    grid布局的props:{cols: int, gap: str, fields: list[field], actions: list[action]}
     tabs布局的props:{tabs: list[dict[label: str, fields: list[field], actions: list[action]]]}
     accordition布局的props:{panels: list[dict[title: str, fields: list[field], actions: list[action]]]}
 actions - list[action],全局action列表
@@ -73,7 +73,7 @@ actions - list[action],全局action列表
 
 <FIELD_STRUCTURE>
 field 包含以下键:
-  - "type": 字段类型,可选值:text/textarea/number/select/radio/multiselect/checkbox/json/image/table/component/date/datetime/file/html/tag/progress/badge/modal
+  - "type": 字段类型,可选值:text/textarea/number/select/radio/multiselect/checkbox/json/image/table/component/date/datetime/file/html/tag/progress/badge
   - "label": 字符串,字段显示标签
   - "key": 字符串,字段唯一标识,用于从 state 中读取和写入数据
   - "value": any,字段值(可选)
@@ -119,13 +119,94 @@ action 包含以下键:
   - "id": 字符串,不显示的唯一标识
   - "label": 字符串,显示的标签
   - "style": 字符串,按钮样式,可选值:primary/secondary/danger/warning/success,默认 secondary
-  - "action_type": 字符串,点击触发的事件类型,可选值:apply_patch/navigate/navigate_block/api/modal
+  - "action_type": 字符串,点击触发的事件类型,可选值:apply_patch/navigate/navigate_block/api
   - "patches": action_type=apply_patch时,将执行的patch数组,详见 **PATCH_DESCRIPTION**
   - "target_instance": action_type=navigate时跳转到target_instance(实例导航)
   - "target_block": action_type=navigate_block时跳转到target_block(block导航,同实例内滚动到指定block)
-  - "api": action_type=api 时,将执行的api调用
+  - "api": action_type=api 时,将执行的api调用,详见**API_CONFIG_STRUCTURE**
   - "disabled": 布尔值,默认 false,是否禁用
 </ACTION_STRUCTURE>
+
+<API_CONFIG_STRUCTURE>
+api 配置包含以下键,用于 action_type=api 的外部 API 调用:
+  - "url": 字符串 - API 请求地址
+  - "method": 字符串 - HTTP 方法,默认 "POST",可选值:GET/POST/PUT/DELETE
+  - "headers": 对象 - 请求头字典,默认 {}
+  - "body_template": 对象|字符串|null - 请求体模板,支持 ${state.params.xxx} 模板语法
+  - "body_template_type": 字符串 - 请求体类型,默认 "json",可选值:json/form
+  - "timeout": 数字 - 请求超时时间(秒),默认 30
+  - "response_mappings": 对象 - 响应映射,将 API 响应映射到 state.params,格式为 {目标路径: JSON路径}
+    - 特殊值 "status_code": 用于获取 HTTP 状态码
+    - 示例: {"state.params.api_response": "json", "state.params.api_status": "status_code"}
+    - 当映射值为对象或数组时,会自动转换为 JSON 字符串显示
+  - "error_mapping": 对象 - 错误映射,将 API 错误映射到 state.runtime,格式同 response_mappings
+</API_CONFIG_STRUCTURE>
+
+<API_EXAMPLE>
+- 基础 API 调用示例(调用 httpbin.org/post):
+  {
+    "id": "call_api",
+    "label": "调用 API",
+    "style": "primary",
+    "action_type": "api",
+    "api": {
+      "url": "https://httpbin.org/post",
+      "method": "POST",
+      "body_template": {"data": "${state.params.api_request_data}"},
+      "body_template_type": "json",
+      "timeout": 30,
+      "response_mappings": {
+        "state.params.api_response": "json",
+        "state.params.api_status": "status_code"
+      }
+    }
+  }
+
+- 模板语法使用(动态传递请求数据):
+  {
+    "api": {
+      "url": "https://api.example.com/users",
+      "method": "POST",
+      "body_template": {
+        "name": "${state.params.username}",
+        "email": "${state.params.useremail}",
+        "timestamp": "${state.runtime.timestamp}"
+      },
+      "body_template_type": "json",
+      "response_mappings": {
+        "state.params.user_id": "data.id",
+        "state.params.user_name": "data.name"
+      }
+    }
+  }
+
+- 带请求头的 API 调用:
+  {
+    "api": {
+      "url": "https://api.example.com/protected",
+      "method": "GET",
+      "headers": {
+        "Authorization": "Bearer ${state.params.token}",
+        "Content-Type": "application/json"
+      },
+      "response_mappings": {
+        "state.params.result": "data"
+      }
+    }
+  }
+
+- 使用 JSONPath 提取嵌套数据:
+  {
+    "api": {
+      "url": "https://api.example.com/search",
+      "response_mappings": {
+        "state.params.items": "results.items",
+        "state.params.total": "results.total_count",
+        "state.params.status_code": "status_code"
+      }
+    }
+  }
+</API_EXAMPLE>
 
 <PATCH_EXAMPLE>
 op 参数可选的值及示例使用如下:

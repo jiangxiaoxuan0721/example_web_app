@@ -1,6 +1,6 @@
 /** 增强表格组件 - 支持排序、分页、多种渲染类型 */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useEventEmitter } from '../utils/eventEmitter';
 import { useFieldPatch } from '../store/schemaStore';
 import ImageModal from './ImageModal';
@@ -39,7 +39,7 @@ interface MixedComponent {
 }
 
 interface TableProps {
-  field: Pick<FieldConfig, 'key' | 'label' | 'columns' | 'rowKey' | 'bordered' | 'striped' | 'hover' | 'emptyText' | 'showHeader' | 'compact' | 'maxHeight' | 'showPagination' | 'pageSize' | 'tableEditable'>;
+  field: Pick<FieldConfig, 'key' | 'label' | 'columns' | 'rowKey' | 'bordered' | 'striped' | 'hover' | 'emptyText' | 'showHeader' | 'compact' | 'maxHeight' | 'showPagination' | 'pageSize' | 'tableEditable' | 'rowSelection'>;
   value: any[];
 }
 
@@ -50,6 +50,7 @@ export default function Table({ field, value }: TableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [editingCell, setEditingCell] = useState<{ rowIndex: number; columnKey: string } | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
+  const [selectedRows, setSelectedRows] = useState<Set<any>>(new Set());
 
   const { emitTableButtonClick } = useEventEmitter();
   const fieldPatch = useFieldPatch();
@@ -67,6 +68,7 @@ export default function Table({ field, value }: TableProps) {
   const showPagination = field.showPagination !== false;
   const pageSize = field.pageSize || 10;
   const tableEditable = field.tableEditable || false;
+  const rowSelection = field.rowSelection || false;
 
   // 排序处理
   const handleSort = (columnKey: string) => {
@@ -81,6 +83,31 @@ export default function Table({ field, value }: TableProps) {
         return { key: columnKey, direction: 'asc' };
       }
     });
+  };
+
+  // 行选择处理
+  const handleRowSelect = (record: any) => {
+    const rowKeyValue = record[rowKey];
+    setSelectedRows((prevSelected) => {
+      const newSelected = new Set(prevSelected);
+      if (newSelected.has(rowKeyValue)) {
+        newSelected.delete(rowKeyValue);
+      } else {
+        newSelected.add(rowKeyValue);
+      }
+      return newSelected;
+    });
+  };
+
+  // 全选/取消全选
+  const handleSelectAll = () => {
+    const allSelected = selectedRows.size === paginatedData.length;
+    setSelectedRows(allSelected ? new Set() : new Set(paginatedData.map((record: any) => record[rowKey])));
+  };
+
+  // 检查行是否被选中
+  const isRowSelected = (record: any) => {
+    return selectedRows.has(record[rowKey]);
   };
 
   // 排序数据
@@ -106,6 +133,17 @@ export default function Table({ field, value }: TableProps) {
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
   const paginatedData = sortedData.slice(startIndex, endIndex);
+
+  // 检查是否全选
+  const isAllSelected = paginatedData.length > 0 && paginatedData.every((record: any) => selectedRows.has(record[rowKey]));
+
+  // 同步选中行到 state
+  useEffect(() => {
+    if (rowSelection) {
+      const fullRecords = data.filter((record: any) => selectedRows.has(record[rowKey]));
+      fieldPatch('state.params', `${field.key}_selected`, fullRecords);
+    }
+  }, [selectedRows, data, rowSelection, field.key, rowKey, fieldPatch]);
 
   // 当排序或数据变化时，重置到第一页
   useMemo(() => {
@@ -816,6 +854,27 @@ export default function Table({ field, value }: TableProps) {
               }}
             >
               <tr>
+                {rowSelection && (
+                  <th
+                    style={{
+                      padding: compact ? '8px 12px' : '12px 16px',
+                      textAlign: 'center',
+                      fontWeight: '600',
+                      color: '#495057',
+                      fontSize: '14px',
+                      borderBottom: '1px solid #dee2e6',
+                      width: '40px',
+                      userSelect: 'none'
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      onChange={handleSelectAll}
+                      style={{ cursor: 'pointer' }}
+                    />
+                  </th>
+                )}
                 {columns.map((column: Column) => {
                   const isSorted = sortConfig?.key === column.key;
                   const sortIcon = isSorted && sortConfig
@@ -873,6 +932,26 @@ export default function Table({ field, value }: TableProps) {
                     e.currentTarget.style.background = '';
                   }}
                 >
+                  {rowSelection && (
+                    <td
+                      style={{
+                        padding: compact ? '8px 12px' : '12px 16px',
+                        textAlign: 'center',
+                        fontSize: '14px',
+                        color: '#212529',
+                        borderBottom: bordered ? '1px solid #dee2e6' : 'none',
+                        background: isRowSelected(record) ? '#e6f7ff' : undefined,
+                        transition: 'background 0.2s'
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isRowSelected(record)}
+                        onChange={() => handleRowSelect(record)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    </td>
+                  )}
                   {columns.map((column: Column) => {
                     const val = record[column.key];
                     const isEditable = tableEditable && column.editable !== false;

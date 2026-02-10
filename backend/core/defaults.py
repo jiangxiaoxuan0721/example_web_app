@@ -7,6 +7,7 @@ from ..fastapi.models import (
     BaseFieldConfig, SelectableFieldConfig, TableFieldConfig, ImageFieldConfig,
     OptionItem, ColumnConfig
 )
+from ..fastapi.models.patch_models import ExternalApiConfig
 
 
 def get_default_instances() -> dict[str, UISchema]:
@@ -17,7 +18,7 @@ def get_default_instances() -> dict[str, UISchema]:
 
 
 def _create_demo_schema() -> UISchema:
-    """创建综合演示 Schema - 包含计数器、动态列表、表格、选项组件、图片组件、布局切换等"""
+    """创建综合演示 Schema - 包含计数器、动态列表、表格、选项组件、图片组件、布局切换、日期时间、文件上传等"""
     from datetime import datetime
 
     return UISchema(
@@ -27,31 +28,45 @@ def _create_demo_schema() -> UISchema:
                 # 计数器
                 counter=0,
                 message="欢迎使用 UI Patch System",
-                
+
                 # 动态列表
                 dynamic_users=[],
                 next_id=1,
-                
-                # 任务表格
+
+                # 任务表格（带行选择）
                 tasks=[
                     {"id": 1, "name": "完成文档编写", "status": "active", "progress": {"current": 80, "total": 100}, "assignee": "张三", "priority": "high"},
                     {"id": 2, "name": "代码审查", "status": "pending", "progress": {"current": 30, "total": 100}, "assignee": "李四", "priority": "medium"},
                     {"id": 3, "name": "部署上线", "status": "completed", "progress": {"current": 100, "total": 100}, "assignee": "王五", "priority": "low"},
                 ],
-                
+                tasks_selected=[],
+
                 # 选项组件
                 status="active",
                 priority="medium",
                 categories=["tech", "life"],
-                
+
+                # 日期时间组件
+                start_date="2024-01-01",
+                end_date="2024-12-31",
+                meeting_time="2024-01-15T14:30",
+
+                # 文件上传
+                uploaded_file="",
+
                 # 图片组件
                 avatar_url="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix",
                 image_url="https://via.placeholder.com/300x200/4A90E2/ffffff?text=Sample+Image",
-                
+
                 # 布局字段
                 grid_a="字段A", grid_b="字段B", grid_c="字段C", grid_d="字段D",
                 tab1_field="标签页1内容", tab2_field="标签页2内容", tab3_field="标签页3内容",
                 acc1_q="问题1", acc1_a="答案1", acc2_q="问题2", acc2_a="答案2",
+
+                # API 调用字段
+                api_request_data="",
+                api_response="",
+                api_status="",
             ),
             runtime={"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         ),
@@ -97,20 +112,21 @@ def _create_demo_schema() -> UISchema:
                 )
             ),
             
-            # Block 3: 表格高级特性
+            # Block 3: 表格高级特性（带行选择）
             Block(
                 id="table_block",
                 layout="form",
-                title="任务列表（可编辑）",
+                title="任务列表",
                 props=BlockProps(  # pyright: ignore[reportCallIssue]
                     fields=[
                         TableFieldConfig(
                             type=FieldType.TABLE,
-                            label="任务列表（可编辑）",
+                            label="任务列表",
                             key="tasks",
                             tableEditable=True,
                             showPagination=True,
                             pageSize=10,
+                            row_selection=True,
                             columns=[
                                 ColumnConfig(key="id", title="ID", width="60px", sortable=True),
                                 ColumnConfig(key="name", title="任务名称", editable=True),
@@ -135,6 +151,11 @@ def _create_demo_schema() -> UISchema:
                             striped=True,
                             hover=True
                         )
+                    ],
+                    actions=[
+                        ActionConfig(id="show_selected", label="查看选中", style="primary", patches=[
+                            SchemaPatch(op=PatchOperationType.MERGE, path="state.runtime", value={"message": f"已选中 {len('${state.params.tasks_selected}')} 条记录"})
+                        ])
                     ]
                 )
             ),
@@ -162,7 +183,66 @@ def _create_demo_schema() -> UISchema:
                 )
             ),
             
-            # Block 5: 图片组件
+            # Block 5: 日期时间组件
+            Block(
+                id="datetime_block",
+                layout="form",
+                title="日期时间组件",
+                props=BlockProps(  # pyright: ignore[reportCallIssue]
+                    fields=[
+                        BaseFieldConfig(label="开始日期", key="start_date", type=FieldType.DATE, placeholder="请选择日期"),
+                        BaseFieldConfig(label="结束日期", key="end_date", type=FieldType.DATE, placeholder="请选择日期"),
+                        BaseFieldConfig(label="会议时间", key="meeting_time", type=FieldType.DATETIME, placeholder="请选择日期时间"),
+                    ]
+                )
+            ),
+
+            # Block 6: API 调用组件
+            Block(
+                id="api_block",
+                layout="form",
+                title="API 调用",
+                props=BlockProps(  # pyright: ignore[reportCallIssue]
+                    fields=[
+                        BaseFieldConfig(label="请求数据", key="api_request_data", type=FieldType.TEXT, placeholder="输入要发送的数据"),
+                        BaseFieldConfig(label="API 响应", key="api_response", type=FieldType.TEXT, editable=False, placeholder="API 调用结果将显示在这里"),
+                        BaseFieldConfig(label="状态", key="api_status", type=FieldType.TEXT, editable=False, placeholder="API 调用状态"),
+                    ],
+                    actions=[
+                        ActionConfig(
+                            id="call_api",
+                            label="调用 API",
+                            style="primary",
+                            action_type=ActionType.API,
+                            api=ExternalApiConfig(
+                                url="https://httpbin.org/post",
+                                method="POST",
+                                body_template={"data": "${state.params.api_request_data}"},
+                                body_template_type="json",
+                                timeout=30,
+                                response_mappings={
+                                    "state.params.api_response": "json",
+                                    "state.params.api_status": "status_code"
+                                }
+                            )
+                        )
+                    ]
+                )
+            ),
+
+            # Block 7: 文件上传组件
+            Block(
+                id="file_block",
+                layout="form",
+                title="文件上传",
+                props=BlockProps(  # pyright: ignore[reportCallIssue]
+                    fields=[
+                        BaseFieldConfig(label="上传文件", key="uploaded_file", type=FieldType.FILE, placeholder="拖拽或点击上传文件"),
+                    ]
+                )
+            ),
+
+            # Block 8: 图片组件
             Block(
                 id="image_block",
                 layout="grid",
@@ -189,8 +269,8 @@ def _create_demo_schema() -> UISchema:
                     ]
                 )
             ),
-            
-            # Block 6: Grid 布局
+
+            # Block 9: Grid 布局
             Block(
                 id="grid_block",
                 layout="grid",
@@ -206,8 +286,8 @@ def _create_demo_schema() -> UISchema:
                     ]
                 )
             ),
-            
-            # Block 7: Tabs 布局
+
+            # Block 10: Tabs 布局
             Block(
                 id="tabs_block",
                 layout="tabs",
@@ -220,8 +300,8 @@ def _create_demo_schema() -> UISchema:
                     ]
                 )
             ),
-            
-            # Block 8: Accordion 布局
+
+            # Block 11: Accordion 布局
             Block(
                 id="accordion_block",
                 layout="accordion",
@@ -234,7 +314,7 @@ def _create_demo_schema() -> UISchema:
                 )
             ),
 
-            # Block 9: 导航功能演示
+            # Block 12: 导航功能演示
             Block(
                 id="navigation_block",
                 layout="form",

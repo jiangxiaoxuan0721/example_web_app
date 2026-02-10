@@ -19,7 +19,6 @@ class ActionType(str, Enum):
     API = "api"
     NAVIGATE = "navigate"
     NAVIGATE_BLOCK = "navigate_block"
-    MODAL = "modal"
     PATCH = "apply_patch"
 
 
@@ -80,7 +79,6 @@ class FieldType(str, Enum):
     TAG = "tag"
     PROGRESS = "progress"
     BADGE = "badge"
-    MODAL = "modal"
 
 
 class LayoutType(str, Enum):

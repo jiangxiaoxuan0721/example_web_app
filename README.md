@@ -61,7 +61,7 @@
 ```
 ${state.params.name}          # 基础引用
 ${state.params.status.label}    # 选项标签（前端渲染）
-${state.runtime.timestamp}        # 运行时数据（服务端自动更新）
+${state.runtime.timestamp}      # 运行时数据（需通过 patch 设置）
 ```
 
 **实现细节**：
@@ -69,7 +69,6 @@ ${state.runtime.timestamp}        # 运行时数据（服务端自动更新）
 - 支持嵌套路径如 `${state.params.user.name}`
 - `append_to_list` 等操作的 `items` 参数自动渲染模板
 - 渲染时跳过 `field.value`，保留模板表达式供后续使用
-- 运行时数据 `state.runtime.timestamp` 每次渲染自动更新
 
 **前端实现**：
 - 使用 `renderTemplate` 函数在前端实时渲染（用于 `.label` 后缀）

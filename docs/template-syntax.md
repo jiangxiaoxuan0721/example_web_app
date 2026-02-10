@@ -78,9 +78,9 @@ ${page_key}               // 页面标识符
 <p>时间：${runtime.timestamp}</p>
 ```
 
-**自动更新**：
+**注意**：
 
-当模板引用 `state.runtime.timestamp` 时，系统会自动更新为当前时间：
+如果需要在模板中显示当前时间，需要先通过 patch 设置 `state.runtime.timestamp`：
 
 ```json
 {
@@ -90,6 +90,15 @@ ${page_key}               // 页面标识符
   "value": "${state.runtime.timestamp}",
   "disabled": true
 }
+```
+
+在创建或更新操作时设置时间戳：
+
+```json
+[
+  {"op": "set", "path": "state.runtime.timestamp", "value": "2026-02-09 15:30:45"}
+]
+```
 ```
 
 ### 3. page_key
@@ -169,16 +178,15 @@ ${page_key}               // 页面标识符
   "id": "submit",
   "label": "提交 (${state.params.item_count})",
   "action_type": "apply_patch",
-  "handler_type": "set",
-  "patches": {...}
+  "patches": [...]
 }
 ```
 
 ## 特殊功能
 
-### 1. 时间戳自动更新
+### 1. 时间戳引用
 
-当模板引用 `state.runtime.timestamp` 时，每次操作都会自动更新为当前时间：
+模板可以引用 `state.runtime.timestamp` 来显示时间戳，但需要通过 patch 手动设置：
 
 ```json
 {
